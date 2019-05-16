@@ -1,0 +1,78 @@
+package com.sourcecode.malls.web.controller;
+
+import java.util.Optional;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.sourcecode.malls.constants.SystemConstant;
+import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.service.impl.ClientService;
+import com.sourcecode.malls.service.impl.VerifyCodeService;
+import com.sourcecode.malls.util.AssertUtil;
+
+@RestController
+@RequestMapping(path = "/client")
+public class ClientController {
+	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
+	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
+	private static final String FORGET_PASSWORD_CODE_CATEGORY = "forget-password-category";
+
+	@Autowired
+	private VerifyCodeService verifyCodeService;
+
+	@Autowired
+	private ClientService clientService;
+
+	@Autowired
+	private CodeStoreRepository codeStoreRepository;
+
+	@Autowired
+	private PasswordEncoder encoder;
+
+	@RequestMapping(path = "/login/code/{mobile}")
+	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile, HttpSession session) {
+		verifyCodeService.sendLoginCode(mobile, session, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
+				ClientContext.getMerchantId() + "");
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/forgetPassword/code/{mobile}")
+	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile, HttpSession session) {
+		clientService.findByMerchantAndUsername(ClientContext.getMerchantId(), mobile);
+		verifyCodeService.sendForgetPasswordCode(mobile, session, FORGET_PASSWORD_TIME_ATTR, FORGET_PASSWORD_CODE_CATEGORY,
+				ClientContext.getMerchantId() + "");
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/forgetPassword/check/{mobile}/{code}")
+	public ResultBean<Void> checkCodeForForgetPassword(@PathVariable String mobile, @PathVariable String code) {
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CODE_CATEGORY,
+				mobile + "_" + ClientContext.getMerchantId());
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(code), "验证码无效");
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/forgetPassword/reset/{code}")
+	public ResultBean<Void> checkCodeForForgetPassword(@RequestBody Client client, @PathVariable String code) {
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CODE_CATEGORY,
+				client.getUsername() + "_" + ClientContext.getMerchantId());
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), "请求无效");
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(code), "请求无效");
+		Client user = clientService.findByMerchantAndUsername(ClientContext.getMerchantId(), client.getUsername());
+		user.setPassword(encoder.encode(client.getPassword()));
+		clientService.save(user);
+		return new ResultBean<>();
+	}
+}

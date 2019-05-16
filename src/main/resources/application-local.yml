@@ -1,0 +1,2 @@
+server.port: 9092
+access.control.allow.origin: http://localhost:8082
