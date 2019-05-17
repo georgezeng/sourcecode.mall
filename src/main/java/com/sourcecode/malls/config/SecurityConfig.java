@@ -34,7 +34,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 
 	@Override
 	protected List<String> getAllowHeaders() {
-		return Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Request-Method", "Content-Type", RequestParams.MERCHANT_ID);
+		return Arrays.asList("Access-Control-Allow-Origin", "Content-Type", RequestParams.MERCHANT_ID);
 	}
 
 	@Override
