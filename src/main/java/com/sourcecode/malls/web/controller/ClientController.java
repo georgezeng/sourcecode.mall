@@ -6,6 +6,8 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +40,8 @@ import com.sourcecode.malls.util.AssertUtil;
 @RestController
 @RequestMapping(path = "/client")
 public class ClientController {
+	private Logger logger = LoggerFactory.getLogger(getClass());
+	
 	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
 	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
@@ -111,6 +115,7 @@ public class ClientController {
 	public ResultBean<String> generateLoginToken(HttpSession session) {
 		String token = UUID.randomUUID().toString();
 		session.setAttribute(SessionAttributes.LOGIN_TOKEN, token);
+		logger.info(session.getId());
 		return new ResultBean<>(token);
 	}
 
@@ -124,6 +129,7 @@ public class ClientController {
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(apOp.get().getMerchant().getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		String token = (String) session.getAttribute(SessionAttributes.LOGIN_TOKEN);
+		logger.info(session.getId());
 		AssertUtil.assertTrue(loginInfo.getUsername().equals(token), "登录信息有误");
 		WechatAccessInfo accessInfo = httpClient.getForObject(
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
