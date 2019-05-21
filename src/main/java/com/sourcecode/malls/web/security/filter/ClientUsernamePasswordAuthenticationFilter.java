@@ -1,6 +1,7 @@
 package com.sourcecode.malls.web.security.filter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
 
 import javax.servlet.ServletException;
@@ -12,6 +13,7 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
@@ -21,9 +23,10 @@ import org.springframework.util.StringUtils;
 
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.domain.client.Client;
-import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 
 @Component
 public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
@@ -36,10 +39,13 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 	private ClientRepository clientRepository;
 
 	@Autowired
-	private MerchantRepository merchantRepository;
+	private MerchantShopApplicationRepository applicationRepository;
 
 	@Autowired
 	private PasswordEncoder encoder;
+
+	@Autowired
+	private SuperAdminProperties adminProperties;
 
 	@Override
 	protected boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
@@ -54,21 +60,27 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
-		String merchantIdStr = request.getHeader(RequestParams.MERCHANT_ID);
-		if (StringUtils.isEmpty(merchantIdStr) || "null".equals(merchantIdStr)) {
-			throw new AuthenticationServiceException("商户不存在");
-		}
 		String username = request.getParameter(RequestParams.USERNAME);
 		String password = request.getParameter(RequestParams.PASSWORD);
 		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
 			throw new AuthenticationServiceException("账号或密码有误");
 		}
-		Long merchantId = Long.valueOf(merchantIdStr);
-		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
-		if (!merchant.isPresent()) {
+		if (adminProperties.getUsername().equals(username) && adminProperties.getPassword().equals(password)) {
+			Client admin = new Client();
+			admin.setId(0l);
+			admin.setUsername(username);
+			return new UsernamePasswordAuthenticationToken(admin, password,
+					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
+		}
+		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
 		}
-		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant.get(), username);
+		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+		if (!apOp.isPresent()) {
+			throw new AuthenticationServiceException("商户不存在");
+		}
+		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(apOp.get().getMerchant(), username);
 		if (!userOp.isPresent()) {
 			throw new UsernameNotFoundException("账号或密码有误");
 		}

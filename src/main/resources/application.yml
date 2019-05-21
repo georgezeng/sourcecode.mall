@@ -6,7 +6,3 @@ spring:
       prefix: 
 
 user.type.name: client
-
-wechat:
-  key: wx137a61306b396b25
-  secret: 855d5a4620b270781df134def5268f43

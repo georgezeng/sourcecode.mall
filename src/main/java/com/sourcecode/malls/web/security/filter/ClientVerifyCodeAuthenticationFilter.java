@@ -21,9 +21,10 @@ import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -37,7 +38,7 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 	private ClientRepository clientRepository;
 
 	@Autowired
-	private MerchantRepository merchantRepository;
+	private MerchantShopApplicationRepository applicationRepository;
 
 	public ClientVerifyCodeAuthenticationFilter() {
 		super(new AntPathRequestMatcher("/login", "POST"));
@@ -46,30 +47,30 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
-		String merchantIdStr = request.getHeader(RequestParams.MERCHANT_ID);
-		if (StringUtils.isEmpty(merchantIdStr)) {
+		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
 		}
+		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+		if (!apOp.isPresent()) {
+			throw new AuthenticationServiceException("商户不存在");
+		}
+		Merchant merchant = apOp.get().getMerchant();
 		String username = request.getParameter(RequestParams.USERNAME);
 		String verifyCode = request.getParameter(RequestParams.PASSWORD);
 		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(verifyCode)) {
 			throw new AuthenticationServiceException("手机号或验证码有误");
 		}
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-				username + "_" + merchantIdStr);
+				username + "_" + merchant.getId());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
 		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(verifyCode), "验证码无效");
-		Long merchantId = Long.valueOf(merchantIdStr);
-		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
-		if (!merchant.isPresent()) {
-			throw new AuthenticationServiceException("商户不存在");
-		}
-		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant.get(), username);
+		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, username);
 		Client user = null;
 		if (!userOp.isPresent()) {
 			user = new Client();
 			user.setUsername(username);
-			user.setMerchant(merchant.get());
+			user.setMerchant(merchant);
 			user.setEnabled(true);
 			clientRepository.save(user);
 		} else {
