@@ -78,7 +78,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		String token = UUID.randomUUID().toString();
+		String token = UUID.randomUUID().toString().replaceAll("-", "");
 		CodeStore store = new CodeStore();
 		store.setCategory(WECHAT_TOKEN_CATEGORY);
 		store.setKey(token);
