@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
 
 import com.alibaba.druid.util.StringUtils;
-import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
