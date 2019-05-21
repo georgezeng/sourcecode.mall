@@ -1,52 +1,35 @@
 package com.sourcecode.malls.web.controller;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
-import com.sourcecode.malls.constants.SessionAttributes;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
-import com.sourcecode.malls.domain.merchant.Merchant;
-import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
-import com.sourcecode.malls.dto.LoginInfo;
-import com.sourcecode.malls.dto.WechatAccessInfo;
-import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
-import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
-import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.impl.ClientService;
-import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
 @RequestMapping(path = "/client")
 public class ClientController {
-	private Logger logger = LoggerFactory.getLogger(getClass());
-	
+
 	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
 	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
-	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String FORGET_PASSWORD_CATEGORY = "forget-password-category";
-	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
 
 	@Autowired
 	private VerifyCodeService verifyCodeService;
@@ -55,28 +38,10 @@ public class ClientController {
 	private ClientService clientService;
 
 	@Autowired
-	private ClientRepository clientRepository;
-
-	@Autowired
 	private CodeStoreRepository codeStoreRepository;
 
 	@Autowired
 	private PasswordEncoder encoder;
-
-	@Autowired
-	private RestTemplate httpClient;
-
-	@Value("${wechat.url.access_token}")
-	private String accessTokenUrl;
-
-	@Value("${wechat.url.userinfo}")
-	private String userInfoUrl;
-
-	@Autowired
-	private MerchantShopApplicationRepository applicationRepository;
-
-	@Autowired
-	private MerchantSettingService settingService;
 
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile, HttpSession session) {
@@ -111,73 +76,4 @@ public class ClientController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/login/token")
-	public ResultBean<String> generateLoginToken(HttpSession session) {
-		String token = UUID.randomUUID().toString();
-		session.setAttribute(SessionAttributes.LOGIN_TOKEN, token);
-		logger.info(session.getId());
-		return new ResultBean<>(token);
-	}
-
-	@RequestMapping(path = "/wechat/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) {
-		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-		AssertUtil.assertNotEmpty(domain, "商户不存在");
-		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-		AssertUtil.assertTrue(apOp.isPresent(), "商户不存在");
-		Merchant merchant = apOp.get().getMerchant();
-		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(apOp.get().getMerchant().getId());
-		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		String token = (String) session.getAttribute(SessionAttributes.LOGIN_TOKEN);
-		logger.info(session.getId());
-		AssertUtil.assertTrue(loginInfo.getUsername().equals(token), "登录信息有误");
-		WechatAccessInfo accessInfo = httpClient.getForObject(
-				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
-				WechatAccessInfo.class);
-		WechatUserInfo userInfo = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()),
-				WechatUserInfo.class);
-		session.setAttribute(SessionAttributes.WECHAT_USERINFO, userInfo);
-		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
-		LoginInfo info = null;
-		if (user.isPresent()) {
-			info = new LoginInfo();
-			info.setUsername(user.get().getUsername());
-			info.setPassword(token);
-		} 
-		return new ResultBean<>(info);
-	}
-
-	@RequestMapping(path = "/wechat/code/{mobile}")
-	public ResultBean<Void> sendWechatRegisterCode(@PathVariable String mobile, HttpSession session) {
-		verifyCodeService.sendRegisterCode(mobile, session, WECHAT_REGISTER_TIME_ATTR, WECHAT_REGISTER_CATEGORY, ClientContext.getMerchantId() + "");
-		return new ResultBean<>();
-	}
-
-	@RequestMapping(path = "/wechat/register")
-	public ResultBean<Void> wechatRegister(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo mobileInfo) {
-		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
-		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
-				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
-		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-		AssertUtil.assertNotEmpty(domain, "商户不存在");
-		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-		AssertUtil.assertTrue(apOp.isPresent(), "商户不存在");
-		Merchant merchant = apOp.get().getMerchant();
-		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
-		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		WechatUserInfo userInfo = (WechatUserInfo) session.getAttribute(SessionAttributes.WECHAT_USERINFO);
-		AssertUtil.assertNotNull(userInfo, "无法获取微信信息");
-		Client user = new Client();
-		user.setUsername(mobileInfo.getUsername());
-		user.setUnionId(userInfo.getUnionId());
-		user.setAvatar(userInfo.getHeadImgUrl());
-		user.setEnabled(true);
-		user.setMerchant(merchant);
-		user.setNickname(userInfo.getNickname());
-		clientRepository.save(user);
-		return new ResultBean<>();
-	}
 }
