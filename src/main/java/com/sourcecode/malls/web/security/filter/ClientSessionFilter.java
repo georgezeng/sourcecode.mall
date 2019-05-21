@@ -57,23 +57,23 @@ public class ClientSessionFilter extends GenericFilterBean {
 				}
 			} else if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
 				HttpServletRequest httpReq = (HttpServletRequest) request;
-				String domain = httpReq.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-				if (StringUtils.isEmpty(domain)) {
-					throw new AuthenticationServiceException("商户不存在");
-				}
-				Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-				if (apOp.isPresent()) {
-					Long merchantId = apOp.get().getMerchant().getId();
-					Authentication token = SecurityContextHolder.getContext().getAuthentication();
-					if (RememberMeAuthenticationToken.class.isAssignableFrom(token.getClass())) {
-						RememberMeAuthenticationToken rToken = (RememberMeAuthenticationToken) token;
-						UserDetails details = (UserDetails) rToken.getPrincipal();
-						Client client = clientService.findByMerchantAndUsername(merchantId, details.getUsername());
-						ClientContext.set(client);
-						ClientContext.setMerchantId(merchantId);
-						session.setAttribute(sessionProperties.getUserId(), client.getId());
-					} else {
-						ClientContext.setMerchantId(merchantId);
+				String origin = httpReq.getHeader("Origin");
+				if (origin != null) {
+					String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
+					Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+					if (apOp.isPresent()) {
+						Long merchantId = apOp.get().getMerchant().getId();
+						Authentication token = SecurityContextHolder.getContext().getAuthentication();
+						if (RememberMeAuthenticationToken.class.isAssignableFrom(token.getClass())) {
+							RememberMeAuthenticationToken rToken = (RememberMeAuthenticationToken) token;
+							UserDetails details = (UserDetails) rToken.getPrincipal();
+							Client client = clientService.findByMerchantAndUsername(merchantId, details.getUsername());
+							ClientContext.set(client);
+							ClientContext.setMerchantId(merchantId);
+							session.setAttribute(sessionProperties.getUserId(), client.getId());
+						} else {
+							ClientContext.setMerchantId(merchantId);
+						}
 					}
 				}
 			} else {
