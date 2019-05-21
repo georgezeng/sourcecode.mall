@@ -32,6 +32,9 @@ public class SecurityConfig extends BaseSecurityConfig {
 	@Autowired
 	private ClientService clientService;
 
+	@Autowired
+	private ClientRememberMeServices rememberServices;
+
 	@Override
 	protected List<String> getAllowHeaders() {
 		return Arrays.asList("Access-Control-Allow-Origin", "Content-Type", RequestParams.MERCHANT_ID);
@@ -40,8 +43,9 @@ public class SecurityConfig extends BaseSecurityConfig {
 	@Override
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
 		http.authorizeRequests().antMatchers("/client/login/**").permitAll();
+		http.authorizeRequests().antMatchers("/client/wechat/**").permitAll();
 		http.authorizeRequests().anyRequest().authenticated();
-		http.rememberMe().rememberMeServices(new ClientRememberMeServices("Client_Remember_Key", clientService));
+		http.rememberMe().rememberMeServices(rememberServices);
 	}
 
 	@Override
