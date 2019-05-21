@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.RememberMeAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,9 +23,11 @@ import com.alibaba.druid.util.StringUtils;
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.properties.SessionAttributesProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.impl.ClientService;
 
 @Component
@@ -32,6 +35,9 @@ public class ClientSessionFilter extends GenericFilterBean {
 
 	@Autowired
 	private ClientRepository clientRepository;
+
+	@Autowired
+	private MerchantShopApplicationRepository applicationRepository;
 
 	@Autowired
 	private ClientService clientService;
@@ -52,9 +58,13 @@ public class ClientSessionFilter extends GenericFilterBean {
 				}
 			} else if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
 				HttpServletRequest httpReq = (HttpServletRequest) request;
-				String merchantIdStr = httpReq.getHeader(RequestParams.MERCHANT_ID);
-				if (!StringUtils.isEmpty(merchantIdStr)) {
-					Long merchantId = Long.valueOf(merchantIdStr);
+				String domain = httpReq.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+				if (StringUtils.isEmpty(domain)) {
+					throw new AuthenticationServiceException("商户不存在");
+				}
+				Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+				if (apOp.isPresent()) {
+					Long merchantId = apOp.get().getMerchant().getId();
 					Authentication token = SecurityContextHolder.getContext().getAuthentication();
 					if (RememberMeAuthenticationToken.class.isAssignableFrom(token.getClass())) {
 						RememberMeAuthenticationToken rToken = (RememberMeAuthenticationToken) token;
