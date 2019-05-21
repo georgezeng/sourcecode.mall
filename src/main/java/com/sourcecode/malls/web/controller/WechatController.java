@@ -42,6 +42,7 @@ public class WechatController {
 
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
+	private static final String WECHAT_TOKEN_CATEGORY = "wechat-token-category";
 
 	@Autowired
 	private VerifyCodeService verifyCodeService;
@@ -71,7 +72,7 @@ public class WechatController {
 	private MerchantSettingService settingService;
 
 	@RequestMapping(path = "/loginUrl")
-	public ResultBean<String> wechatLoginUrl(HttpServletRequest request, HttpSession session) throws Exception {
+	public ResultBean<String> wechatLoginUrl(HttpServletRequest request) throws Exception {
 		String origin = request.getHeader("Origin");
 		String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
@@ -81,8 +82,11 @@ public class WechatController {
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		String token = UUID.randomUUID().toString();
-		session.setAttribute(SessionAttributes.LOGIN_TOKEN, token);
-		logger.info(token + ":" + session.getId());
+		CodeStore store = new CodeStore();
+		store.setCategory(WECHAT_TOKEN_CATEGORY);
+		store.setKey(token);
+		store.setValue("");
+		codeStoreRepository.save(store);
 		return new ResultBean<>(
 				String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token));
 	}
@@ -96,9 +100,8 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		String token = (String) session.getAttribute(SessionAttributes.LOGIN_TOKEN);
-		logger.info(token + ":" + session.getId());
-		AssertUtil.assertTrue(loginInfo.getUsername().equals(token), "登录信息有误");
+		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
+		AssertUtil.assertTrue(store.isPresent(), "登录信息有误");
 		WechatAccessInfo accessInfo = httpClient.getForObject(
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
 				WechatAccessInfo.class);
@@ -110,7 +113,7 @@ public class WechatController {
 		if (user.isPresent()) {
 			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
-			info.setPassword(token);
+			info.setPassword(loginInfo.getUsername());
 		}
 		return new ResultBean<>(info);
 	}
