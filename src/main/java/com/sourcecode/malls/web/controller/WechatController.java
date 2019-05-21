@@ -82,6 +82,7 @@ public class WechatController {
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		String token = UUID.randomUUID().toString();
 		session.setAttribute(SessionAttributes.LOGIN_TOKEN, token);
+		logger.info(token + ":" + session.getId());
 		return new ResultBean<>(
 				String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token));
 	}
@@ -96,6 +97,7 @@ public class WechatController {
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		String token = (String) session.getAttribute(SessionAttributes.LOGIN_TOKEN);
+		logger.info(token + ":" + session.getId());
 		AssertUtil.assertTrue(loginInfo.getUsername().equals(token), "登录信息有误");
 		WechatAccessInfo accessInfo = httpClient.getForObject(
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
