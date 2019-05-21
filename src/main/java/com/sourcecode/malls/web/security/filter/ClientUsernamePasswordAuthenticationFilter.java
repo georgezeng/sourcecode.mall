@@ -73,6 +73,7 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
 		}
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+		logger.info(domain + ":" + request.getRemoteHost() + ":" + request.getRequestURL());
 		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
 		}
