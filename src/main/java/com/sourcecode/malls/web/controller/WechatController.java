@@ -7,6 +7,8 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +38,7 @@ import com.sourcecode.malls.util.AssertUtil;
 @RestController
 @RequestMapping(path = "/client/wechat")
 public class WechatController {
+	Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
@@ -82,10 +85,11 @@ public class WechatController {
 		CodeStore store = new CodeStore();
 		store.setCategory(WECHAT_TOKEN_CATEGORY);
 		store.setKey(token);
-		store.setValue("");
+		store.setValue(token);
 		codeStoreRepository.save(store);
-		return new ResultBean<>(
-				String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token));
+		String url = String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token);
+		logger.info(url);
+		return new ResultBean<>(url);
 	}
 
 	@RequestMapping(path = "/info")
