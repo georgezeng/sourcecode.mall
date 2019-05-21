@@ -7,8 +7,6 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +36,6 @@ import com.sourcecode.malls.util.AssertUtil;
 @RestController
 @RequestMapping(path = "/client/wechat")
 public class WechatController {
-	private Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
