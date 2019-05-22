@@ -148,7 +148,7 @@ public class WechatController {
 		String result = httpClient.getForObject(String.format(userInfoUrl, mobileInfo.getToken(), mobileInfo.getId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		if(!StringUtils.isEmpty(userInfo.getErrmsg())) {
-			logger.warn("wechat error: [" + userInfo.getErrorcode() + "] - " + userInfo.getErrmsg());
+			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
 		Client user = new Client();
