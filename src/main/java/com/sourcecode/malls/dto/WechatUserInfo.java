@@ -3,7 +3,7 @@ package com.sourcecode.malls.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class WechatUserInfo {
-	private String errorcode;
+	private String errcode;
 	private String errmsg;
 	@JsonProperty("openid")
 	private String openId;
@@ -13,12 +13,12 @@ public class WechatUserInfo {
 	@JsonProperty("unionid")
 	private String unionId;
 
-	public String getErrorcode() {
-		return errorcode;
+	public String getErrcode() {
+		return errcode;
 	}
 
-	public void setErrorcode(String errorcode) {
-		this.errorcode = errorcode;
+	public void setErrcode(String errcode) {
+		this.errcode = errcode;
 	}
 
 	public String getErrmsg() {
