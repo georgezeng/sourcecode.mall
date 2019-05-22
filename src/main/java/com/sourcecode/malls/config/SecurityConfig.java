@@ -25,7 +25,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 
 	@Autowired
 	private ClientUsernamePasswordAuthenticationFilter authenticationFilter;
-	
+
 	@Autowired
 	private ClientWechatAuthenticationFilter wechatAuthenticationFilter;
 
@@ -51,9 +51,9 @@ public class SecurityConfig extends BaseSecurityConfig {
 		wechatAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		wechatAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
-		http.addFilterAfter(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterBefore(verifyCodeAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
+		http.addFilterAfter(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 	}
 
 	protected UserDetailsService getUserDetailsService() {

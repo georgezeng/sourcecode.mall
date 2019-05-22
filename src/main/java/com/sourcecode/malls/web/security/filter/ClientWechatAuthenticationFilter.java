@@ -20,11 +20,15 @@ import org.springframework.stereotype.Component;
 import com.aliyuncs.utils.StringUtils;
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.constants.SessionAttributes;
+import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.util.AssertUtil;
 
 @Component
 public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
@@ -34,6 +38,9 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
+
+	@Autowired
+	private CodeStoreRepository codeStoreRepository;
 
 	public ClientWechatAuthenticationFilter() {
 		super(new AntPathRequestMatcher("/login", "POST"));
@@ -56,14 +63,13 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
 			throw new AuthenticationServiceException("登录参数有误");
 		}
-		HttpSession session = request.getSession();
-		String token = (String) session.getAttribute(SessionAttributes.LOGIN_TOKEN);
-		if (!password.equals(token)) {
-			throw new AuthenticationServiceException("账号或密码有误");
+		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY, password);
+		if (!store.isPresent()) {
+			throw new AuthenticationServiceException("登录参数有误");
 		}
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, username);
 		if (!userOp.isPresent()) {
-			throw new AuthenticationServiceException("账号或密码有误");
+			throw new AuthenticationServiceException("登录参数有误");
 		}
 		Client user = userOp.get();
 		return new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
