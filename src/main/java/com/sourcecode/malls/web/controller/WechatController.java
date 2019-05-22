@@ -29,7 +29,6 @@ import com.sourcecode.malls.dto.WechatAccessInfo;
 import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
-import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -97,7 +96,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) {
+	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -107,17 +106,12 @@ public class WechatController {
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
 		AssertUtil.assertTrue(store.isPresent(), "登录信息有误");
-		WechatUserInfo userInfo = null;
-		try {
-			String result = httpClient.getForObject(
-					String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
-					String.class);
-			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
-			userInfo = mapper.readValue(result, WechatUserInfo.class);
-		} catch (Exception e) {
-			throw new BusinessException("解析微信信息出错", e);
-		}
+		String result = httpClient.getForObject(
+				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
+				String.class);
+		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
+		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		session.setAttribute(SessionAttributes.WECHAT_USERINFO, userInfo);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
