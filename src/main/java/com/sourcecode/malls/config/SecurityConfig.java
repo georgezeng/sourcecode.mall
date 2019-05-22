@@ -11,6 +11,7 @@ import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.web.security.filter.ClientSessionFilter;
 import com.sourcecode.malls.web.security.filter.ClientUsernamePasswordAuthenticationFilter;
 import com.sourcecode.malls.web.security.filter.ClientVerifyCodeAuthenticationFilter;
+import com.sourcecode.malls.web.security.filter.ClientWechatAuthenticationFilter;
 import com.sourcecode.malls.web.security.rememberme.ClientRememberMeServices;
 
 @Configuration
@@ -20,10 +21,13 @@ public class SecurityConfig extends BaseSecurityConfig {
 	private ClientSessionFilter sessionFilter;
 
 	@Autowired
-	private ClientVerifyCodeAuthenticationFilter registerAuthenticationFilter;
+	private ClientVerifyCodeAuthenticationFilter verifyCodeAuthenticationFilter;
 
 	@Autowired
 	private ClientUsernamePasswordAuthenticationFilter authenticationFilter;
+	
+	@Autowired
+	private ClientWechatAuthenticationFilter wechatAuthenticationFilter;
 
 	@Autowired
 	private ClientService clientService;
@@ -40,12 +44,15 @@ public class SecurityConfig extends BaseSecurityConfig {
 
 	@Override
 	protected void after(HttpSecurity http) throws Exception {
-		registerAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
-		registerAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		verifyCodeAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
+		verifyCodeAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
 		authenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		authenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		wechatAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
+		wechatAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
-		http.addFilterBefore(registerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+		http.addFilterAfter(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+		http.addFilterBefore(verifyCodeAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
 	}
 
