@@ -113,6 +113,7 @@ public class WechatController {
 		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		session.setAttribute(SessionAttributes.WECHAT_USERINFO, userInfo);
+		logger.info("info: " + session.getId());
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
@@ -144,6 +145,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
+		logger.info("register: " + session.getId());
 		WechatUserInfo userInfo = (WechatUserInfo) session.getAttribute(SessionAttributes.WECHAT_USERINFO);
 		AssertUtil.assertNotNull(userInfo, "无法获取微信信息");
 		Client user = new Client();
