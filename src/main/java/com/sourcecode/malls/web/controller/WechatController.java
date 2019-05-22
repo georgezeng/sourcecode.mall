@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ import com.sourcecode.malls.dto.WechatAccessInfo;
 import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
+import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -111,11 +113,13 @@ public class WechatController {
 		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
-		LoginInfo info = null;
+		LoginInfo info = new LoginInfo();
 		if (user.isPresent()) {
-			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
+		} else {
+			info.setUsername(accessInfo.getAccessToken());
+			info.setPassword(accessInfo.getOpenId());
 		}
 		return new ResultBean<>(info);
 	}
@@ -141,15 +145,12 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
-		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		String result = httpClient.getForObject(
-				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), mobileInfo.getCode()),
-				String.class);
-		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
-		logger.info(result);
+		String result = httpClient.getForObject(String.format(userInfoUrl, mobileInfo.getToken(), mobileInfo.getId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
+		if(!StringUtils.isEmpty(userInfo.getErrmsg())) {
+			logger.warn("wechat error: [" + userInfo.getErrorcode() + "] - " + userInfo.getErrmsg());
+			throw new BusinessException("获取微信信息有误");
+		}
 		Client user = new Client();
 		user.setUsername(mobileInfo.getUsername());
 		user.setUnionId(userInfo.getUnionId());
