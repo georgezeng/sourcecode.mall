@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.constants.SessionAttributes;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
@@ -56,6 +57,9 @@ public class WechatController {
 	@Autowired
 	private RestTemplate httpClient;
 
+	@Autowired
+	private ObjectMapper mapper;
+
 	@Value("${wechat.url.login}")
 	private String loginUrl;
 
@@ -92,7 +96,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) {
+	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -102,11 +106,12 @@ public class WechatController {
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
 		AssertUtil.assertTrue(store.isPresent(), "登录信息有误");
-		WechatAccessInfo accessInfo = httpClient.getForObject(
+		String result = httpClient.getForObject(
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
-				WechatAccessInfo.class);
-		WechatUserInfo userInfo = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()),
-				WechatUserInfo.class);
+				String.class);
+		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
+		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		session.setAttribute(SessionAttributes.WECHAT_USERINFO, userInfo);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
