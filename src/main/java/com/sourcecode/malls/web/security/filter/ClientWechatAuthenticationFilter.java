@@ -6,7 +6,6 @@ import java.util.Optional;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -19,7 +18,6 @@ import org.springframework.stereotype.Component;
 
 import com.aliyuncs.utils.StringUtils;
 import com.sourcecode.malls.constants.RequestParams;
-import com.sourcecode.malls.constants.SessionAttributes;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
@@ -28,7 +26,6 @@ import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
-import com.sourcecode.malls.util.AssertUtil;
 
 @Component
 public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
