@@ -2,6 +2,10 @@ package com.sourcecode.malls.web.controller;
 
 import java.util.Optional;
 
+import javax.servlet.http.HttpSession;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,7 +26,8 @@ import com.sourcecode.malls.util.AssertUtil;
 @RestController
 @RequestMapping(path = "/client")
 public class ClientController {
-
+Logger logger = LoggerFactory.getLogger(getClass());
+	
 	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
 	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
 	private static final String FORGET_PASSWORD_CATEGORY = "forget-password-category";
@@ -44,6 +49,13 @@ public class ClientController {
 		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
+
+	@RequestMapping(path = "/test")
+	public ResultBean<Void> sendForgetPasswordCode(HttpSession session) {
+		logger.info(session.getId());
+		return new ResultBean<>();
+	}
+	
 
 	@RequestMapping(path = "/forgetPassword/code/{mobile}")
 	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile) {

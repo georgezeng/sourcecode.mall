@@ -33,7 +33,6 @@ public class SecurityConfig extends BaseSecurityConfig {
 
 	@Override
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
-		http.authorizeRequests().antMatchers("/client/login/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/**").permitAll();
 		http.authorizeRequests().anyRequest().authenticated();
 		http.rememberMe().rememberMeServices(rememberServices);
