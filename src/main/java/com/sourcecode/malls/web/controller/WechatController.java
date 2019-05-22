@@ -100,7 +100,6 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		logger.info("token: " + loginInfo.getUsername());
 		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
 		AssertUtil.assertTrue(store.isPresent(), "登录信息有误");
 		WechatAccessInfo accessInfo = httpClient.getForObject(
