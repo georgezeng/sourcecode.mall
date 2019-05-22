@@ -1,8 +1,5 @@
 package com.sourcecode.malls.config;
 
-import java.util.Arrays;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,7 +7,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.web.security.filter.ClientSessionFilter;
 import com.sourcecode.malls.web.security.filter.ClientUsernamePasswordAuthenticationFilter;
@@ -34,11 +30,6 @@ public class SecurityConfig extends BaseSecurityConfig {
 
 	@Autowired
 	private ClientRememberMeServices rememberServices;
-
-	@Override
-	protected List<String> getAllowHeaders() {
-		return Arrays.asList("Access-Control-Allow-Origin", "Content-Type", RequestParams.MERCHANT_ID);
-	}
 
 	@Override
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
