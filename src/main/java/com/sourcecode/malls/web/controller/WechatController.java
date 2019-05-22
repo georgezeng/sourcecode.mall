@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sourcecode.malls.constants.SessionAttributes;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
@@ -91,13 +89,12 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		logger.info(request.getSession().getId());
 		String url = String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token);
 		return new ResultBean<>(url);
 	}
 
 	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) throws Exception {
+	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo) throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -113,7 +110,6 @@ public class WechatController {
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
-		session.setAttribute(SessionAttributes.WECHAT_USERINFO, userInfo);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
@@ -125,21 +121,19 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/code/{mobile}")
-	public ResultBean<Void> sendWechatRegisterCode(@PathVariable String mobile, HttpSession session) {
-		verifyCodeService.sendRegisterCode(mobile, session, WECHAT_REGISTER_TIME_ATTR, WECHAT_REGISTER_CATEGORY, ClientContext.getMerchantId() + "");
+	public ResultBean<Void> sendWechatRegisterCode(@PathVariable String mobile) {
+		verifyCodeService.sendRegisterCode(mobile, WECHAT_REGISTER_TIME_ATTR, WECHAT_REGISTER_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/register")
-	public ResultBean<Void> wechatRegister(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo mobileInfo) {
-		// AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
-		// AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
-		// Optional<CodeStore> codeStoreOp =
-		// codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
-		// mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-		// AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		// AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()),
-		// "验证码无效");
+	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
+		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
+		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
+				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -147,8 +141,14 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		WechatUserInfo userInfo = (WechatUserInfo) session.getAttribute(SessionAttributes.WECHAT_USERINFO);
-		AssertUtil.assertNotNull(userInfo, "无法获取微信信息");
+		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
+		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
+		String result = httpClient.getForObject(
+				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), mobileInfo.getCode()),
+				String.class);
+		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
+		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		Client user = new Client();
 		user.setUsername(mobileInfo.getUsername());
 		user.setUnionId(userInfo.getUnionId());

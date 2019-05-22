@@ -2,8 +2,6 @@ package com.sourcecode.malls.web.controller;
 
 import java.util.Optional;
 
-import javax.servlet.http.HttpSession;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,17 +40,15 @@ public class ClientController {
 	private PasswordEncoder encoder;
 
 	@RequestMapping(path = "/login/code/{mobile}")
-	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile, HttpSession session) {
-		verifyCodeService.sendLoginCode(mobile, session, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-				ClientContext.getMerchantId() + "");
+	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
+		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/forgetPassword/code/{mobile}")
-	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile, HttpSession session) {
+	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile) {
 		clientService.findByMerchantAndUsername(ClientContext.getMerchantId(), mobile);
-		verifyCodeService.sendForgetPasswordCode(mobile, session, FORGET_PASSWORD_TIME_ATTR, FORGET_PASSWORD_CATEGORY,
-				ClientContext.getMerchantId() + "");
+		verifyCodeService.sendForgetPasswordCode(mobile, FORGET_PASSWORD_TIME_ATTR, FORGET_PASSWORD_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 

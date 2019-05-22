@@ -1,14 +1,8 @@
 package com.sourcecode.malls.dto;
 
-import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class WechatUserInfo implements Serializable{
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+public class WechatUserInfo {
 	@JsonProperty("openid")
 	private String openId;
 	private String nickname;
