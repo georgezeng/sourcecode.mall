@@ -10,7 +10,8 @@ public class IndexController {
 
 	@RequestMapping(path = "/index")
 	public String index(HttpServletRequest request) {
-		return String.format("<script>window.location.href='%s'</script>", "https://www.dobaishop.com/#/Login");
+		String host = request.getHeader("Origin");
+		return String.format("<script>window.location.href='%s'</script>", String.format("%s/#/Login", host));
 	}
 
 }
