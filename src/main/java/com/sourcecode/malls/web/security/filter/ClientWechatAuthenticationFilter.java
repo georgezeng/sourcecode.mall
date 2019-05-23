@@ -46,7 +46,6 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
-		logger.info("C1.............");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
@@ -69,7 +68,6 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 		if (!userOp.isPresent()) {
 			throw new AuthenticationServiceException("登录参数有误");
 		}
-		logger.info("C2.............");
 		Client user = userOp.get();
 		return new UsernamePasswordAuthenticationToken(user, password, user.getAuthorities());
 	}
@@ -77,7 +75,8 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 	@Override
 	protected boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
 		boolean matched = super.requiresAuthentication(request, response);
-		matched = matched && "ThirdParty".equals(request.getParameter(RequestParams.LOGIN_TYPE));
+		matched = matched && "Wechat".equals(request.getParameter(RequestParams.LOGIN_TYPE));
+		logger.info("test matched.................: " + matched + ", " + request.getParameter(RequestParams.LOGIN_TYPE));
 		if (matched) {
 			logger.info("matched.................");
 		}
