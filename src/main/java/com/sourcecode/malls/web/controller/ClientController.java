@@ -2,6 +2,8 @@ package com.sourcecode.malls.web.controller;
 
 import java.util.Optional;
 
+import javax.servlet.http.HttpSession;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,12 @@ public class ClientController {
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
 		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/test")
+	public ResultBean<Void> sendForgetPasswordCode(HttpSession session) {
+		logger.info(session.getId());
 		return new ResultBean<>();
 	}
 
