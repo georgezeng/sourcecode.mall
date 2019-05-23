@@ -2,7 +2,11 @@ package com.sourcecode.malls.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class WechatAccessInfo {
+public class WechatAccessInfo extends WechatBaseInfo {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	@JsonProperty("access_token")
 	private String accessToken;
 	@JsonProperty("expires_in")

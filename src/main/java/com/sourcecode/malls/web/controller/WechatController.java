@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,7 @@ public class WechatController {
 
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
+	private static final String WECHAT_USERINFO_ATTR = "wechat-userinfo";
 
 	@Autowired
 	private VerifyCodeService verifyCodeService;
@@ -96,7 +98,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo) throws Exception {
+	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo loginInfo) throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -110,16 +112,23 @@ public class WechatController {
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
 				String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+			throw new BusinessException("获取微信信息有误");
+		}
 		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
+		if (!StringUtils.isEmpty(userInfo.getErrcode())) {
+			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
+			throw new BusinessException("获取微信信息有误");
+		}
+		session.setAttribute(WECHAT_USERINFO_ATTR, userInfo);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
-		LoginInfo info = new LoginInfo();
+		LoginInfo info = null;
 		if (user.isPresent()) {
+			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
-		} else {
-			info.setUsername(accessInfo.getAccessToken());
-			info.setPassword(accessInfo.getOpenId());
 		}
 		return new ResultBean<>(info);
 	}
@@ -131,7 +140,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/register")
-	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
+	public ResultBean<Void> wechatRegister(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo mobileInfo) throws Exception {
 		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
 		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
@@ -145,12 +154,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		String result = httpClient.getForObject(String.format(userInfoUrl, mobileInfo.getToken(), mobileInfo.getId()), String.class);
-		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
-		if (!StringUtils.isEmpty(userInfo.getErrmsg())) {
-			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
-			throw new BusinessException("获取微信信息有误");
-		}
+		WechatUserInfo userInfo = (WechatUserInfo) session.getAttribute(WECHAT_USERINFO_ATTR);
 		Client user = new Client();
 		user.setUsername(mobileInfo.getUsername());
 		user.setUnionId(userInfo.getUnionId());
