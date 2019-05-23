@@ -76,7 +76,7 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 	protected boolean requiresAuthentication(HttpServletRequest request, HttpServletResponse response) {
 		boolean matched = super.requiresAuthentication(request, response);
 		matched = matched && "Wechat".equals(request.getParameter(RequestParams.LOGIN_TYPE));
-		logger.info("test matched.................: " + matched + ", " + request.getParameter(RequestParams.LOGIN_TYPE));
+		logger.info("test matched.................: " + request.getRequestURL() + ", " + matched + ", " + request.getParameter(RequestParams.LOGIN_TYPE));
 		if (matched) {
 			logger.info("matched.................");
 		}
