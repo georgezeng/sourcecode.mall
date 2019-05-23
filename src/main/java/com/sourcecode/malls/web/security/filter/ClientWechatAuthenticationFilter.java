@@ -15,8 +15,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-import com.aliyuncs.utils.StringUtils;
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
@@ -69,7 +69,7 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 			throw new AuthenticationServiceException("登录参数有误");
 		}
 		Client user = userOp.get();
-		return new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+		return new UsernamePasswordAuthenticationToken(user, password, user.getAuthorities());
 	}
 
 	@Override
