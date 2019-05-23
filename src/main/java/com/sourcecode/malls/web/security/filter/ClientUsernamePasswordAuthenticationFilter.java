@@ -27,6 +27,7 @@ import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.service.impl.ClientService;
 
 @Component
 public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenticationProcessingFilter {
@@ -37,6 +38,9 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 
 	@Autowired
 	private ClientRepository clientRepository;
+
+	@Autowired
+	private ClientService clientService;
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
@@ -65,15 +69,6 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
 			throw new AuthenticationServiceException("账号或密码有误");
 		}
-		if (adminProperties.getUsername().equals(username) && adminProperties.getPassword().equals(password)) {
-			Client admin = new Client();
-			admin.setId(0l);
-			admin.setUsername(username);
-			admin.setEnabled(true);
-			admin.setPassword("FakePwd");
-			return new UsernamePasswordAuthenticationToken(admin, password,
-					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
-		}
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
@@ -81,6 +76,11 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 		if (!apOp.isPresent()) {
 			throw new AuthenticationServiceException("商户不存在");
+		}
+		if (adminProperties.getUsername().equals(username) && encoder.matches(password, adminProperties.getPassword())) {
+			Client admin = clientService.getAdmin(apOp.get().getMerchant());
+			return new UsernamePasswordAuthenticationToken(admin, password,
+					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
 		}
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(apOp.get().getMerchant(), username);
 		if (!userOp.isPresent()) {

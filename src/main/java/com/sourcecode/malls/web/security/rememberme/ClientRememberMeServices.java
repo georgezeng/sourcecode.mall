@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 
 import com.aliyuncs.utils.StringUtils;
 import com.sourcecode.malls.context.ClientContext;
-import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -58,7 +57,6 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	public void onLoginSuccess(HttpServletRequest request, HttpServletResponse response, Authentication successfulAuthentication) {
 		try {
 			setMerchantId(request);
-			ClientContext.set((Client) successfulAuthentication.getPrincipal());
 			super.onLoginSuccess(request, response, successfulAuthentication);
 		} finally {
 			ClientContext.clear();

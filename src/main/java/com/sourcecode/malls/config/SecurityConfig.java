@@ -1,11 +1,15 @@
 package com.sourcecode.malls.config;
 
+import java.util.Arrays;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
+import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.web.security.filter.ClientSessionFilter;
@@ -38,7 +42,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 	@Override
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
 		rememberMeServices.setAlwaysRemember(true);
-		http.rememberMe().rememberMeServices(rememberMeServices);
+		http.rememberMe().key(rememberMeServices.getKey()).rememberMeServices(rememberMeServices);
 		http.authorizeRequests().antMatchers("/client/wechat/**").permitAll();
 		http.authorizeRequests().anyRequest().authenticated();
 	}
@@ -48,12 +52,18 @@ public class SecurityConfig extends BaseSecurityConfig {
 		verifyCodeAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		verifyCodeAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		verifyCodeAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		verifyCodeAuthenticationFilter.setSessionAuthenticationStrategy(
+				new CompositeSessionAuthenticationStrategy(Arrays.asList(new ChangeSessionIdAuthenticationStrategy())));
 		authenticationFilter.setRememberMeServices(rememberMeServices);
 		authenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		authenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		authenticationFilter.setSessionAuthenticationStrategy(
+				new CompositeSessionAuthenticationStrategy(Arrays.asList(new ChangeSessionIdAuthenticationStrategy())));
 		wechatAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		wechatAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		wechatAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		wechatAuthenticationFilter.setSessionAuthenticationStrategy(
+				new CompositeSessionAuthenticationStrategy(Arrays.asList(new ChangeSessionIdAuthenticationStrategy())));
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
 		http.addFilterBefore(verifyCodeAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class);

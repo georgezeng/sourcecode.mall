@@ -48,10 +48,24 @@ public class ClientSessionFilter extends GenericFilterBean {
 			HttpSession session = ((HttpServletRequest) request).getSession();
 			Long userId = (Long) session.getAttribute(sessionProperties.getUserId());
 			if (userId != null) {
-				Optional<Client> user = clientRepository.findById(userId);
-				if (user.isPresent()) {
-					ClientContext.set(user.get());
-					ClientContext.setMerchantId(user.get().getMerchant().getId());
+				if (userId > 0l) {
+					Optional<Client> user = clientRepository.findById(userId);
+					if (user.isPresent()) {
+						ClientContext.set(user.get());
+						ClientContext.setMerchantId(user.get().getMerchant().getId());
+					}
+				} else {
+					HttpServletRequest httpReq = (HttpServletRequest) request;
+					String origin = httpReq.getHeader("Origin");
+					if (origin != null) {
+						String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
+						Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+						if (apOp.isPresent()) {
+							Client user = clientService.getAdmin(apOp.get().getMerchant());
+							ClientContext.set(user);
+							ClientContext.setMerchantId(user.getMerchant().getId());
+						}
+					}
 				}
 			} else if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
 				HttpServletRequest httpReq = (HttpServletRequest) request;

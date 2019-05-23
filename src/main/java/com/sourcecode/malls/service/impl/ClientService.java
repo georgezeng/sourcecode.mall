@@ -34,21 +34,14 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	@Transactional(readOnly = true)
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-//		if (ClientContext.get() != null && adminProperties.getUsername().equals(username)) {
-//			return ClientContext.get();
-//		}
-		if(adminProperties.getUsername().equals(username)) {
-			Client admin = new Client();
-			admin.setUsername(username);
-			admin.setPassword("tt");
-			admin.setEnabled(true);
-			return admin;
-		}
 		Long merchantId = ClientContext.getMerchantId();
 		if (merchantId == null) {
 			throw new UsernameNotFoundException("用户名或密码有误");
 		}
 		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
+		if (adminProperties.getUsername().equals(username)) {
+			return getAdmin(merchant.get());
+		}
 		if (!merchant.isPresent()) {
 			throw new UsernameNotFoundException("用户名或密码有误");
 		}
@@ -59,9 +52,22 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return client.get();
 	}
 
+	public Client getAdmin(Merchant merchant) {
+		Client admin = new Client();
+		admin.setId(0l);
+		admin.setUsername(adminProperties.getUsername());
+		admin.setPassword(adminProperties.getPassword());
+		admin.setEnabled(true);
+		admin.setMerchant(merchant);
+		return admin;
+	}
+
 	public Client findByMerchantAndUsername(Long merchantId, String username) {
 		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
 		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
+		if (username.equals(adminProperties.getUsername())) {
+			return getAdmin(merchant.get());
+		}
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), username);
 		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
 		return client.get();
