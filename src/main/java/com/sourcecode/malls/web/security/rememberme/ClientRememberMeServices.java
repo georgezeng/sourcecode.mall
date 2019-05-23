@@ -49,8 +49,6 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 	@Override
 	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request, HttpServletResponse response) {
-		for(String c : cookieTokens) 
-		logger.info(c);
 		if (cookieTokens.length != 3) {
 			throw new InvalidCookieException("Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
 		}
