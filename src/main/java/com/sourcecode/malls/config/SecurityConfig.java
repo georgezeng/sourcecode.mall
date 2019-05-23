@@ -66,7 +66,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		wechatAuthenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
 		http.addFilterBefore(verifyCodeAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-		http.addFilterAfter(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+		http.addFilterBefore(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class);
 	}
 
