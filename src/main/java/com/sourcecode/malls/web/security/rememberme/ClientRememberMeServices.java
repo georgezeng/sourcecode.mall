@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.codec.Utf8;
 import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
+import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationException;
 import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -35,16 +36,18 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	}
 
 	private void setMerchantId(HttpServletRequest request) {
-		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-		if (StringUtils.isEmpty(domain)) {
-			throw new AuthenticationServiceException("商户不存在");
+		if (request.getHeader("Origin") != null) {
+			String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+			if (StringUtils.isEmpty(domain)) {
+				throw new AuthenticationServiceException("商户不存在");
+			}
+			Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+			if (!apOp.isPresent()) {
+				throw new AuthenticationServiceException("商户不存在");
+			}
+			Merchant merchant = apOp.get().getMerchant();
+			ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
 		}
-		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-		if (!apOp.isPresent()) {
-			throw new AuthenticationServiceException("商户不存在");
-		}
-		Merchant merchant = apOp.get().getMerchant();
-		ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
 	}
 
 	@Override
@@ -52,7 +55,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		if (cookieTokens.length != 3) {
 			throw new InvalidCookieException("Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
 		}
-		
+
 		long tokenExpiryTime;
 
 		try {
@@ -72,6 +75,9 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 		try {
 			setMerchantId(request);
+			if (ClientContext.getMerchantId() == null) {
+				throw new RememberMeAuthenticationException("没有商家信息");
+			}
 			UserDetails userDetails = getUserDetailsService().loadUserByUsername(cookieTokens[0]);
 
 			String password = userDetails.getPassword();

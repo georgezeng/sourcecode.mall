@@ -26,8 +26,8 @@ import com.sourcecode.malls.util.AssertUtil;
 @RestController
 @RequestMapping(path = "/client")
 public class ClientController {
-Logger logger = LoggerFactory.getLogger(getClass());
-	
+	Logger logger = LoggerFactory.getLogger(getClass());
+
 	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
 	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
 	private static final String FORGET_PASSWORD_CATEGORY = "forget-password-category";
@@ -55,7 +55,6 @@ Logger logger = LoggerFactory.getLogger(getClass());
 		logger.info(session.getId());
 		return new ResultBean<>();
 	}
-	
 
 	@RequestMapping(path = "/forgetPassword/code/{mobile}")
 	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile) {

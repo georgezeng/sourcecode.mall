@@ -64,14 +64,17 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
-		String username = request.getParameter(RequestParams.USERNAME);
-		String password = request.getParameter(RequestParams.PASSWORD);
-		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
-			throw new AuthenticationServiceException("账号或密码有误");
+		if (request.getHeader("Origin") == null) {
+			throw new AuthenticationServiceException("登录参数有误");
 		}
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
+		}
+		String username = request.getParameter(RequestParams.USERNAME);
+		String password = request.getParameter(RequestParams.PASSWORD);
+		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(password)) {
+			throw new AuthenticationServiceException("账号或密码有误");
 		}
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 		if (!apOp.isPresent()) {

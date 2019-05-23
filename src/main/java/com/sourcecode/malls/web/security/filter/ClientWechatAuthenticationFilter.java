@@ -46,6 +46,9 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 	@Override
 	public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response)
 			throws AuthenticationException, IOException, ServletException {
+		if (request.getHeader("Origin") == null) {
+			throw new AuthenticationServiceException("登录参数有误");
+		}
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		if (StringUtils.isEmpty(domain)) {
 			throw new AuthenticationServiceException("商户不存在");
