@@ -35,20 +35,14 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		Long merchantId = ClientContext.getMerchantId();
-		if (merchantId == null) {
-			throw new UsernameNotFoundException("用户名或密码有误");
-		}
+		AssertUtil.assertNotNull(merchantId, "商户不存在");
 		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
 		if (adminProperties.getUsername().equals(username)) {
 			return getAdmin(merchant.get());
 		}
-		if (!merchant.isPresent()) {
-			throw new UsernameNotFoundException("用户名或密码有误");
-		}
+		AssertUtil.assertTrue(merchant.isPresent(), "用户名或密码有误");
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), username);
-		if (!client.isPresent()) {
-			throw new UsernameNotFoundException("用户名或密码有误");
-		}
+		AssertUtil.assertTrue(client.isPresent(), "用户名或密码有误");
 		return client.get();
 	}
 
