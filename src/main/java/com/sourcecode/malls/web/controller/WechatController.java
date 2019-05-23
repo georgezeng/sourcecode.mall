@@ -85,7 +85,7 @@ public class WechatController {
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 		AssertUtil.assertTrue(apOp.isPresent(), "商户不存在");
 		Merchant merchant = apOp.get().getMerchant();
-		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
+		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechatGzh(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		String token = UUID.randomUUID().toString().replaceAll("-", "");
 		CodeStore store = new CodeStore();
@@ -104,7 +104,7 @@ public class WechatController {
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 		AssertUtil.assertTrue(apOp.isPresent(), "商户不存在");
 		Merchant merchant = apOp.get().getMerchant();
-		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechat(merchant.getId());
+		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechatGzh(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
 		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
 		AssertUtil.assertTrue(store.isPresent(), "登录信息有误");
