@@ -79,8 +79,7 @@ public class ClientSessionFilter extends GenericFilterBean {
 			}
 			chain.doFilter(request, response);
 		} finally {
-			ClientContext.set(null);
-			ClientContext.setMerchantId(null);
+			ClientContext.clear();
 		}
 	}
 

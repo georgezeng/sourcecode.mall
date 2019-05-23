@@ -22,5 +22,10 @@ public final class ClientContext {
 	public static void setMerchantId(Long merchantId) {
 		merchantIdHolder.set(merchantId);
 	}
+	
+	public static void clear() {
+		set(null);
+		setMerchantId(null);
+	}
 
 }

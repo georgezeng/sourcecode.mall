@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.service.base.JpaService;
@@ -27,21 +28,33 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	@Autowired
 	private MerchantRepository merchantRepository;
 
+	@Autowired
+	private SuperAdminProperties adminProperties;
+
 	@Transactional(readOnly = true)
 	@Override
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+//		if (ClientContext.get() != null && adminProperties.getUsername().equals(username)) {
+//			return ClientContext.get();
+//		}
+		if(adminProperties.getUsername().equals(username)) {
+			Client admin = new Client();
+			admin.setUsername(username);
+			admin.setPassword("tt");
+			admin.setEnabled(true);
+			return admin;
+		}
 		Long merchantId = ClientContext.getMerchantId();
-		UsernameNotFoundException e = new UsernameNotFoundException("用户名或密码有误");
 		if (merchantId == null) {
-			throw e;
+			throw new UsernameNotFoundException("用户名或密码有误");
 		}
 		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
 		if (!merchant.isPresent()) {
-			throw e;
+			throw new UsernameNotFoundException("用户名或密码有误");
 		}
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), username);
 		if (!client.isPresent()) {
-			throw e;
+			throw new UsernameNotFoundException("用户名或密码有误");
 		}
 		return client.get();
 	}

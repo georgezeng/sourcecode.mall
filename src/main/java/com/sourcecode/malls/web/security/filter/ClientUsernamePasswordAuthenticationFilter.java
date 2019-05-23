@@ -69,6 +69,8 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 			Client admin = new Client();
 			admin.setId(0l);
 			admin.setUsername(username);
+			admin.setEnabled(true);
+			admin.setPassword("FakePwd");
 			return new UsernamePasswordAuthenticationToken(admin, password,
 					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
 		}

@@ -33,21 +33,25 @@ public class SecurityConfig extends BaseSecurityConfig {
 	private ClientService clientService;
 
 	@Autowired
-	private ClientRememberMeServices rememberServices;
+	private ClientRememberMeServices rememberMeServices;
 
 	@Override
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
+		rememberMeServices.setAlwaysRemember(true);
+		http.rememberMe().rememberMeServices(rememberMeServices);
 		http.authorizeRequests().antMatchers("/client/wechat/**").permitAll();
 		http.authorizeRequests().anyRequest().authenticated();
-		http.rememberMe().rememberMeServices(rememberServices);
 	}
 
 	@Override
 	protected void after(HttpSecurity http) throws Exception {
+		verifyCodeAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		verifyCodeAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		verifyCodeAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		authenticationFilter.setRememberMeServices(rememberMeServices);
 		authenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		authenticationFilter.setAuthenticationFailureHandler(failureHandler);
+		wechatAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		wechatAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		wechatAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
