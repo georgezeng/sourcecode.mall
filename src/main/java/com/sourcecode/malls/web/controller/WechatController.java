@@ -97,7 +97,6 @@ public class WechatController {
 
 	@RequestMapping(path = "/info")
 	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo) throws Exception {
-		logger.info("info.........");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -122,7 +121,6 @@ public class WechatController {
 			info.setUsername(accessInfo.getAccessToken());
 			info.setPassword(accessInfo.getOpenId());
 		}
-		logger.info("info.........finished: " + info);
 		return new ResultBean<>(info);
 	}
 
