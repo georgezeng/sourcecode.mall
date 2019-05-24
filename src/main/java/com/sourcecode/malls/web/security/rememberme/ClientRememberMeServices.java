@@ -99,7 +99,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 				logger.warn(msg);
 				throw new InvalidCookieException(msg);
 			}
-
+			logger.info("user auto login success........");
 			return userDetails;
 		} finally {
 			ClientContext.clear();
