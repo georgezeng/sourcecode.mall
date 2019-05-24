@@ -92,7 +92,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			// the token is valid,
 			// it will cause SecurityContextHolder population, whilst if invalid, will cause
 			// the cookie to be cancelled.
-			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
+			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), userDetails.getPassword());
 
 			if (!equals(expectedTokenSignature, cookieTokens[2])) {
 				throw new InvalidCookieException(
