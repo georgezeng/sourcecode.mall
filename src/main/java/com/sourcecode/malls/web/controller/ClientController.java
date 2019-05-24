@@ -5,10 +5,14 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.constants.SystemConstant;
@@ -18,6 +22,7 @@ import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -42,6 +47,19 @@ public class ClientController {
 
 	@Autowired
 	private PasswordEncoder encoder;
+
+	@Autowired
+	private FileOnlineSystemService fileService;
+
+	@Value("${user.type.name}")
+	private String userDir;
+
+	@RequestMapping(path = "/img/load")
+	public Resource loadImg(@RequestParam String filePath) {
+		Client client = ClientContext.get();
+		String path = userDir + "/" + client.getId() + "/" + filePath;
+		return new ByteArrayResource(fileService.load(false, path));
+	}
 
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {

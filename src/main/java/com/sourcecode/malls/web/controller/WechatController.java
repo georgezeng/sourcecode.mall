@@ -150,9 +150,10 @@ public class WechatController {
 				String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
-		String avatar = userDir + "/" + ClientContext.get().getId() + "/" + "avatar.png";
+		String fileRelativePath = "avatar.png";
+		String avatar = userDir + "/" + ClientContext.get().getId() + "/" + fileRelativePath;
 		fileService.upload(false, avatar, new ByteArrayInputStream(buf));
-		ClientContext.get().setAvatar(avatar);
+		ClientContext.get().setAvatar(fileRelativePath);
 		clientRepository.save(ClientContext.get());
 		return new ResultBean<>();
 	}
