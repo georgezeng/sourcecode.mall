@@ -107,17 +107,17 @@ public class WechatController {
 		String key = "merchant_" + ClientContext.getMerchantId();
 		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
 		CodeStore store = null;
-//		if (!storeOp.isPresent()) {
+		if (!storeOp.isPresent()) {
 			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
 					String.class);
 			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
 				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 				throw new BusinessException("获取微信信息有误");
 			}
 			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
 			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
 				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 				throw new BusinessException("获取微信信息有误");
 			}
@@ -126,9 +126,9 @@ public class WechatController {
 			store.setKey(key);
 			store.setValue(accessInfo.getTicket());
 			codeStoreRepository.save(store);
-//		} else {
-//			store = storeOp.get();
-//		}
+		} else {
+			store = storeOp.get();
+		}
 		String nonce = UUID.randomUUID().toString();
 		Long timestamp = new Date().getTime();
 		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
@@ -192,13 +192,13 @@ public class WechatController {
 				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
 				String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-		if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+		if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
 			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
 		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
-		if (!StringUtils.isEmpty(userInfo.getErrcode())) {
+		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
 			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
