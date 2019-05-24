@@ -107,26 +107,23 @@ public class WechatController {
 		String key = "merchant_" + ClientContext.getMerchantId();
 		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
 		CodeStore store = null;
-		if (!storeOp.isPresent()) {
+//		if (!storeOp.isPresent()) {
 			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
 					String.class);
 			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+			logger.info(result);
 			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 			store = new CodeStore();
 			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
 			store.setKey(key);
 			store.setValue(accessInfo.getTicket());
 			codeStoreRepository.save(store);
-		} else {
-			store = storeOp.get();
-		}
+//		} else {
+//			store = storeOp.get();
+//		}
 		String nonce = UUID.randomUUID().toString();
 		Long timestamp = new Date().getTime();
-		logger.info("ticket: " + store.getValue());
-		logger.info("nonce: " + nonce);
-		logger.info("timestamp: " + timestamp);
-		logger.info("url: " + url);
 		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
 		String signature = String.format(template, store.getValue(), nonce, timestamp + "", url);
 		signature = DigestUtils.sha1Hex(signature);
