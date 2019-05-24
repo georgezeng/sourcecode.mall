@@ -16,6 +16,15 @@ public class WechatAccessInfo extends WechatBaseInfo {
 	@JsonProperty("openid")
 	private String openId;
 	private String scope;
+	private String ticket;
+
+	public String getTicket() {
+		return ticket;
+	}
+
+	public void setTicket(String ticket) {
+		this.ticket = ticket;
+	}
 
 	public String getAccessToken() {
 		return accessToken;

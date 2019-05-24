@@ -16,6 +16,7 @@ import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
@@ -41,6 +42,12 @@ public class ClientController {
 
 	@Autowired
 	private PasswordEncoder encoder;
+
+	@RequestMapping(path = "/current")
+	public ResultBean<ClientDTO> current() {
+		ClientDTO client = ClientContext.get().asDTO();
+		return new ResultBean<>(client);
+	}
 
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {

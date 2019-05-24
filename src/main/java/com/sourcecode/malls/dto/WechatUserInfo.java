@@ -14,6 +14,15 @@ public class WechatUserInfo extends WechatBaseInfo {
 	private String headImgUrl;
 	@JsonProperty("unionid")
 	private String unionId;
+	private int sex;
+
+	public int getSex() {
+		return sex;
+	}
+
+	public void setSex(int sex) {
+		this.sex = sex;
+	}
 
 	public String getUnionId() {
 		return unionId;

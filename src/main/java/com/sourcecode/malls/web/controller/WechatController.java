@@ -1,12 +1,16 @@
 package com.sourcecode.malls.web.controller;
 
+import java.io.ByteArrayInputStream;
 import java.net.URLEncoder;
+import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +19,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
@@ -27,13 +32,16 @@ import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.LoginInfo;
 import com.sourcecode.malls.dto.WechatAccessInfo;
+import com.sourcecode.malls.dto.WechatJsApiConfig;
 import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
+import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -46,6 +54,7 @@ public class WechatController {
 	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
 	private static final String WECHAT_USERINFO_ATTR = "wechat-userinfo";
+	private static final String WECHAT_JSAPI_TICKET_CATEGORY = "wechat-jsapi-ticket-category";
 
 	@Autowired
 	private VerifyCodeService verifyCodeService;
@@ -62,20 +71,84 @@ public class WechatController {
 	@Autowired
 	private ObjectMapper mapper;
 
-	@Value("${wechat.url.login}")
+	@Autowired
+	private FileOnlineSystemService fileService;
+
+	@Value("${wechat.user.url.login}")
 	private String loginUrl;
 
-	@Value("${wechat.url.access_token}")
+	@Value("${wechat.user.url.access_token}")
 	private String accessTokenUrl;
 
-	@Value("${wechat.url.userinfo}")
+	@Value("${wechat.user.url.userinfo}")
 	private String userInfoUrl;
+
+	@Value("${wechat.api.url.access_token}")
+	private String apiAccessTokenUrl;
+
+	@Value("${wechat.api.url.js}")
+	private String jsApiUrl;
+
+	@Value("${wechat.api.url.file}")
+	private String fileApiUrl;
+
+	@Value("${user.type.name}")
+	private String userDir;
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
 
 	@Autowired
 	private MerchantSettingService settingService;
+
+	@RequestMapping(path = "/jsconfig")
+	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
+		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
+		String key = "merchant_" + ClientContext.getMerchantId();
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
+		CodeStore store = null;
+		if (!storeOp.isPresent()) {
+			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
+					String.class);
+			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			store = new CodeStore();
+			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
+			store.setKey(key);
+			store.setValue(accessInfo.getTicket());
+			codeStoreRepository.save(store);
+		} else {
+			store = storeOp.get();
+		}
+		String nonce = UUID.randomUUID().toString();
+		Long timestamp = new Date().getTime();
+		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
+		String signature = String.format(template, store.getValue(), nonce, timestamp + "", url);
+		signature = DigestUtils.sha1Hex(signature);
+		WechatJsApiConfig ticket = new WechatJsApiConfig();
+		ticket.setAppId(setting.get().getAccount());
+		ticket.setNonce(nonce);
+		ticket.setTimestamp(timestamp);
+		ticket.setSignature(signature);
+		return new ResultBean<>(ticket);
+	}
+
+	@RequestMapping(path = "/fetchFile/{mediaId}")
+	public ResultBean<String> fetchFile(String mediaId) throws Exception {
+		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
+		String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
+				String.class);
+		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
+		String avatar = userDir + "/" + ClientContext.get().getId() + "/" + "avatar.png";
+		fileService.upload(false, avatar, new ByteArrayInputStream(buf));
+		ClientContext.get().setAvatar(avatar);
+		clientRepository.save(ClientContext.get());
+		return new ResultBean<>();
+	}
 
 	@RequestMapping(path = "/loginUrl")
 	public ResultBean<String> wechatLoginUrl(HttpServletRequest request) throws Exception {
@@ -162,6 +235,7 @@ public class WechatController {
 		user.setEnabled(true);
 		user.setMerchant(merchant);
 		user.setNickname(userInfo.getNickname());
+		user.setSex(userInfo.getSex() == 1 ? Sex.Male : Sex.Female);
 		clientRepository.save(user);
 		return new ResultBean<>();
 	}
