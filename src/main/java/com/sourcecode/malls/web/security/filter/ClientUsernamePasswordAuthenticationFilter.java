@@ -92,7 +92,7 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 		if (!encoder.matches(password, userOp.get().getPassword())) {
 			throw new UsernameNotFoundException("账号或密码有误");
 		}
-		return new UsernamePasswordAuthenticationToken(userOp.get(), password, userOp.get().getAuthorities());
+		return new UsernamePasswordAuthenticationToken(userOp.get(), userOp.get().getPassword(), userOp.get().getAuthorities());
 	}
 
 }
