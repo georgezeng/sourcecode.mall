@@ -84,7 +84,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			if (password == null) {
 				password = "";
 			}
-			logger.info("2: " + password);
+
 			// Check signature of token matches remaining details.
 			// Must do this after user lookup, as we need the DAO-derived password.
 			// If efficiency was a major issue, just add in a UserCache implementation,
@@ -95,8 +95,9 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
 
 			if (!equals(expectedTokenSignature, cookieTokens[2])) {
-				throw new InvalidCookieException(
-						"Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'");
+				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
+				logger.warn(msg);
+				throw new InvalidCookieException(msg);
 			}
 
 			return userDetails;
@@ -158,7 +159,6 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		// SEC-949
 		expiryTime += 1000L * (tokenLifetime < 0 ? TWO_WEEKS_S : tokenLifetime);
 
-		logger.info("1: " + password);
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
 
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request, response);
