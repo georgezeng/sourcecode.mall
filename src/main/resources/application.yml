@@ -7,6 +7,8 @@ spring:
 
 user.type.name: client
 
+cookie.token.name: token
+
 wechat:
   user:
     url:

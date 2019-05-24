@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -30,6 +31,9 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
+
+	@Value("${cookie.token.name}")
+	private String tokenCookieName;
 
 	@Autowired
 	public ClientRememberMeServices(ClientService clientService) {
@@ -64,12 +68,12 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		} catch (NumberFormatException nfe) {
 			throw new InvalidCookieException("Cookie token[1] did not contain a valid number (contained '" + cookieTokens[1] + "')");
 		}
-
+logger.info("test.........1");
 		if (isTokenExpired(tokenExpiryTime)) {
 			throw new InvalidCookieException(
 					"Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime) + "'; current time is '" + new Date() + "')");
 		}
-
+		logger.info("test.........2");
 		// Check the user exists.
 		// Defer lookup until after expiry time checked, to possibly avoid expensive
 		// database call.
@@ -80,7 +84,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 				throw new RememberMeAuthenticationException("没有商家信息");
 			}
 			UserDetails userDetails = getUserDetailsService().loadUserByUsername(cookieTokens[0]);
-
+			logger.info("test.........3");
 			String password = userDetails.getPassword();
 			if (password == null) {
 				password = "";
@@ -94,12 +98,13 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			// it will cause SecurityContextHolder population, whilst if invalid, will cause
 			// the cookie to be cancelled.
 			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
-
+			logger.info("test.........4");
 			if (!equals(expectedTokenSignature, cookieTokens[2])) {
 				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
 				logger.warn(msg);
 				throw new InvalidCookieException(msg);
 			}
+			logger.info("test.........5");
 			return userDetails;
 		} finally {
 			ClientContext.clear();
@@ -161,21 +166,20 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
 
-		logger.info("writing cookie.............");
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request, response);
-logger.info("login success.............");
+
 		if (logger.isDebugEnabled()) {
 			logger.debug("Added remember-me cookie for user '" + username + "', expiry: '" + new Date(expiryTime) + "'");
 		}
 
 	}
-	
-	protected void onLoginFail(HttpServletRequest request, HttpServletResponse response) {
-		Cookie cookie = new Cookie("token", null);
+
+	protected void cancelCookie(HttpServletRequest request, HttpServletResponse response) {
+		Cookie cookie = new Cookie(tokenCookieName, null);
 		cookie.setMaxAge(0);
 		cookie.setPath("/");
 		response.addCookie(cookie);
-		logger.warn("Auto login failed.........");
+		super.cancelCookie(request, response);
 	}
 
 }
