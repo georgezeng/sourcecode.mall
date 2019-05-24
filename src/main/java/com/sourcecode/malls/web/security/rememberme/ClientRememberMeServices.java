@@ -161,6 +161,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
 
+		logger.info("writing cookie.............");
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request, response);
 logger.info("login success.............");
 		if (logger.isDebugEnabled()) {
