@@ -46,7 +46,6 @@ public class ClientController {
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
 		ClientDTO client = ClientContext.get().asDTO();
-		logger.info(client.getUsername() + ", test.......");
 		return new ResultBean<>(client);
 	}
 
