@@ -99,7 +99,6 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 				logger.warn(msg);
 				throw new InvalidCookieException(msg);
 			}
-			logger.info("user auto login success........");
 			return userDetails;
 		} finally {
 			ClientContext.clear();
@@ -167,6 +166,10 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			logger.debug("Added remember-me cookie for user '" + username + "', expiry: '" + new Date(expiryTime) + "'");
 		}
 
+	}
+	
+	protected void onLoginFail(HttpServletRequest request, HttpServletResponse response) {
+		logger.warn("Auto login failed.........");
 	}
 
 }
