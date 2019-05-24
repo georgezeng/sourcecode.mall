@@ -68,12 +68,12 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		} catch (NumberFormatException nfe) {
 			throw new InvalidCookieException("Cookie token[1] did not contain a valid number (contained '" + cookieTokens[1] + "')");
 		}
-logger.info("test.........1");
+
 		if (isTokenExpired(tokenExpiryTime)) {
 			throw new InvalidCookieException(
 					"Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime) + "'; current time is '" + new Date() + "')");
 		}
-		logger.info("test.........2");
+
 		// Check the user exists.
 		// Defer lookup until after expiry time checked, to possibly avoid expensive
 		// database call.
@@ -84,7 +84,7 @@ logger.info("test.........1");
 				throw new RememberMeAuthenticationException("没有商家信息");
 			}
 			UserDetails userDetails = getUserDetailsService().loadUserByUsername(cookieTokens[0]);
-			logger.info("test.........3");
+
 			String password = userDetails.getPassword();
 			if (password == null) {
 				password = "";
@@ -98,13 +98,13 @@ logger.info("test.........1");
 			// it will cause SecurityContextHolder population, whilst if invalid, will cause
 			// the cookie to be cancelled.
 			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
-			logger.info("test.........4");
+
 			if (!equals(expectedTokenSignature, cookieTokens[2])) {
 				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
 				logger.warn(msg);
 				throw new InvalidCookieException(msg);
 			}
-			logger.info("test.........5");
+
 			return userDetails;
 		} finally {
 			ClientContext.clear();

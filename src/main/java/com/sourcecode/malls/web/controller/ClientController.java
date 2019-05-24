@@ -55,7 +55,7 @@ public class ClientController {
 	private String userDir;
 
 	@RequestMapping(path = "/img/load")
-	public Resource loadImg(@RequestParam String filePath) {
+	public Resource loadImg(@RequestParam(name="filePath", required=true) String filePath) {
 		Client client = ClientContext.get();
 		String path = userDir + "/" + client.getId() + "/" + filePath;
 		return new ByteArrayResource(fileService.load(false, path));
