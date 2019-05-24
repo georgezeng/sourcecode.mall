@@ -123,6 +123,10 @@ public class WechatController {
 		}
 		String nonce = UUID.randomUUID().toString();
 		Long timestamp = new Date().getTime();
+		logger.info("ticket: " + store.getValue());
+		logger.info("nonce: " + nonce);
+		logger.info("timestamp: " + timestamp);
+		logger.info("url: " + url);
 		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
 		String signature = String.format(template, store.getValue(), nonce, timestamp + "", url);
 		signature = DigestUtils.sha1Hex(signature);
