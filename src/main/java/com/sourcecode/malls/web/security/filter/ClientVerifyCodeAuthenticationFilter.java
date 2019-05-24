@@ -79,7 +79,7 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 		} else {
 			user = userOp.get();
 		}
-		return new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+		return new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities());
 	}
 
 	@Override
