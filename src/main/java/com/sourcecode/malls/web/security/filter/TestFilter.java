@@ -18,8 +18,10 @@ public class TestFilter extends GenericFilterBean {
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
 		HttpServletRequest req = (HttpServletRequest) request;
-		for (Cookie cookie : req.getCookies()) {
-			logger.info(cookie.getName() + ":" + cookie.getValue());
+		if (req.getCookies() != null) {
+			for (Cookie cookie : req.getCookies()) {
+				logger.info(cookie.getName() + ":" + cookie.getValue());
+			}
 		}
 		chain.doFilter(request, response);
 	}
