@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -169,6 +170,10 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	}
 	
 	protected void onLoginFail(HttpServletRequest request, HttpServletResponse response) {
+		Cookie cookie = new Cookie("token", null);
+		cookie.setMaxAge(0);
+		cookie.setPath("/");
+		response.addCookie(cookie);
 		logger.warn("Auto login failed.........");
 	}
 
