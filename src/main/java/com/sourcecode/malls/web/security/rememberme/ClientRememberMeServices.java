@@ -174,12 +174,13 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 	}
 
+	@Override
 	protected void cancelCookie(HttpServletRequest request, HttpServletResponse response) {
-		Cookie cookie = new Cookie(tokenCookieName, null);
-		cookie.setMaxAge(0);
-		cookie.setPath("/");
-		response.addCookie(cookie);
-		super.cancelCookie(request, response);
+//		Cookie cookie = new Cookie(tokenCookieName, null);
+//		cookie.setMaxAge(0);
+//		cookie.setPath("/");
+//		response.addCookie(cookie);
+//		super.cancelCookie(request, response);
 	}
 
 }
