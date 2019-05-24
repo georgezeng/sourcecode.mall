@@ -162,7 +162,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		String signatureValue = makeTokenSignature(expiryTime, username, password);
 
 		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request, response);
-
+logger.info("login success.............");
 		if (logger.isDebugEnabled()) {
 			logger.debug("Added remember-me cookie for user '" + username + "', expiry: '" + new Date(expiryTime) + "'");
 		}
