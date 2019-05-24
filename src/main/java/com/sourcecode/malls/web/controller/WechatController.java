@@ -111,9 +111,16 @@ public class WechatController {
 			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
 					String.class);
 			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
 			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
-			logger.info(result);
 			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
 			store = new CodeStore();
 			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
 			store.setKey(key);
