@@ -55,7 +55,7 @@ public class ClientController {
 	@Value("${user.type.name}")
 	private String userDir;
 
-	@RequestMapping(path = "/img/load")
+	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
 		String path = userDir + "/" + client.getId() + "/" + filePath;
@@ -68,7 +68,7 @@ public class ClientController {
 		return new ResultBean<>(client);
 	}
 
-	@RequestMapping(path = "/login/code/{mobile}", produces = { MediaType.IMAGE_PNG_VALUE })
+	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
 		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
