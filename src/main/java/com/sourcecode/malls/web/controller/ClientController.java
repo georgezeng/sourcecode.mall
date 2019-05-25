@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -55,7 +56,7 @@ public class ClientController {
 	private String userDir;
 
 	@RequestMapping(path = "/img/load")
-	public Resource loadImg(@RequestParam(name="filePath", required=true) String filePath) {
+	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
 		String path = userDir + "/" + client.getId() + "/" + filePath;
 		return new ByteArrayResource(fileService.load(false, path));
@@ -67,7 +68,7 @@ public class ClientController {
 		return new ResultBean<>(client);
 	}
 
-	@RequestMapping(path = "/login/code/{mobile}")
+	@RequestMapping(path = "/login/code/{mobile}", produces = { MediaType.IMAGE_PNG_VALUE })
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
 		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
