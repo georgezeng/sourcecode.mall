@@ -201,7 +201,8 @@ public class WechatController {
 			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
-		result = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), String.class);
+		byte[] buf = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
+		result = new String(buf, "UTF-8");
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
 			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
