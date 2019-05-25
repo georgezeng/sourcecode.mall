@@ -149,7 +149,17 @@ public class WechatController {
 		String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
 				String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+			throw new BusinessException("获取微信信息有误");
+		}
 		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
+		result = new String(buf);
+		accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+		if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+			throw new BusinessException("获取微信信息有误");
+		}
 		String fileRelativePath = filePath;
 		filePath = userDir + "/" + ClientContext.get().getId() + "/" + filePath;
 		fileService.upload(false, filePath, new ByteArrayInputStream(buf));
