@@ -55,7 +55,7 @@ public class ClientController {
 	@Value("${user.type.name}")
 	private String userDir;
 
-	@RequestMapping(path = "/img/load.png", produces = { MediaType.IMAGE_PNG_VALUE })
+	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
 		String path = userDir + "/" + client.getId() + "/" + filePath;
