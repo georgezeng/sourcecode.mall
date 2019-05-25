@@ -202,7 +202,7 @@ public class WechatController {
 			throw new BusinessException("获取微信信息有误");
 		}
 		byte[] buf = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
-		result = new String(buf, "ISO-8859-1");
+		result = new String(buf, "UTF-8");
 		logger.info(result);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
