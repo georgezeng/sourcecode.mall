@@ -51,7 +51,6 @@ public class SecurityConfig extends BaseSecurityConfig {
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
 		rememberMeServices.setAlwaysRemember(true);
 		http.rememberMe().key(rememberMeServices.getKey()).rememberMeServices(rememberMeServices);
-		http.sessionManagement().sessionFixation();
 		http.authorizeRequests().antMatchers("/client/wechat/loginUrl").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/info").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/register").permitAll();
