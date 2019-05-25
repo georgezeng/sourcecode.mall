@@ -33,8 +33,6 @@ import com.sourcecode.malls.util.AssertUtil;
 public class ClientController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
-	private static final String LOGIN_CODE_TIME_ATTR = "login-register-code-time";
-	private static final String FORGET_PASSWORD_TIME_ATTR = "forget-password-code-time";
 	private static final String FORGET_PASSWORD_CATEGORY = "forget-password-category";
 
 	@Autowired
@@ -70,14 +68,14 @@ public class ClientController {
 
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
-		verifyCodeService.sendLoginCode(mobile, LOGIN_CODE_TIME_ATTR, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
+		verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/forgetPassword/code/{mobile}")
 	public ResultBean<Void> sendForgetPasswordCode(@PathVariable String mobile) {
 		clientService.findByMerchantAndUsername(ClientContext.getMerchantId(), mobile);
-		verifyCodeService.sendForgetPasswordCode(mobile, FORGET_PASSWORD_TIME_ATTR, FORGET_PASSWORD_CATEGORY, ClientContext.getMerchantId() + "");
+		verifyCodeService.sendForgetPasswordCode(mobile, FORGET_PASSWORD_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 

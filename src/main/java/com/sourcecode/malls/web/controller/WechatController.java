@@ -50,7 +50,6 @@ import com.sourcecode.malls.util.AssertUtil;
 public class WechatController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
-	private static final String WECHAT_REGISTER_TIME_ATTR = "wechat-register-code-time";
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
 	private static final String WECHAT_USERINFO_ATTR = "wechat-userinfo";
 	private static final String WECHAT_JSAPI_TICKET_CATEGORY = "wechat-jsapi-ticket-category";
@@ -221,18 +220,18 @@ public class WechatController {
 
 	@RequestMapping(path = "/code/{mobile}")
 	public ResultBean<Void> sendWechatRegisterCode(@PathVariable String mobile) {
-		verifyCodeService.sendRegisterCode(mobile, WECHAT_REGISTER_TIME_ATTR, WECHAT_REGISTER_CATEGORY, ClientContext.getMerchantId() + "");
+		verifyCodeService.sendRegisterCode(mobile, WECHAT_REGISTER_CATEGORY, ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/register")
 	public ResultBean<Void> wechatRegister(HttpServletRequest request, HttpSession session, @RequestBody LoginInfo mobileInfo) throws Exception {
-		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
-		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
-				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
+//		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
+//		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
+//		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
+//				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
+//		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
+//		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -241,6 +240,7 @@ public class WechatController {
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
 		WechatUserInfo userInfo = (WechatUserInfo) session.getAttribute(WECHAT_USERINFO_ATTR);
+		logger.info(userInfo + "");
 		Client user = new Client();
 		user.setUsername(mobileInfo.getUsername());
 		user.setUnionId(userInfo.getUnionId());
