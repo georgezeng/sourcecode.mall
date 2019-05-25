@@ -203,7 +203,6 @@ public class WechatController {
 		}
 		byte[] buf = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
 		result = new String(buf, "UTF-8");
-		logger.info(result);
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
 			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
