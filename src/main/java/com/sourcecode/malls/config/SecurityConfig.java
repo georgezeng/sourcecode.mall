@@ -50,6 +50,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/wechat/loginUrl").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/info").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/register").permitAll();
+		http.authorizeRequests().antMatchers("/client/wechat/code/**").permitAll();
 		http.authorizeRequests().antMatchers("/index").permitAll();
 		http.authorizeRequests().anyRequest().authenticated();
 	}
