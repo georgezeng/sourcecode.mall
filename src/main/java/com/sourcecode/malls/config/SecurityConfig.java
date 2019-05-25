@@ -47,7 +47,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 	protected void processAuthorizations(HttpSecurity http) throws Exception {
 		rememberMeServices.setAlwaysRemember(true);
 		http.rememberMe().key(rememberMeServices.getKey()).rememberMeServices(rememberMeServices);
-		http.sessionManagement().sessionFixation();
+//		http.sessionManagement().sessionFixation();
 		http.authorizeRequests().antMatchers("/client/wechat/loginUrl").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/info").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/register").permitAll();
@@ -60,15 +60,15 @@ public class SecurityConfig extends BaseSecurityConfig {
 		verifyCodeAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		verifyCodeAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		verifyCodeAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
-		verifyCodeAuthenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
+//		verifyCodeAuthenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
 		authenticationFilter.setRememberMeServices(rememberMeServices);
 		authenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		authenticationFilter.setAuthenticationFailureHandler(failureHandler);
-		authenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
+//		authenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
 		wechatAuthenticationFilter.setRememberMeServices(rememberMeServices);
 		wechatAuthenticationFilter.setAuthenticationSuccessHandler(successHandler);
 		wechatAuthenticationFilter.setAuthenticationFailureHandler(failureHandler);
-		wechatAuthenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
+//		wechatAuthenticationFilter.setSessionAuthenticationStrategy(sessionStrategy);
 		http.addFilterBefore(sessionFilter, FilterSecurityInterceptor.class);
 		http.addFilterBefore(verifyCodeAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 		http.addFilterBefore(wechatAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
