@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.codec.Utf8;
@@ -44,11 +43,11 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		if (request.getHeader("Origin") != null) {
 			String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 			if (StringUtils.isEmpty(domain)) {
-				throw new AuthenticationServiceException("商户不存在");
+				throw new RememberMeAuthenticationException("商户不存在");
 			}
 			Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 			if (!apOp.isPresent()) {
-				throw new AuthenticationServiceException("商户不存在");
+				throw new RememberMeAuthenticationException("商户不存在");
 			}
 			Merchant merchant = apOp.get().getMerchant();
 			ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
