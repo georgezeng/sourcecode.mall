@@ -59,7 +59,6 @@ public class ClientController {
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
 		String path = userDir + "/" + client.getId() + "/" + filePath;
-		logger.info(path  + "............................");
 		return new ByteArrayResource(fileService.load(false, path));
 	}
 
