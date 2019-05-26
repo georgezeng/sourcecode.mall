@@ -40,9 +40,11 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		if (adminProperties.getUsername().equals(username)) {
 			return getAdmin(merchant.get());
 		}
-		AssertUtil.assertTrue(merchant.isPresent(), "用户名或密码有误");
+		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), username);
-		AssertUtil.assertTrue(client.isPresent(), "用户名或密码有误");
+		if (!client.isPresent()) {
+			throw new UsernameNotFoundException("用户名或密码有误");
+		}
 		return client.get();
 	}
 
