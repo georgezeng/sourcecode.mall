@@ -60,6 +60,16 @@ public class ClientController {
 		return new ByteArrayResource(fileService.load(false, path));
 	}
 
+	@RequestMapping(path = "/save")
+	public ResultBean<Void> save(@RequestBody ClientDTO dto) {
+		Client client = ClientContext.get();
+		client.setBirthday(dto.getBirthday());
+		client.setSex(dto.getSex());
+		client.setNickname(dto.getNickname());
+		clientService.save(client);
+		return new ResultBean<>();
+	}
+
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
 		ClientDTO client = ClientContext.get().asDTO();

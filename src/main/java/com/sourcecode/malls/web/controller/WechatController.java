@@ -50,7 +50,6 @@ public class WechatController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
-	private static final String WECHAT_USERINFO_ATTR = "wechat-userinfo";
 	private static final String WECHAT_JSAPI_TICKET_CATEGORY = "wechat-jsapi-ticket-category";
 	private static final String WECHAT_USERINFO_CATEGORY = "wechat-userinfo-category";
 
@@ -230,12 +229,12 @@ public class WechatController {
 
 	@RequestMapping(path = "/register")
 	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
-//		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
-//		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
-//		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
-//				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-//		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-//		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
+		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
+		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
+				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -243,7 +242,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToken());
+		codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToken());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), "无法获取微信信息");
 		WechatUserInfo userInfo = mapper.readValue(codeStoreOp.get().getValue(), WechatUserInfo.class);
 		Client user = new Client();
@@ -253,7 +252,16 @@ public class WechatController {
 		user.setEnabled(true);
 		user.setMerchant(merchant);
 		user.setNickname(userInfo.getNickname());
-		user.setSex(userInfo.getSex() == 1 ? Sex.Male : Sex.Female);
+		switch (userInfo.getSex()) {
+		case 1:
+			user.setSex(Sex.Male);
+			break;
+		case 2:
+			user.setSex(Sex.Female);
+			break;
+		default:
+			user.setSex(Sex.Secret);
+		}
 		clientRepository.save(user);
 		return new ResultBean<>();
 	}
