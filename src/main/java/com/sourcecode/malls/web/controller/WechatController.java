@@ -230,12 +230,12 @@ public class WechatController {
 
 	@RequestMapping(path = "/register")
 	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
-		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
-		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
-				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
+//		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
+//		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
+//		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
+//				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
+//		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
+//		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -243,7 +243,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToekn());
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToekn());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), "无法获取微信信息");
 		WechatUserInfo userInfo = mapper.readValue(codeStoreOp.get().getValue(), WechatUserInfo.class);
 		Client user = new Client();
