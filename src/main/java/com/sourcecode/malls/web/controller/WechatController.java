@@ -243,7 +243,7 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
 		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToekn());
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToken());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), "无法获取微信信息");
 		WechatUserInfo userInfo = mapper.readValue(codeStoreOp.get().getValue(), WechatUserInfo.class);
 		Client user = new Client();

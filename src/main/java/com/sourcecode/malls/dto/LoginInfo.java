@@ -3,14 +3,14 @@ package com.sourcecode.malls.dto;
 public class LoginInfo {
 	private String username;
 	private String password;
-	private String toekn;
+	private String token;
 
-	public String getToekn() {
-		return toekn;
+	public String getToken() {
+		return token;
 	}
 
-	public void setToekn(String toekn) {
-		this.toekn = toekn;
+	public void setToken(String token) {
+		this.token = token;
 	}
 
 	public String getUsername() {
