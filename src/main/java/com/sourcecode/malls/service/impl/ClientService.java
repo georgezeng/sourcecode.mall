@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
@@ -53,6 +54,8 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		admin.setId(0l);
 		admin.setUsername(adminProperties.getUsername());
 		admin.setPassword(adminProperties.getPassword());
+		admin.setNickname("管理员");
+		admin.setSex(Sex.Secret);
 		admin.setEnabled(true);
 		admin.setMerchant(merchant);
 		return admin;
