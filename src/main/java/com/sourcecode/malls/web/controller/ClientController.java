@@ -27,6 +27,7 @@ import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
+import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
@@ -95,10 +96,13 @@ public class ClientController {
 	public ResultBean<Void> saveIdentity(@RequestBody ClientIdentityDTO identity) {
 		Client client = ClientContext.get();
 		ClientIdentity data = identityRepository.findByClient(client).orElseGet(ClientIdentity::new);
-		BeanUtils.copyProperties(identity, data, "id", "merchantId");
+		AssertUtil.assertTrue(!VerificationStatus.Passed.equals(data.getStatus()), "已经审核通过，不需要再次提交");
+		BeanUtils.copyProperties(identity, data, "id", "merchantId", "status");
 		if (data.getId() == null) {
 			data.setClient(client);
 		}
+		data.setStatus(VerificationStatus.Checking);
+		data.setReason(null);
 		identityRepository.save(data);
 		return new ResultBean<>();
 	}
