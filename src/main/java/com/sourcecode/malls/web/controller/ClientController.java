@@ -97,7 +97,7 @@ public class ClientController {
 		Client client = ClientContext.get();
 		ClientIdentity data = identityRepository.findByClient(client).orElseGet(ClientIdentity::new);
 		AssertUtil.assertTrue(!VerificationStatus.Passed.equals(data.getStatus()), "已经审核通过，不需要再次提交");
-		BeanUtils.copyProperties(identity, data, "id", "merchantId", "status");
+		BeanUtils.copyProperties(identity, data, "id", "merchantId", "status", "reason");
 		if (data.getId() == null) {
 			data.setClient(client);
 		}
