@@ -17,6 +17,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
@@ -66,8 +67,8 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 		}
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
 				username + "_" + merchant.getId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(verifyCode), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(verifyCode), ExceptionMessageConstant.VERIFY_CODE_INVALID);
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, username);
 		Client user = null;
 		if (!userOp.isPresent()) {

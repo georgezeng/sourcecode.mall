@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
@@ -157,7 +158,7 @@ public class WechatController {
 		fileService.upload(false, filePath, new ByteArrayInputStream(buf));
 		ClientContext.get().setAvatar(fileRelativePath);
 		clientRepository.save(ClientContext.get());
-		return new ResultBean<>();
+		return new ResultBean<>(filePath);
 	}
 
 	@RequestMapping(path = "/loginUrl")
@@ -233,8 +234,8 @@ public class WechatController {
 		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
 				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), ExceptionMessageConstant.VERIFY_CODE_INVALID);
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);

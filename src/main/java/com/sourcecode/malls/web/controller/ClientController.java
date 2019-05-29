@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -16,17 +17,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.ClientIdentity;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
+import com.sourcecode.malls.dto.client.ClientIdentityDTO;
+import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
+import com.sourcecode.malls.util.RegexpUtil;
 
 @RestController
 @RequestMapping(path = "/client")
@@ -43,6 +50,9 @@ public class ClientController {
 
 	@Autowired
 	private CodeStoreRepository codeStoreRepository;
+
+	@Autowired
+	private ClientIdentityRepository identityRepository;
 
 	@Autowired
 	private PasswordEncoder encoder;
@@ -70,10 +80,65 @@ public class ClientController {
 		return new ResultBean<>();
 	}
 
+	@RequestMapping(path = "/identity/load")
+	public ResultBean<ClientIdentityDTO> loadImg() {
+		Client client = ClientContext.get();
+		ClientIdentity data = identityRepository.findByClient(client).orElse(null);
+		ClientIdentityDTO dto = null;
+		if (data != null) {
+			dto = data.asDTO();
+		}
+		return new ResultBean<>(dto);
+	}
+
+	@RequestMapping(path = "/identity/save")
+	public ResultBean<Void> saveIdentity(@RequestBody ClientIdentityDTO identity) {
+		Client client = ClientContext.get();
+		ClientIdentity data = identityRepository.findByClient(client).orElseGet(ClientIdentity::new);
+		BeanUtils.copyProperties(identity, data, "id", "merchantId");
+		if (data.getId() == null) {
+			data.setClient(client);
+		}
+		identityRepository.save(data);
+		return new ResultBean<>();
+	}
+
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
 		ClientDTO client = ClientContext.get().asDTO();
 		return new ResultBean<>(client);
+	}
+
+	@RequestMapping(path = "/resetPassword/code")
+	public ResultBean<Void> sendResetPasswordCode() {
+		sendForgetPasswordCode(ClientContext.get().getUsername());
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/resetPassword")
+	public ResultBean<Void> resetPassword(@RequestBody PasswordDTO dto) {
+		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CATEGORY,
+				ClientContext.get().getUsername() + "_" + ClientContext.getMerchantId());
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(dto.getOldPassword()), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		Client user = ClientContext.get();
+		user.setPassword(encoder.encode(dto.getPassword()));
+		clientService.save(user);
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/updatePassword")
+	public ResultBean<Void> updatePassword(@RequestBody PasswordDTO dto) {
+		Client user = ClientContext.get();
+		AssertUtil.assertNotEmpty(user.getPassword(), "还没有设置过密码，请使用重置密码功能");
+		AssertUtil.assertTrue(encoder.matches(dto.getOldPassword(), user.getPassword()), ExceptionMessageConstant.OLD_PASSWORD_IS_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		user.setPassword(encoder.encode(dto.getPassword()));
+		clientService.save(user);
+		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/login/code/{mobile}")
@@ -93,8 +158,8 @@ public class ClientController {
 	public ResultBean<Void> checkCodeForForgetPassword(@PathVariable String mobile, @PathVariable String code) {
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CATEGORY,
 				mobile + "_" + ClientContext.getMerchantId());
-		AssertUtil.assertTrue(codeStoreOp.isPresent(), "验证码无效");
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(code), "验证码无效");
+		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(code), ExceptionMessageConstant.VERIFY_CODE_INVALID);
 		return new ResultBean<>();
 	}
 
