@@ -153,11 +153,8 @@ public class WechatController {
 			throw new BusinessException("获取微信信息有误");
 		}
 		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
-		String fileRelativePath = filePath;
 		filePath = userDir + "/" + ClientContext.get().getId() + "/" + filePath;
 		fileService.upload(false, filePath, new ByteArrayInputStream(buf));
-		ClientContext.get().setAvatar(fileRelativePath);
-		clientRepository.save(ClientContext.get());
 		return new ResultBean<>();
 	}
 
