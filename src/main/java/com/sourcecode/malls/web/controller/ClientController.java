@@ -77,6 +77,7 @@ public class ClientController {
 		client.setBirthday(dto.getBirthday());
 		client.setSex(dto.getSex());
 		client.setNickname(dto.getNickname());
+		client.setAvatar(dto.getAvatar());
 		clientService.save(client);
 		return new ResultBean<>();
 	}
