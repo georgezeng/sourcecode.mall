@@ -142,7 +142,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/fetchFile/{mediaId}")
-	public ResultBean<Void> fetchFile(@PathVariable String mediaId, @RequestParam(name = "filePath") String filePath) throws Exception {
+	public ResultBean<String> fetchFile(@PathVariable String mediaId, @RequestParam(name = "filePath") String filePath) throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
 		String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
@@ -155,7 +155,7 @@ public class WechatController {
 		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
 		filePath = userDir + "/" + ClientContext.get().getId() + "/" + filePath;
 		fileService.upload(false, filePath, new ByteArrayInputStream(buf));
-		return new ResultBean<>();
+		return new ResultBean<>(filePath);
 	}
 
 	@RequestMapping(path = "/loginUrl")

@@ -67,8 +67,9 @@ public class ClientController {
 	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
-		String path = userDir + "/" + client.getId() + "/" + filePath;
-		return new ByteArrayResource(fileService.load(false, path));
+		String rootPath = userDir + "/" + client.getId() + "/";
+		AssertUtil.assertTrue(filePath.startsWith(rootPath), ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
+		return new ByteArrayResource(fileService.load(false, filePath));
 	}
 
 	@RequestMapping(path = "/save")
