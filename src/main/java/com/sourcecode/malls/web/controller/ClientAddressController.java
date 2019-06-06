@@ -34,12 +34,19 @@ public class ClientAddressController {
 
 	@RequestMapping(path = "/save")
 	public ResultBean<Void> save(@RequestBody ClientAddressDTO dto) {
-		ClientAddress data = new ClientAddress();
-		BeanUtils.copyProperties(dto, data, "id");
-		if (data.getId() == null) {
+		ClientAddress data = null;
+		if (dto.getId() != null) {
+			Optional<ClientAddress> dataOp = repository.findById(dto.getId());
+			AssertUtil.assertTrue(
+					dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
+					ExceptionMessageConstant.NO_SUCH_RECORD);
+			data = dataOp.get();
+		} else {
+			data = new ClientAddress();
 			Client client = ClientContext.get();
 			data.setClient(client);
 		}
+		BeanUtils.copyProperties(dto, data, "id");
 		repository.save(data);
 		return new ResultBean<>();
 	}
