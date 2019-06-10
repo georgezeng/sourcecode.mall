@@ -23,15 +23,11 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.properties.SessionAttributesProperties;
-import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.impl.ClientService;
 
 @Component
 public class ClientSessionFilter extends GenericFilterBean {
-
-	@Autowired
-	private ClientRepository clientRepository;
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
@@ -43,13 +39,14 @@ public class ClientSessionFilter extends GenericFilterBean {
 	private SessionAttributesProperties sessionProperties;
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
+			throws IOException, ServletException {
 		try {
 			HttpSession session = ((HttpServletRequest) request).getSession();
 			Long userId = (Long) session.getAttribute(sessionProperties.getUserId());
 			if (userId != null) {
 				if (userId > 0l) {
-					Optional<Client> user = clientRepository.findById(userId);
+					Optional<Client> user = clientService.findById(userId);
 					if (user.isPresent()) {
 						ClientContext.set(user.get());
 						ClientContext.setMerchantId(user.get().getMerchant().getId());

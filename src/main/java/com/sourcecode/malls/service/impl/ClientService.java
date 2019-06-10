@@ -69,7 +69,15 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		}
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), username);
 		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
+		client.get().getMerchant();
 		return client.get();
+	}
+
+	public Optional<Client> findById(Long id) {
+		Optional<Client> client = clientRepository.findById(id);
+		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
+		client.get().getMerchant();
+		return client;
 	}
 
 	@Override
