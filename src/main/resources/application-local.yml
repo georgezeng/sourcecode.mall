@@ -1,1 +1,4 @@
 server.port: 9002
+#spring:
+#  jpa:
+#    show-sql: true

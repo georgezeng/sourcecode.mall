@@ -13,9 +13,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.goods.GoodsCategory;
+import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsCategoryRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
@@ -24,11 +26,15 @@ public class GoodsCategoryController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Autowired
+	private MerchantRepository merchantRepository;
+
+	@Autowired
 	private GoodsCategoryRepository repository;
 
 	@RequestMapping(path = "/list/level1")
 	public ResultBean<GoodsAttributeDTO> listLevel1() {
-		List<GoodsCategory> list = repository.findByMerchantAndParentIsNull(ClientContext.get().getMerchant());
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		List<GoodsCategory> list = repository.findByMerchantAndParentIsNull(merchant.get());
 		return new ResultBean<>(list.stream().map(it -> it.asDTO()).collect(Collectors.toList()));
 	}
 
@@ -36,7 +42,8 @@ public class GoodsCategoryController {
 	public ResultBean<GoodsAttributeDTO> listLevel2(@PathVariable Long id) {
 		Optional<GoodsCategory> parent = repository.findById(id);
 		AssertUtil.assertTrue(parent.isPresent(), "找不到商品分类");
-		List<GoodsCategory> list = repository.findByMerchantAndParent(ClientContext.get().getMerchant(), parent.get());
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		List<GoodsCategory> list = repository.findByMerchantAndParent(merchant.get(), parent.get());
 		return new ResultBean<>(list.stream().map(it -> it.asDTO(false, true)).collect(Collectors.toList()));
 	}
 
