@@ -66,9 +66,10 @@ public class ClientController {
 
 	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
-		Client client = ClientContext.get();
-		String rootPath = userDir + "/" + client.getId() + "/";
-		AssertUtil.assertTrue(filePath.startsWith(rootPath), ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
+//		Client client = ClientContext.get();
+		String rootPath = userDir + "/";// + client.getId() + "/";
+		AssertUtil.assertTrue(filePath.startsWith(rootPath) && filePath.endsWith("avatar.png"),
+				ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
 		return new ByteArrayResource(fileService.load(false, filePath));
 	}
 
@@ -126,9 +127,12 @@ public class ClientController {
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CATEGORY,
 				ClientContext.get().getUsername() + "_" + ClientContext.getMerchantId());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(dto.getOldPassword()), ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
-		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(dto.getOldPassword()),
+				ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()),
+				ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()),
+				ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
 		Client user = ClientContext.get();
 		user.setPassword(encoder.encode(dto.getPassword()));
 		clientService.save(user);
@@ -139,9 +143,12 @@ public class ClientController {
 	public ResultBean<Void> updatePassword(@RequestBody PasswordDTO dto) {
 		Client user = ClientContext.get();
 		AssertUtil.assertNotEmpty(user.getPassword(), "还没有设置过密码，请使用重置密码功能");
-		AssertUtil.assertTrue(encoder.matches(dto.getOldPassword(), user.getPassword()), ExceptionMessageConstant.OLD_PASSWORD_IS_INVALID);
-		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
-		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		AssertUtil.assertTrue(encoder.matches(dto.getOldPassword(), user.getPassword()),
+				ExceptionMessageConstant.OLD_PASSWORD_IS_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()),
+				ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()),
+				ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
 		user.setPassword(encoder.encode(dto.getPassword()));
 		clientService.save(user);
 		return new ResultBean<>();
@@ -149,7 +156,8 @@ public class ClientController {
 
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
-		verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
+		verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
+				ClientContext.getMerchantId() + "");
 		return new ResultBean<>();
 	}
 

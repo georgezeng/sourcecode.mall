@@ -10,24 +10,21 @@ import javax.persistence.criteria.Root;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.dto.query.PageInfo;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
+import com.sourcecode.malls.service.base.JpaService;
 
 @Service
 @Transactional
-public class GoodsItemService {
+public class GoodsItemService extends BaseGoodsItemService implements JpaService<GoodsItem, Long> {
 	Logger logger = LoggerFactory.getLogger(getClass());
-
-	@Autowired
-	private GoodsItemRepository itemRepository;
 
 	@Transactional(readOnly = true)
 	public Page<GoodsItem> findByCategory(Long merchantId, Long categoryId, String type, PageInfo pageInfo) {
@@ -51,12 +48,22 @@ public class GoodsItemService {
 		switch (type) {
 		case "putTime":
 			return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "putTime"));
-		case "realPrice":
-			return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "realPrice", "putTime"));
+		case "price": {
+			if (Direction.ASC.equals(pageInfo.getOrder())) {
+				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
+			} else {
+				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
+			}
+		}
 		default:
 			return itemRepository.findAll(spec,
-					pageInfo.pageable(Direction.DESC, "rank.orderNums", "rank.goodPoints", "putTime"));
+					pageInfo.pageable(Direction.DESC, "rank.orderNums", "rank.goodEvaluations", "putTime"));
 		}
 
+	}
+
+	@Override
+	public JpaRepository<GoodsItem, Long> getRepository() {
+		return itemRepository;
 	}
 }
