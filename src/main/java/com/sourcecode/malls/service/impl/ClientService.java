@@ -58,6 +58,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		admin.setSex(Sex.Secret);
 		admin.setEnabled(true);
 		admin.setMerchant(merchant);
+		admin.setAuth(adminProperties.getAuthority());
 		return admin;
 	}
 
