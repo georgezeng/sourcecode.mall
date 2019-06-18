@@ -80,10 +80,10 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 		if (!apOp.isPresent()) {
 			throw new AuthenticationServiceException("商户不存在");
 		}
-		if (adminProperties.getUsername().equals(username) && encoder.matches(password, adminProperties.getPassword())) {
+		if (adminProperties.getUsername().equals(username)
+				&& encoder.matches(password, adminProperties.getPassword())) {
 			Client admin = clientService.getAdmin(apOp.get().getMerchant());
-			return new UsernamePasswordAuthenticationToken(admin, password,
-					Arrays.asList(new SimpleGrantedAuthority(adminProperties.getAuthority())));
+			return new UsernamePasswordAuthenticationToken(admin, password, admin.getAuthorities());
 		}
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(apOp.get().getMerchant(), username);
 		if (!userOp.isPresent()) {

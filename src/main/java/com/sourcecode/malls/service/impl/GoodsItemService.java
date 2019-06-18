@@ -40,7 +40,9 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("merchant"), merchantId));
-				predicate.add(criteriaBuilder.equal(root.get("category"), categoryId));
+				if (categoryId > 0) {
+					predicate.add(criteriaBuilder.equal(root.get("category"), categoryId));
+				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
