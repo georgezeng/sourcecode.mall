@@ -105,7 +105,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return client;
 	}
 
-	public int saveCart(Client client, ClientCartItemDTO dto) {
+	public void saveCart(Client client, ClientCartItemDTO dto) {
 		Optional<GoodsItem> item = itemService.findById(dto.getItemId());
 		AssertUtil.assertTrue(item.isPresent() && item.get().getMerchant().getId().equals(client.getMerchant().getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
@@ -125,7 +125,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		data.setProperty(property);
 		data.setClient(client);
 		cartRepository.save(data);
-		return cartRepository.findByClient(client).size();
 	}
 
 	@Transactional(readOnly = true)
