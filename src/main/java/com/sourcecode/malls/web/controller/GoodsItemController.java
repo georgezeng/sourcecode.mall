@@ -44,10 +44,7 @@ public class GoodsItemController {
 	@RequestMapping(path = "/list/params/{id}/{type}")
 	public ResultBean<GoodsItemDTO> list(@PathVariable("id") Long categoryId, @PathVariable("type") String type,
 			@RequestBody PageInfo pageInfo) {
-		long start = System.currentTimeMillis();
 		Page<GoodsItem> result = service.findByCategory(ClientContext.getMerchantId(), categoryId, type, pageInfo);
-		long end = System.currentTimeMillis();
-		logger.info("elapsed: " + (end - start) / 1000);
 		return new ResultBean<>(
 				result.getContent().stream().map(it -> it.asDTO(false, false)).collect(Collectors.toList()));
 	}
