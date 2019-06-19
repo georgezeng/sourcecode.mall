@@ -69,4 +69,10 @@ public class ClientCartController {
 		clientService.saveCart(ClientContext.get(), dto);
 		return itemInfo(dto.getItemId());
 	}
+
+	@RequestMapping(path = "/delete/params/{id}")
+	public ResultBean<Void> delete(@PathVariable Long id) {
+		cartRepository.deleteById(id);
+		return new ResultBean<>();
+	}
 }
