@@ -44,16 +44,18 @@ public class ClientCartController {
 		int total = cartRepository.findByClient(ClientContext.get()).size();
 		Map<String, Integer> map = new HashMap<>();
 		map.put("total", total);
-		Optional<GoodsItem> item = itemRepository.findById(id);
-		AssertUtil.assertTrue(
-				item.isPresent() && item.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		List<ClientCartItem> cart = cartRepository.findByClientAndItem(ClientContext.get(), item.get());
-		total = 0;
-		for (ClientCartItem cartItem : cart) {
-			total += cartItem.getNums();
+		if (id > 0) {
+			Optional<GoodsItem> item = itemRepository.findById(id);
+			AssertUtil.assertTrue(
+					item.isPresent() && item.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
+					ExceptionMessageConstant.NO_SUCH_RECORD);
+			List<ClientCartItem> cart = cartRepository.findByClientAndItem(ClientContext.get(), item.get());
+			total = 0;
+			for (ClientCartItem cartItem : cart) {
+				total += cartItem.getNums();
+			}
+			map.put("itemNums", total);
 		}
-		map.put("itemNums", total);
 		return new ResultBean<>(map);
 	}
 
