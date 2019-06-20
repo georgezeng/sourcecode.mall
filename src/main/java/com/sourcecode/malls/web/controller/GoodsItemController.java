@@ -26,7 +26,6 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
 import com.sourcecode.malls.service.impl.GoodsItemService;
-import com.sourcecode.malls.web.security.filter.UserSessionFilter;
 
 @RestController
 @RequestMapping(path = "/goods/item")
@@ -46,10 +45,8 @@ public class GoodsItemController {
 	public ResultBean<GoodsItemDTO> list(@PathVariable("id") Long categoryId, @PathVariable("type") String type,
 			@RequestBody PageInfo pageInfo) {
 		Page<GoodsItem> result = service.findByCategory(ClientContext.getMerchantId(), categoryId, type, pageInfo);
-		ResultBean<GoodsItemDTO> data = new ResultBean<>(
+		return new ResultBean<>(
 				result.getContent().stream().map(it -> it.asDTO(false, false)).collect(Collectors.toList()));
-		UserSessionFilter.V.set(System.currentTimeMillis());
-		return data;
 	}
 
 	@RequestMapping(path = "/definitions/load")
