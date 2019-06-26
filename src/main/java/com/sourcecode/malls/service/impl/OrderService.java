@@ -100,7 +100,7 @@ public class OrderService {
 							.findById(itemDTO.getPropertyId());
 					if (property.isPresent() && property.get().getItem().getId().equals(goodsItem.get().getId())) {
 						OrderItemDTO orderItem = new OrderItemDTO();
-						orderItem.setItem(goodsItem.get().asDTO(false, false));
+						orderItem.setItem(goodsItem.get().asDTO(false, false, false));
 						orderItem.setProperty(property.get().asDTO());
 						orderItem.setNums(itemDTO.getNums());
 						List<GoodsItemValue> values = valueRepository.findAllByUid(property.get().getUid());

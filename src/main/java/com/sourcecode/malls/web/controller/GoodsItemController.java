@@ -46,7 +46,7 @@ public class GoodsItemController {
 			@RequestBody PageInfo pageInfo) {
 		Page<GoodsItem> result = service.findByCategory(ClientContext.getMerchantId(), categoryId, type, pageInfo);
 		return new ResultBean<>(
-				result.getContent().stream().map(it -> it.asDTO(false, false)).collect(Collectors.toList()));
+				result.getContent().stream().map(it -> it.asDTO(false, false, false)).collect(Collectors.toList()));
 	}
 
 	@RequestMapping(path = "/definitions/load")
