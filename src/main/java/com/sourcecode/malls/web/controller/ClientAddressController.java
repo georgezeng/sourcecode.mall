@@ -54,7 +54,7 @@ public class ClientAddressController {
 	@RequestMapping(path = "/list")
 	public ResultBean<ClientAddressDTO> list(@RequestBody PageInfo pageInfo) {
 		Client client = ClientContext.get();
-		List<ClientAddress> list = repository.findByClient(client, pageInfo.pageable());
+		List<ClientAddress> list = repository.findAllByClient(client, pageInfo.pageable());
 		if (list == null) {
 			list = new ArrayList<>();
 		}
@@ -67,6 +67,15 @@ public class ClientAddressController {
 		AssertUtil.assertTrue(data.getClient().getId().equals(ClientContext.get().getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		return new ResultBean<>(data.asDTO());
+	}
+
+	@RequestMapping(path = "/load/default")
+	public ResultBean<ClientAddressDTO> loadDefault() {
+		Optional<ClientAddress> data = repository.findByClientAndIsDefault(ClientContext.get(), true);
+		if (data.isPresent()) {
+			return new ResultBean<>(data.get().asDTO());
+		}
+		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/asDefault/params/{id}")

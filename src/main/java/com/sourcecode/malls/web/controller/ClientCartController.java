@@ -22,7 +22,7 @@ import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientCartItemDTO;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
-import com.sourcecode.malls.service.impl.ClientService;
+import com.sourcecode.malls.service.impl.ClientCartService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
@@ -31,7 +31,7 @@ public class ClientCartController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private ClientService clientService;
+	private ClientCartService clientCartService;
 
 	@Autowired
 	private ClientCartRepository cartRepository;
@@ -61,18 +61,34 @@ public class ClientCartController {
 
 	@RequestMapping(path = "/list")
 	public ResultBean<ClientCartItemDTO> list(@RequestBody KeyDTO<Long> dto) {
-		return new ResultBean<>(clientService.getCart(ClientContext.get()));
+		return new ResultBean<>(clientCartService.getCart(ClientContext.get()));
 	}
 
 	@RequestMapping(path = "/save")
 	public ResultBean<Map<String, Integer>> save(@RequestBody ClientCartItemDTO dto) {
-		clientService.saveCart(ClientContext.get(), dto);
+		clientCartService.saveCart(ClientContext.get(), dto);
 		return itemInfo(dto.getItemId());
+	}
+
+	@RequestMapping(path = "/updateNums/params/{id}/{nums}")
+	public ResultBean<Void> updateNums(@PathVariable("id") Long id, @PathVariable("nums") Integer nums) {
+		Optional<ClientCartItem> cartItem = cartRepository.findById(id);
+		AssertUtil.assertTrue(
+				cartItem.isPresent() && cartItem.get().getClient().getId().equals(ClientContext.get().getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		cartItem.get().setNums(nums);
+		cartRepository.save(cartItem.get());
+		return new ResultBean<>();
 	}
 
 	@RequestMapping(path = "/delete/params/{id}")
 	public ResultBean<Void> delete(@PathVariable Long id) {
 		cartRepository.deleteById(id);
+		return new ResultBean<>();
+	}
+	
+	@RequestMapping(path = "/settleAccount")
+	public ResultBean<Void> settleAccount() {
 		return new ResultBean<>();
 	}
 }
