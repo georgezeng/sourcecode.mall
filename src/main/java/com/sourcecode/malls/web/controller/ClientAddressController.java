@@ -46,6 +46,9 @@ public class ClientAddressController {
 			Client client = ClientContext.get();
 			data.setClient(client);
 		}
+		if (dto.isDefault()) {
+			repository.clearDefaultStatus(ClientContext.get().getId());
+		}
 		BeanUtils.copyProperties(dto, data, "id");
 		repository.save(data);
 		return new ResultBean<>();
@@ -75,17 +78,6 @@ public class ClientAddressController {
 		if (data.isPresent()) {
 			return new ResultBean<>(data.get().asDTO());
 		}
-		return new ResultBean<>();
-	}
-
-	@RequestMapping(path = "/asDefault/params/{id}")
-	public ResultBean<Void> asDefault(@PathVariable Long id) {
-		Optional<ClientAddress> data = repository.findById(id);
-		AssertUtil.assertTrue(data.isPresent() && data.get().getClient().getId().equals(ClientContext.get().getId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		repository.clearDefaultStatus(ClientContext.get().getId());
-		data.get().setDefault(true);
-		repository.save(data.get());
 		return new ResultBean<>();
 	}
 
