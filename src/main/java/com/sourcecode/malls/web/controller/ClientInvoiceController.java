@@ -16,7 +16,6 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.InvoiceTemplate;
 import com.sourcecode.malls.dto.base.ResultBean;
-import com.sourcecode.malls.dto.merchant.InvoiceSettingDTO;
 import com.sourcecode.malls.dto.order.InvoiceDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.repository.jpa.impl.merchant.InvoiceSettingRepository;
