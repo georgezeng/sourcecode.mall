@@ -73,10 +73,7 @@ public class ClientInvoiceController {
 
 	@RequestMapping(path = "/content/list")
 	public ResultBean<String> contentList() {
-		PageInfo info = new PageInfo();
-		info.setNum(1);
-		info.setSize(99999999);
-		return new ResultBean<>(settingRepository.findAllByMerchant(ClientContext.get().getMerchant(), info.pageable())
+		return new ResultBean<>(settingRepository.findAllByMerchantOrderByOrderNumAsc(ClientContext.get().getMerchant())
 				.stream().map(invoice -> invoice.getContent()).collect(Collectors.toList()));
 	}
 
