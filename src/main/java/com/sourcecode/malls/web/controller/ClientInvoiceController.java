@@ -16,8 +16,10 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.InvoiceTemplate;
 import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.dto.merchant.InvoiceSettingDTO;
 import com.sourcecode.malls.dto.order.InvoiceDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
+import com.sourcecode.malls.repository.jpa.impl.merchant.InvoiceSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.InvoiceTemplateRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -28,6 +30,9 @@ public class ClientInvoiceController {
 
 	@Autowired
 	private InvoiceTemplateRepository templateRepository;
+
+	@Autowired
+	private InvoiceSettingRepository settingRepository;
 
 	@RequestMapping(path = "/save")
 	public ResultBean<Void> save(@RequestBody InvoiceDTO dto) {
@@ -65,6 +70,15 @@ public class ClientInvoiceController {
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		templateRepository.delete(op.get());
 		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/content/list")
+	public ResultBean<String> contentList() {
+		PageInfo info = new PageInfo();
+		info.setNum(1);
+		info.setSize(99999999);
+		return new ResultBean<>(settingRepository.findAllByMerchant(ClientContext.get().getMerchant(), info.pageable())
+				.stream().map(invoice -> invoice.getContent()).collect(Collectors.toList()));
 	}
 
 }
