@@ -6,10 +6,19 @@ import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemPropertyDTO;
 
 public class OrderItemDTO {
+	private Long cartItemId;
 	private GoodsItemDTO item;
 	private GoodsItemPropertyDTO property;
 	private List<String> attrs;
 	private int nums;
+
+	public Long getCartItemId() {
+		return cartItemId;
+	}
+
+	public void setCartItemId(Long cartItemId) {
+		this.cartItemId = cartItemId;
+	}
 
 	public List<String> getAttrs() {
 		return attrs;

@@ -1,9 +1,18 @@
 package com.sourcecode.malls.dto;
 
 public class SettleItemDTO {
+	private Long cartItemId;
 	private Long itemId;
 	private Long propertyId;
 	private int nums;
+
+	public Long getCartItemId() {
+		return cartItemId;
+	}
+
+	public void setCartItemId(Long cartItemId) {
+		this.cartItemId = cartItemId;
+	}
 
 	public int getNums() {
 		return nums;

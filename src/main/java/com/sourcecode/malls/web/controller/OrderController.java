@@ -18,6 +18,9 @@ import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.dto.order.OrderDTO;
+import com.sourcecode.malls.dto.query.QueryInfo;
+import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -62,9 +65,46 @@ public class OrderController {
 	}
 
 	@RequestMapping(path = "/create")
-	public ResultBean<Void> create(@RequestBody SettleAccountDTO dto) throws Exception {
+	public ResultBean<Void> create(@RequestBody SettleAccountDTO dto) {
 		orderService.generateOrder(ClientContext.get(), dto);
 		return new ResultBean<>();
 	}
 
+	@RequestMapping(path = "/list")
+	public ResultBean<OrderDTO> list(@RequestBody QueryInfo<OrderStatus> queryInfo) {
+		return new ResultBean<>(orderService.getOrders(ClientContext.get(), queryInfo).getList());
+	}
+
+	@RequestMapping(path = "/load/params/{id}")
+	public ResultBean<OrderDTO> load(@PathVariable Long id) {
+		return new ResultBean<>(orderService.getOrder(ClientContext.get(), id));
+	}
+
+	@RequestMapping(path = "/count")
+	public ResultBean<Long> count(@RequestBody QueryInfo<OrderStatus> queryInfo) {
+		return new ResultBean<>(orderService.getOrders(ClientContext.get(), queryInfo).getTotal());
+	}
+
+	@RequestMapping(path = "/count/uncomment")
+	public ResultBean<Long> countUnComment() {
+		return new ResultBean<>(orderService.countUncommentOrders(ClientContext.get()));
+	}
+
+	@RequestMapping(path = "/cancel/params/{id}")
+	public ResultBean<Void> cancel(@PathVariable Long id) {
+		orderService.cancel(ClientContext.get(), id);
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/pickup/params/{id}")
+	public ResultBean<Void> pickup(@PathVariable Long id) {
+		orderService.pickup(ClientContext.get(), id);
+		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/delete/params/{id}")
+	public ResultBean<Void> delete(@PathVariable Long id) {
+		orderService.delete(ClientContext.get(), id);
+		return new ResultBean<>();
+	}
 }

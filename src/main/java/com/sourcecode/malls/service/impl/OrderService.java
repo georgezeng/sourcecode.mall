@@ -8,15 +8,24 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
@@ -31,8 +40,11 @@ import com.sourcecode.malls.dto.OrderItemDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.SettleItemDTO;
+import com.sourcecode.malls.dto.order.OrderDTO;
+import com.sourcecode.malls.dto.query.PageInfo;
+import com.sourcecode.malls.dto.query.PageResult;
+import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
-import com.sourcecode.malls.enums.SubOrderStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
@@ -93,13 +105,24 @@ public class OrderService {
 		List<OrderItemDTO> orderItems = new ArrayList<>();
 		previewDTO.setItems(orderItems);
 		for (SettleItemDTO itemDTO : dto.getItems()) {
-			Optional<GoodsItem> goodsItem = goodsItemRepository.findById(itemDTO.getItemId());
+			Optional<GoodsItem> goodsItem = Optional.empty();
+			if (previewDTO.isFromCart()) {
+				Optional<ClientCartItem> cartItem = cartRepository.findById(itemDTO.getItemId());
+				if (cartItem.isPresent()) {
+					goodsItem = Optional.of(cartItem.get().getItem());
+				}
+			} else {
+				goodsItem = goodsItemRepository.findById(itemDTO.getItemId());
+			}
 			if (goodsItem.isPresent() && goodsItem.get().getMerchant().getId().equals(ClientContext.getMerchantId())) {
 				if (goodsItem.get().isEnabled()) {
 					Optional<GoodsItemProperty> property = goodsItemPropertyRepository
 							.findById(itemDTO.getPropertyId());
 					if (property.isPresent() && property.get().getItem().getId().equals(goodsItem.get().getId())) {
 						OrderItemDTO orderItem = new OrderItemDTO();
+						if (previewDTO.isFromCart()) {
+							orderItem.setCartItemId(itemDTO.getItemId());
+						}
 						orderItem.setItem(goodsItem.get().asDTO(false, false, false));
 						orderItem.setProperty(property.get().asDTO());
 						orderItem.setNums(itemDTO.getNums());
@@ -146,7 +169,7 @@ public class OrderService {
 		List<SubOrder> subs = new ArrayList<>();
 		if (dto.isFromCart()) {
 			for (SettleItemDTO itemDTO : dto.getItems()) {
-				Optional<ClientCartItem> cartItemOp = cartRepository.findById(itemDTO.getItemId());
+				Optional<ClientCartItem> cartItemOp = cartRepository.findById(itemDTO.getCartItemId());
 				if (cartItemOp.isPresent() && cartItemOp.get().getClient().getId().equals(client.getId())) {
 					ClientCartItem cartItem = cartItemOp.get();
 					BigDecimal dealPrice = cartItem.getProperty().getPrice()
@@ -154,6 +177,7 @@ public class OrderService {
 					totalPrice = totalPrice.add(dealPrice);
 					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice,
 							subs);
+					cartRepository.delete(cartItem);
 				}
 			}
 		} else {
@@ -190,17 +214,14 @@ public class OrderService {
 		sub.setItemName(item.getName());
 		sub.setMarketPrice(item.getMarketPrice());
 		sub.setNums(nums);
-		sub.setOrderId(generateOrderId());
 		sub.setParent(parent);
-		sub.setPayment(parent.getPayment());
 		sub.setUnitPrice(property.getPrice());
 		sub.setSellingPoints(item.getSellingPoints());
-		sub.setStatus(SubOrderStatus.UnPay);
 		List<GoodsItemValue> values = valueRepository.findAllByUid(property.getUid());
 		StringBuilder spec = new StringBuilder();
 		int index = 0;
 		for (GoodsItemValue value : values) {
-			spec.append(value.getValue());
+			spec.append(value.getValue().getName());
 			if (index < values.size() - 1) {
 				spec.append(", ");
 			}
@@ -208,7 +229,7 @@ public class OrderService {
 		}
 		sub.setSpecificationValues(spec.toString());
 		byte[] buf = fileService.load(true, item.getThumbnail());
-		String filePath = fileDir + "/" + client.getMerchant().getId() + "/" + client.getId() + "/" + sub.getOrderId()
+		String filePath = fileDir + "/" + client.getMerchant().getId() + "/" + client.getId() + "/" + sub.getId()
 				+ "/thumb.png";
 		fileService.upload(true, filePath, new ByteArrayInputStream(buf));
 		sub.setThumbnail(filePath);
@@ -224,12 +245,102 @@ public class OrderService {
 		if (orderOp.isPresent()) {
 			Order order = orderOp.get();
 			order.setStatus(OrderStatus.Paid);
-			for (SubOrder subOrder : order.getSubList()) {
-				subOrder.setStatus(SubOrderStatus.Paid);
-			}
-			subOrderRepository.saveAll(order.getSubList());
+			order.setPayTime(new Date());
 			orderRepository.save(order);
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public PageResult<OrderDTO> getOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
+		Specification<Order> spec = new Specification<Order>() {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Predicate toPredicate(Root<Order> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+				List<Predicate> predicate = new ArrayList<>();
+				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
+				if (queryInfo.getData() != null) {
+					predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
+				}
+				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
+			}
+		};
+		Page<Order> orders = orderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		return new PageResult<>(orders.get().map(order -> order.asDTO()).collect(Collectors.toList()),
+				orders.getTotalElements());
+	}
+
+	@Transactional(readOnly = true)
+	public OrderDTO getOrder(Client client, Long id) {
+		Optional<Order> order = orderRepository.findById(id);
+		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		return order.get().asDTO();
+	}
+
+	@Transactional(readOnly = true)
+	public Long countUncommentOrders(Client client) {
+		Specification<Order> spec = new Specification<Order>() {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Predicate toPredicate(Root<Order> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+				List<Predicate> predicate = new ArrayList<>();
+				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
+				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
+				predicate.add(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished));
+				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
+			}
+		};
+		PageInfo page = new PageInfo();
+		page.setNum(1);
+		page.setSize(1);
+		Page<Order> orders = orderRepository.findAll(spec, page.pageable());
+		return orders.getTotalElements();
+	}
+
+	public void cancel(Client client, Long id) {
+		Optional<Order> order = orderRepository.findById(id);
+		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		OrderStatus status = order.get().getStatus();
+		boolean paid = OrderStatus.Paid.equals(status);
+		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
+		order.get().setStatus(OrderStatus.Canceled);
+		orderRepository.save(order.get());
+		if (paid) {
+			// 自动退款
+		}
+	}
+
+	public void pickup(Client client, Long id) {
+		Optional<Order> order = orderRepository.findById(id);
+		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.get().getStatus()), "不能确认收货，订单状态有误");
+		order.get().setStatus(OrderStatus.Finished);
+		orderRepository.save(order.get());
+	}
+
+	public void delete(Client client, Long id) {
+		Optional<Order> order = orderRepository.findById(id);
+		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		OrderStatus status = order.get().getStatus();
+		AssertUtil.assertTrue(OrderStatus.Canceled.equals(status) || OrderStatus.Closed.equals(status)
+				|| OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
+		order.get().setDeleted(true);
+		orderRepository.save(order.get());
 	}
 
 }
