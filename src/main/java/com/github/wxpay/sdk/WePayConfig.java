@@ -51,7 +51,9 @@ public class WePayConfig extends WXPayConfig {
 
 			@Override
 			public void report(String domain, long elapsedTimeMillis, Exception ex) {
-				logger.error("[WePay Error] - " + domain + ": " + ex.getMessage(), ex);
+				if (ex != null) {
+					logger.error("[WePay Error] - " + domain + ": " + ex.getMessage(), ex);
+				}
 			}
 
 			@Override
