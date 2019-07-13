@@ -317,11 +317,10 @@ public class WechatController {
 		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
 		data.put("spbill_create_ip", ip);
 //		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
-		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/notify");
+		data.put("notify_url", URLEncoder.encode("https://mall-server.bsxkj.com/client/wechat/notify", "UTF-8"));
 		data.put("trade_type", type);
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
-		logger.info(new ObjectMapper().writeValueAsString(resp));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		return new ResultBean<>(resp);
