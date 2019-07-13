@@ -320,6 +320,9 @@ public class WechatController {
 		data.put("trade_type", type);
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
+		logger.info(new ObjectMapper().writeValueAsString(resp));
+		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
+		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		return new ResultBean<>(resp);
 	}
 }
