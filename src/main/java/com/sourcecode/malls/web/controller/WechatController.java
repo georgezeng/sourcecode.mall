@@ -308,7 +308,7 @@ public class WechatController {
 		Order order = orderOp.get();
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
-		WXPay wxpay = new WXPay(config);
+		WXPay wxpay = new WXPay(config, false);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
 		data.put("out_trade_no", order.getOrderId());
@@ -316,7 +316,6 @@ public class WechatController {
 		data.put("fee_type", "CNY");
 		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
 		data.put("spbill_create_ip", ip);
-		data.put("sign_type", SignType.HMACSHA256.name());
 //		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
 		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/notify");
 		data.put("trade_type", type);
