@@ -14,14 +14,12 @@ public class WePayConfig extends WXPayConfig {
 	private String key;
 	private String mchId;
 	private ByteArrayInputStream bis;
-	private String domain;
 
-	public WePayConfig(DeveloperSettingDTO info, byte[] cert, String domain) {
+	public WePayConfig(DeveloperSettingDTO info, byte[] cert) {
 		this.appId = info.getAccount();
 		this.key = info.getSecret();
 		this.mchId = info.getMch();
 		this.bis = new ByteArrayInputStream(cert);
-		this.domain = domain;
 	}
 
 	@Override
@@ -58,7 +56,7 @@ public class WePayConfig extends WXPayConfig {
 
 			@Override
 			public DomainInfo getDomain(WXPayConfig config) {
-				return new DomainInfo(domain, true);
+				return new DomainInfo("api.mch.weixin.qq.com", true);
 			}
 
 		};
