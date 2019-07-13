@@ -289,6 +289,7 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 	
+	@RequestMapping(path = "/notify")
 	public void notify(@RequestBody String body) {
 		logger.info("body: " + body);
 	}
