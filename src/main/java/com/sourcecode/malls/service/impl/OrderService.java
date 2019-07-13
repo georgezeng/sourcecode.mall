@@ -14,6 +14,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
@@ -285,7 +286,7 @@ public class OrderService {
 
 	@Transactional(readOnly = true)
 	public Long countUncommentOrders(Client client) {
-		Specification<Order> spec = new Specification<Order>() {
+		Specification<SubOrder> spec = new Specification<SubOrder>() {
 
 			/**
 			 * 
@@ -293,19 +294,20 @@ public class OrderService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<Order> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<SubOrder> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
+				Join<SubOrder, Order> join = root.join("parent");
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
-				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
 				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
-				predicate.add(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished));
+				predicate.add(criteriaBuilder.equal(join.get("deleted"), false));
+				predicate.add(criteriaBuilder.equal(join.get("status"), OrderStatus.Finished));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
 		PageInfo page = new PageInfo();
 		page.setNum(1);
 		page.setSize(1);
-		Page<Order> orders = orderRepository.findAll(spec, page.pageable());
+		Page<SubOrder> orders = subOrderRepository.findAll(spec, page.pageable());
 		return orders.getTotalElements();
 	}
 
