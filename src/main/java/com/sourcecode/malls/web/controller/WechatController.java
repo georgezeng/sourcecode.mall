@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wxpay.sdk.WXPay;
 import com.github.wxpay.sdk.WePayConfig;
+import com.github.wxpay.sdk.WXPayConstants.SignType;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -315,6 +316,7 @@ public class WechatController {
 		data.put("fee_type", "CNY");
 		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
 		data.put("spbill_create_ip", ip);
+		data.put("sign_type", SignType.HMACSHA256.name());
 //		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
 		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/notify");
 		data.put("trade_type", type);
