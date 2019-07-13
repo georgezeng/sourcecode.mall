@@ -1,8 +1,11 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,12 +25,15 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wxpay.sdk.WXPay;
+import com.github.wxpay.sdk.WePayConfig;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.LoginInfo;
 import com.sourcecode.malls.dto.WechatAccessInfo;
@@ -39,10 +45,12 @@ import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
+import com.sourcecode.malls.service.impl.WechatSettingService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
@@ -99,6 +107,15 @@ public class WechatController {
 	@Autowired
 	private MerchantSettingService settingService;
 
+	@Autowired
+	private WechatSettingService wechatSettingService;
+
+	@Autowired
+	private OrderRepository orderRepository;
+
+	@Autowired
+	private MerchantShopApplicationRepository merchantShopRepository;
+
 	@RequestMapping(path = "/jsconfig")
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
@@ -107,7 +124,8 @@ public class WechatController {
 		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
 		CodeStore store = null;
 		if (!storeOp.isPresent()) {
-			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
+			String result = httpClient.getForObject(
+					String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
 					String.class);
 			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
@@ -142,17 +160,19 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/fetchFile/{mediaId}")
-	public ResultBean<String> fetchFile(@PathVariable String mediaId, @RequestParam(name = "filePath") String filePath) throws Exception {
+	public ResultBean<String> fetchFile(@PathVariable String mediaId, @RequestParam(name = "filePath") String filePath)
+			throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
-		String result = httpClient.getForObject(String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
-				String.class);
+		String result = httpClient.getForObject(
+				String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()), String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 		if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
 			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
-		byte[] buf = httpClient.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
+		byte[] buf = httpClient
+				.getForEntity(String.format(fileApiUrl, accessInfo.getAccessToken(), mediaId), byte[].class).getBody();
 		filePath = userDir + "/" + ClientContext.get().getId() + "/" + filePath;
 		fileService.upload(false, filePath, new ByteArrayInputStream(buf));
 		return new ResultBean<>(filePath);
@@ -174,12 +194,14 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		String url = String.format(loginUrl, developerSetting.get().getAccount(), URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token);
+		String url = String.format(loginUrl, developerSetting.get().getAccount(),
+				URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token);
 		return new ResultBean<>(url);
 	}
 
 	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo) throws Exception {
+	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo)
+			throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -187,17 +209,18 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechatGzh(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY, loginInfo.getUsername());
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY,
+				loginInfo.getUsername());
 		AssertUtil.assertTrue(storeOp.isPresent(), "登录信息有误");
-		String result = httpClient.getForObject(
-				String.format(accessTokenUrl, developerSetting.get().getAccount(), developerSetting.get().getSecret(), loginInfo.getPassword()),
-				String.class);
+		String result = httpClient.getForObject(String.format(accessTokenUrl, developerSetting.get().getAccount(),
+				developerSetting.get().getSecret(), loginInfo.getPassword()), String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
 		if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
 			logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
 		}
-		byte[] buf = httpClient.getForObject(String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
+		byte[] buf = httpClient.getForObject(
+				String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
 		result = new String(buf, "UTF-8");
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
 		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
@@ -226,13 +249,15 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/register")
-	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
+	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo)
+			throws Exception {
 		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
 		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
 				mobileInfo.getUsername() + "_" + ClientContext.getMerchantId());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(mobileInfo.getPassword()),
+				ExceptionMessageConstant.VERIFY_CODE_INVALID);
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -262,5 +287,35 @@ public class WechatController {
 		}
 		clientRepository.save(user);
 		return new ResultBean<>();
+	}
+
+	@RequestMapping(path = "/unifiedOrder/params/{type}/{id}")
+	public ResultBean<Map<String, String>> unifiedOrder(HttpServletRequest request, @PathVariable Long id,
+			@PathVariable String type) throws Exception {
+		String ip = request.getHeader("X-Forwarded-For");
+		if (StringUtils.isEmpty(ip)) {
+			ip = request.getRemoteAddr();
+		}
+		Optional<Order> orderOp = orderRepository.findById(id);
+		AssertUtil.assertTrue(
+				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
+		Order order = orderOp.get();
+		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
+		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
+		WXPay wxpay = new WXPay(config);
+		Map<String, String> data = new HashMap<String, String>();
+		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
+		data.put("out_trade_no", order.getOrderId());
+		data.put("device_info", "WEB");
+		data.put("fee_type", "CNY");
+		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
+		data.put("spbill_create_ip", ip);
+		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
+		data.put("trade_type", type);
+
+		Map<String, String> resp = wxpay.unifiedOrder(data);
+		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
+		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
+		return new ResultBean<>(resp);
 	}
 }
