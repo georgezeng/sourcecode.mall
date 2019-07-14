@@ -332,7 +332,7 @@ public class WechatController {
 		Order order = orderOp.get();
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
-		WXPay wxpay = new WXPay(config, false, true);
+		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
 		data.put("out_trade_no", order.getOrderId());
