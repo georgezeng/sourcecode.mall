@@ -363,6 +363,7 @@ public class WechatController {
 		String template = "appId=%s&nonceStr=%s&package=prepay_id=%s&signType=MD5&timeStamp=%s&key=%s";
 		String signature = String.format(template, config.getAppID(), resp.get("nonce_str"), resp.get("prepay_id"),
 				timestamp, config.getKey());
+		logger.info(signature);
 		signature = DigestUtils.md5Hex(signature);
 		resp.put("timestamp", timestamp);
 		resp.put("package", "prepay_id=" + resp.get("prepay_id"));
