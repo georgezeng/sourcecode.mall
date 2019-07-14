@@ -363,7 +363,7 @@ public class WechatController {
 			AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 			AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		}
-
+		logger.info(mapper.writeValueAsString(resp));
 		String timestamp = new Date().getTime() / 1000 + "";
 		String template = "appId=%s&nonceStr=%s&package=prepay_id=%s&signType=MD5&timeStamp=%s&key=%s";
 		String signature = String.format(template, config.getAppID(), resp.get("nonce_str"), resp.get("prepay_id"),
