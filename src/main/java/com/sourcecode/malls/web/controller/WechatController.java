@@ -332,7 +332,7 @@ public class WechatController {
 		Order order = orderOp.get();
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
-		WXPay wxpay = new WXPay(config);
+		WXPay wxpay = new WXPay(config, false, true);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
 		data.put("out_trade_no", order.getOrderId());
@@ -363,7 +363,7 @@ public class WechatController {
 		String template = "appId=%s&nonceStr=%s&package=prepay_id=%s&signType=MD5&timeStamp=%s&key=%s";
 		String signature = String.format(template, config.getAppID(), resp.get("nonce_str"), resp.get("prepay_id"),
 				timestamp, config.getKey());
-		signature = DigestUtils.sha256Hex(signature);
+		signature = DigestUtils.md5Hex(signature);
 		resp.put("timestamp", timestamp);
 		resp.put("package", "prepay_id=" + resp.get("prepay_id"));
 		resp.put("paySign", signature);
