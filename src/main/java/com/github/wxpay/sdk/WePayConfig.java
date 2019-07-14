@@ -23,17 +23,17 @@ public class WePayConfig extends WXPayConfig {
 	}
 
 	@Override
-	String getAppID() {
+	public String getAppID() {
 		return appId;
 	}
 
 	@Override
-	String getMchID() {
+	public String getMchID() {
 		return mchId;
 	}
 
 	@Override
-	String getKey() {
+	public String getKey() {
 		return key;
 	}
 

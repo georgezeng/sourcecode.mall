@@ -200,8 +200,8 @@ public class WechatController {
 		return new ResultBean<>(url);
 	}
 
-	@RequestMapping(path = "/info")
-	public ResultBean<LoginInfo> getWechatInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo)
+	@RequestMapping(path = "/loginInfo")
+	public ResultBean<LoginInfo> getLoginInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo)
 			throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
@@ -239,6 +239,7 @@ public class WechatController {
 			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
+			info.setToken(accessInfo.getOpenId());
 		}
 		return new ResultBean<>(info);
 	}
@@ -289,20 +290,20 @@ public class WechatController {
 		clientRepository.save(user);
 		return new ResultBean<>();
 	}
-	
+
 	@RequestMapping(path = "/notify")
 	public void notify(@RequestBody String body) {
 		logger.info("body: " + body);
 	}
 
-	@RequestMapping(path = "/unifiedOrder/params/{type}/{id}")
-	public ResultBean<Map<String, String>> unifiedOrder(HttpServletRequest request, @PathVariable Long id,
-			@PathVariable String type) throws Exception {
+	@RequestMapping(path = "/unifiedOrder")
+	public ResultBean<Map<String, String>> unifiedOrder(HttpServletRequest request,
+			@RequestBody Map<String, String> params) throws Exception {
 		String ip = request.getHeader("X-Forwarded-For");
 		if (StringUtils.isEmpty(ip)) {
 			ip = request.getRemoteAddr();
 		}
-		Optional<Order> orderOp = orderRepository.findById(id);
+		Optional<Order> orderOp = orderRepository.findById(Long.valueOf(params.get("id")));
 		AssertUtil.assertTrue(
 				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
 		Order order = orderOp.get();
@@ -318,7 +319,10 @@ public class WechatController {
 		data.put("spbill_create_ip", ip);
 //		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
 		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/notify");
-		data.put("trade_type", type);
+		data.put("trade_type", params.get("type"));
+		if ("JSAPI".equals(params.get("type"))) {
+			data.put("openid", params.get("openId"));
+		}
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
 		logger.info(new ObjectMapper().writeValueAsString(resp));
