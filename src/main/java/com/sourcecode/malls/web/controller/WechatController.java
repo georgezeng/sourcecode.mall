@@ -323,13 +323,14 @@ public class WechatController {
 				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 				throw new BusinessException("获取微信信息有误");
 			}
-			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
-			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
+			if ("ticket".equals(field)) {
+				result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+				accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+				if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+					logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+					throw new BusinessException("获取微信信息有误");
+				}
 			}
-			logger.info(accessInfo.getOpenId() + "");
 			store = new CodeStore();
 			store.setCategory(category);
 			store.setKey(key);
@@ -340,7 +341,7 @@ public class WechatController {
 		} else {
 			store = storeOp.get();
 		}
-		
+
 		return store;
 	}
 }
