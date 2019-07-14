@@ -27,7 +27,6 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wxpay.sdk.WXPay;
 import com.github.wxpay.sdk.WePayConfig;
-import com.github.wxpay.sdk.WXPayConstants.SignType;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -62,6 +61,8 @@ public class WechatController {
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
 	private static final String WECHAT_JSAPI_TICKET_CATEGORY = "wechat-jsapi-ticket-category";
 	private static final String WECHAT_USERINFO_CATEGORY = "wechat-userinfo-category";
+	private static final String WECHAT_JSAPI_OPENID_CATEGORY = "wechat-jspi-openid-category";
+	private static final String WECHAT_PAY_TOKEN_CATEGORY = "wechat-pay-token-category";
 
 	@Autowired
 	private VerifyCodeService verifyCodeService;
@@ -239,7 +240,6 @@ public class WechatController {
 			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
-			info.setToken(accessInfo.getOpenId());
 		}
 		return new ResultBean<>(info);
 	}
@@ -291,9 +291,8 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/notify")
-	public void notify(@RequestBody String body) {
-		logger.info("body: " + body);
+	@RequestMapping(path = "/pay/notify/params/{token}")
+	public void notify(@PathVariable String token) {
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
@@ -309,6 +308,32 @@ public class WechatController {
 		Order order = orderOp.get();
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
+		String key = "merchant_" + ClientContext.getMerchantId();
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
+		CodeStore store = null;
+		if (!storeOp.isPresent()) {
+			String result = httpClient
+					.getForObject(String.format(apiAccessTokenUrl, config.getAppID(), config.getKey()), String.class);
+			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			store = new CodeStore();
+			store.setCategory(WECHAT_JSAPI_OPENID_CATEGORY);
+			store.setKey(key);
+			store.setValue(accessInfo.getOpenId());
+			codeStoreRepository.save(store);
+		} else {
+			store = storeOp.get();
+		}
+
 		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
@@ -317,15 +342,20 @@ public class WechatController {
 		data.put("fee_type", "CNY");
 		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
 		data.put("spbill_create_ip", ip);
-//		data.put("notify_url", "https://" + shop.get().getDomain() + "/#/WePay/Notify");
-		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/notify");
+		String token = UUID.randomUUID().toString();
+		CodeStore tokenStore = new CodeStore();
+		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
+		tokenStore.setKey(token);
+		tokenStore.setValue(order.getOrderId());
+		codeStoreRepository.save(tokenStore);
+		data.put("notify_url", request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
+				+ "/client/wechat/pay/notify/params/" + token);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
-			data.put("openid", params.get("openId"));
+			data.put("openid", store.getValue());
 		}
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
-		logger.info(new ObjectMapper().writeValueAsString(resp));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		return new ResultBean<>(resp);
