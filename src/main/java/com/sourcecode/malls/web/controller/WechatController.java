@@ -335,6 +335,7 @@ public class WechatController {
 			Field f = accessInfo.getClass().getDeclaredField(field);
 			f.setAccessible(true);
 			store.setValue((String) f.get(accessInfo));
+			logger.info(store.getValue());
 			codeStoreRepository.save(store);
 		} else {
 			store = storeOp.get();
