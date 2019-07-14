@@ -1,6 +1,7 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -122,32 +123,8 @@ public class WechatController {
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
-		String key = "merchant_" + ClientContext.getMerchantId();
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
-		CodeStore store = null;
-		if (!storeOp.isPresent()) {
-			String result = httpClient.getForObject(
-					String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
-					String.class);
-			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
-			}
-			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
-			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
-			}
-			store = new CodeStore();
-			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
-			store.setKey(key);
-			store.setValue(accessInfo.getTicket());
-			codeStoreRepository.save(store);
-		} else {
-			store = storeOp.get();
-		}
+		CodeStore store = getTokenInfo(setting.get().getAccount(), setting.get().getSecret(),
+				WECHAT_JSAPI_TICKET_CATEGORY, "ticket");
 		String nonce = UUID.randomUUID().toString();
 		Long timestamp = new Date().getTime();
 		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
@@ -308,32 +285,6 @@ public class WechatController {
 		Order order = orderOp.get();
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
-		String key = "merchant_" + ClientContext.getMerchantId();
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
-		CodeStore store = null;
-		if (!storeOp.isPresent()) {
-			String result = httpClient
-					.getForObject(String.format(apiAccessTokenUrl, config.getAppID(), config.getKey()), String.class);
-			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
-			}
-			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
-			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
-			}
-			store = new CodeStore();
-			store.setCategory(WECHAT_JSAPI_OPENID_CATEGORY);
-			store.setKey(key);
-			store.setValue(accessInfo.getOpenId());
-			codeStoreRepository.save(store);
-		} else {
-			store = storeOp.get();
-		}
-
 		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
@@ -352,12 +303,42 @@ public class WechatController {
 				+ "/client/wechat/pay/notify/params/" + token);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
-			data.put("openid", store.getValue());
+			data.put("openid", getTokenInfo(config.getAppID(), config.getKey(), WECHAT_JSAPI_OPENID_CATEGORY, "openId")
+					.getValue());
 		}
-
 		Map<String, String> resp = wxpay.unifiedOrder(data);
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		return new ResultBean<>(resp);
+	}
+
+	private CodeStore getTokenInfo(String appId, String secret, String category, String field) throws Exception {
+		String key = "merchant_" + ClientContext.getMerchantId();
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(category, key);
+		CodeStore store = null;
+		if (!storeOp.isPresent()) {
+			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, appId, secret), String.class);
+			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			store = new CodeStore();
+			store.setCategory(category);
+			store.setKey(key);
+			Field f = accessInfo.getClass().getDeclaredField(field);
+			f.setAccessible(true);
+			store.setValue((String) f.get(accessInfo));
+			codeStoreRepository.save(store);
+		} else {
+			store = storeOp.get();
+		}
+		return store;
 	}
 }
