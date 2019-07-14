@@ -347,7 +347,7 @@ public class WechatController {
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
 		data.put("notify_url", request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
-				+ "/client/wechat/pay/notify/params/" + token);
+				+ "/client/wechat/pay/notify/");
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
 			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
@@ -367,7 +367,6 @@ public class WechatController {
 		resp.put("timestamp", timestamp);
 		resp.put("package", "prepay_id=" + resp.get("prepay_id"));
 		resp.put("paySign", signature);
-		logger.info("wepay-order-info: " + mapper.writeValueAsString(resp));
 		return new ResultBean<>(resp);
 	}
 }
