@@ -333,33 +333,38 @@ public class WechatController {
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
 		WXPay wxpay = new WXPay(config);
+
 		Map<String, String> data = new HashMap<String, String>();
-		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
 		data.put("out_trade_no", order.getOrderId());
-		data.put("device_info", "WEB");
-		data.put("fee_type", "CNY");
-		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
-		data.put("spbill_create_ip", ip);
-		String token = UUID.randomUUID().toString();
-		CodeStore tokenStore = new CodeStore();
-		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
-		tokenStore.setKey(token);
-		tokenStore.setValue(order.getOrderId());
-		codeStoreRepository.save(tokenStore);
-		data.put("notify_url", request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
-				+ "/client/wechat/pay/notify/params/" + token);
-		data.put("trade_type", params.get("type"));
-		if ("JSAPI".equals(params.get("type"))) {
-			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
-			AssertUtil.assertTrue(wechatToken.isPresent(), "无法获取微信账号信息，请重新登录");
-			data.put("openid", wechatToken.get().getOpenId());
+		Map<String, String> resp = wxpay.orderQuery(data);
+		if (!("SUCCESS".equals(resp.get("return_code")) && "SUCCESS".equals(resp.get("result_code")))) {
+			data = new HashMap<String, String>();
+			data.put("body", "[" + shop.get().getName() + "]商品订单支付");
+			data.put("out_trade_no", order.getOrderId());
+			data.put("device_info", "WEB");
+			data.put("fee_type", "CNY");
+			data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
+			data.put("spbill_create_ip", ip);
+			String token = UUID.randomUUID().toString();
+			CodeStore tokenStore = new CodeStore();
+			tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
+			tokenStore.setKey(token);
+			tokenStore.setValue(order.getOrderId());
+			codeStoreRepository.save(tokenStore);
+			data.put("notify_url", request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
+					+ "/client/wechat/pay/notify/params/" + token);
+			data.put("trade_type", params.get("type"));
+			if ("JSAPI".equals(params.get("type"))) {
+				Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
+				AssertUtil.assertTrue(wechatToken.isPresent(), "无法获取微信账号信息，请重新登录");
+				data.put("openid", wechatToken.get().getOpenId());
+			}
+			resp = wxpay.unifiedOrder(data);
+			AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
+			AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		}
 
-		Map<String, String> resp = wxpay.unifiedOrder(data);
-		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
-		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
-
-		String timestamp = new Date().getTime() + "";
+		String timestamp = new Date().getTime() / 1000 + "";
 		String template = "appId=%s&nonceStr=%s&package=prepay_id=%s&signType=MD5&timeStamp=%s&key=%s";
 		String signature = String.format(template, config.getAppID(), resp.get("nonce_str"), resp.get("prepay_id"),
 				timestamp, config.getKey());
