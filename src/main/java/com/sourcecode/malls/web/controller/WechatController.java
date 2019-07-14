@@ -315,7 +315,6 @@ public class WechatController {
 	private CodeStore getTokenInfo(String appId, String secret, String category, String field) throws Exception {
 		String key = "merchant_" + ClientContext.getMerchantId();
 		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(category, key);
-		logger.info(storeOp.isPresent() + "");
 		CodeStore store = null;
 		if (!storeOp.isPresent()) {
 			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, appId, secret), String.class);
@@ -330,6 +329,7 @@ public class WechatController {
 				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 				throw new BusinessException("获取微信信息有误");
 			}
+			logger.info(accessInfo.getOpenId() + "");
 			store = new CodeStore();
 			store.setCategory(category);
 			store.setKey(key);
@@ -340,7 +340,7 @@ public class WechatController {
 		} else {
 			store = storeOp.get();
 		}
-		logger.info(store.getValue() + "");
+		
 		return store;
 	}
 }
