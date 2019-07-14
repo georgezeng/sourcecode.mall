@@ -1,7 +1,6 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.ByteArrayInputStream;
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -32,19 +31,21 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.WechatToken;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.LoginInfo;
-import com.sourcecode.malls.dto.WechatAccessInfo;
 import com.sourcecode.malls.dto.WechatJsApiConfig;
 import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
+import com.sourcecode.malls.dto.wechat.WechatAccessInfo;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.client.WechatTokenRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -62,7 +63,6 @@ public class WechatController {
 	private static final String WECHAT_REGISTER_CATEGORY = "wechat-register-category";
 	private static final String WECHAT_JSAPI_TICKET_CATEGORY = "wechat-jsapi-ticket-category";
 	private static final String WECHAT_USERINFO_CATEGORY = "wechat-userinfo-category";
-	private static final String WECHAT_JSAPI_OPENID_CATEGORY = "wechat-jspi-openid-category";
 	private static final String WECHAT_PAY_TOKEN_CATEGORY = "wechat-pay-token-category";
 
 	@Autowired
@@ -73,6 +73,9 @@ public class WechatController {
 
 	@Autowired
 	private CodeStoreRepository codeStoreRepository;
+
+	@Autowired
+	private WechatTokenRepository wechatTokenRepository;
 
 	@Autowired
 	private RestTemplate httpClient;
@@ -123,8 +126,32 @@ public class WechatController {
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
-		CodeStore store = getTokenInfo(setting.get().getAccount(), setting.get().getSecret(),
-				WECHAT_JSAPI_TICKET_CATEGORY, "ticket");
+		String key = "merchant_" + ClientContext.getMerchantId();
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
+		CodeStore store = null;
+		if (!storeOp.isPresent()) {
+			String result = httpClient.getForObject(
+					String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
+					String.class);
+			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
+			accessInfo = mapper.readValue(result, WechatAccessInfo.class);
+			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
+				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
+				throw new BusinessException("获取微信信息有误");
+			}
+			store = new CodeStore();
+			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
+			store.setKey(key);
+			store.setValue(accessInfo.getTicket());
+			codeStoreRepository.save(store);
+		} else {
+			store = storeOp.get();
+		}
 		String nonce = UUID.randomUUID().toString();
 		Long timestamp = new Date().getTime();
 		String template = "jsapi_ticket=%s&noncestr=%s&timestamp=%s&url=%s";
@@ -202,6 +229,8 @@ public class WechatController {
 				String.format(userInfoUrl, accessInfo.getAccessToken(), accessInfo.getOpenId()), byte[].class);
 		result = new String(buf, "UTF-8");
 		WechatUserInfo userInfo = mapper.readValue(result, WechatUserInfo.class);
+		userInfo.setAccessToken(accessInfo.getAccessToken());
+		userInfo.setRefreshToken(accessInfo.getRefreshToken());
 		if (!StringUtils.isEmpty(userInfo.getErrcode()) && !"0".equals(userInfo.getErrcode())) {
 			logger.warn("wechat error: [" + userInfo.getErrcode() + "] - " + userInfo.getErrmsg());
 			throw new BusinessException("获取微信信息有误");
@@ -209,11 +238,23 @@ public class WechatController {
 		CodeStore store = new CodeStore();
 		store.setCategory(WECHAT_USERINFO_CATEGORY);
 		store.setKey(loginInfo.getUsername());
-		store.setValue(result);
+		store.setValue(mapper.writeValueAsString(userInfo));
 		codeStoreRepository.save(store);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
+			Optional<WechatToken> tokensOp = wechatTokenRepository.findByUserId(user.get().getId());
+			WechatToken tokens = null;
+			if (!tokensOp.isPresent()) {
+				tokens = new WechatToken();
+				tokens.setUserId(user.get().getId());
+			} else {
+				tokens = tokensOp.get();
+			}
+			tokens.setAccessToken(accessInfo.getAccessToken());
+			tokens.setOpenId(accessInfo.getOpenId());
+			tokens.setRefreshToken(accessInfo.getRefreshToken());
+			wechatTokenRepository.save(tokens);
 			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
@@ -265,6 +306,12 @@ public class WechatController {
 			user.setSex(Sex.Secret);
 		}
 		clientRepository.save(user);
+		WechatToken tokens = new WechatToken();
+		tokens.setUserId(user.getId());
+		tokens.setAccessToken(userInfo.getAccessToken());
+		tokens.setRefreshToken(userInfo.getRefreshToken());
+		tokens.setOpenId(userInfo.getOpenId());
+		wechatTokenRepository.save(tokens);
 		return new ResultBean<>();
 	}
 
@@ -303,45 +350,14 @@ public class WechatController {
 				+ "/client/wechat/pay/notify/params/" + token);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
-			data.put("openid", getTokenInfo(config.getAppID(), config.getKey(), WECHAT_JSAPI_OPENID_CATEGORY, "openId")
-					.getValue());
+			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
+			AssertUtil.assertTrue(wechatToken.isPresent(), "无法获取微信账号信息，请重新登录");
+			data.put("openid", wechatToken.get().getOpenId());
 		}
+
 		Map<String, String> resp = wxpay.unifiedOrder(data);
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 		return new ResultBean<>(resp);
-	}
-
-	private CodeStore getTokenInfo(String appId, String secret, String category, String field) throws Exception {
-		String key = "merchant_" + ClientContext.getMerchantId();
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(category, key);
-		CodeStore store = null;
-		if (!storeOp.isPresent()) {
-			String result = httpClient.getForObject(String.format(apiAccessTokenUrl, appId, secret), String.class);
-			WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-			if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-				throw new BusinessException("获取微信信息有误");
-			}
-			if ("ticket".equals(field)) {
-				result = httpClient.getForObject(String.format(jsApiUrl, accessInfo.getAccessToken()), String.class);
-				accessInfo = mapper.readValue(result, WechatAccessInfo.class);
-				if (!StringUtils.isEmpty(accessInfo.getErrcode()) && !"0".equals(accessInfo.getErrcode())) {
-					logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
-					throw new BusinessException("获取微信信息有误");
-				}
-			}
-			store = new CodeStore();
-			store.setCategory(category);
-			store.setKey(key);
-			Field f = accessInfo.getClass().getDeclaredField(field);
-			f.setAccessible(true);
-			store.setValue((String) f.get(accessInfo));
-			codeStoreRepository.save(store);
-		} else {
-			store = storeOp.get();
-		}
-
-		return store;
 	}
 }

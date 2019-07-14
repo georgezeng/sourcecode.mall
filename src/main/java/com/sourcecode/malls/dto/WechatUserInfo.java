@@ -1,12 +1,15 @@
 package com.sourcecode.malls.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sourcecode.malls.dto.wechat.WechatBaseInfo;
 
 public class WechatUserInfo extends WechatBaseInfo {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private String accessToken;
+	private String refreshToken;
 	@JsonProperty("openid")
 	private String openId;
 	private String nickname;
@@ -15,6 +18,22 @@ public class WechatUserInfo extends WechatBaseInfo {
 	@JsonProperty("unionid")
 	private String unionId;
 	private int sex;
+
+	public String getAccessToken() {
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
+
+	public String getRefreshToken() {
+		return refreshToken;
+	}
+
+	public void setRefreshToken(String refreshToken) {
+		this.refreshToken = refreshToken;
+	}
 
 	public int getSex() {
 		return sex;
