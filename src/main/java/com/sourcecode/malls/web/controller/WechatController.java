@@ -26,6 +26,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wxpay.sdk.WXPay;
+import com.github.wxpay.sdk.WXPayUtil;
 import com.github.wxpay.sdk.WePayConfig;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
@@ -316,8 +317,8 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/pay/notify")
-	public void notify(@RequestBody String payload) {
-		logger.info(payload);
+	public ResultBean<Map<String, String>> notify(@RequestBody String payload) throws Exception {
+		return new ResultBean<>(WXPayUtil.xmlToMap(payload));
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
@@ -347,8 +348,7 @@ public class WechatController {
 		tokenStore.setKey(token);
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
-		data.put("notify_url",
-				"https://mall-server.bsxkj.com/client/wechat/pay/notify");
+		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/pay/notify");
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
 			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
