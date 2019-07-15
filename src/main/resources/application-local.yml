@@ -3,3 +3,9 @@ server.port: 9002
 #  jpa:
 #    show-sql: true
 #spring.main.allow-bean-definition-overriding: true
+
+wechat:
+  api:
+    url:
+      pay:
+        notify_url: 'http://localhost:9002/client/wechat/pay/success'

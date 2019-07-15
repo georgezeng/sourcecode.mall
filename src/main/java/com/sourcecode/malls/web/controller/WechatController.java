@@ -52,6 +52,7 @@ import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
+import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.service.impl.WechatSettingService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -105,6 +106,9 @@ public class WechatController {
 	@Value("${wechat.api.url.file}")
 	private String fileApiUrl;
 
+	@Value("${wechat.api.url.pay.notify_url}")
+	private String notifyUrl;
+
 	@Value("${user.type.name}")
 	private String userDir;
 
@@ -119,6 +123,9 @@ public class WechatController {
 
 	@Autowired
 	private OrderRepository orderRepository;
+
+	@Autowired
+	private OrderService orderService;
 
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
@@ -316,9 +323,10 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/pay/notify")
-	public ResultBean<Map<String, String>> notify(@RequestBody String payload) throws Exception {
-		return new ResultBean<>(WXPayUtil.xmlToMap(payload));
+	@RequestMapping(path = "/pay/success")
+	public void notify(@RequestBody String payload) throws Exception {
+		String orderId = WXPayUtil.xmlToMap(payload).get("out_trade_no");
+		orderService.afterPayment(orderId);
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
@@ -348,7 +356,7 @@ public class WechatController {
 		tokenStore.setKey(token);
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
-		data.put("notify_url", "https://mall-server.bsxkj.com/client/wechat/pay/notify");
+		data.put("notify_url", notifyUrl);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
 			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
