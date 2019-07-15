@@ -41,11 +41,6 @@ public class WePayConfig extends WXPayConfig {
 	InputStream getCertStream() {
 		return bis;
 	}
-	
-	@Override
-	public boolean shouldAutoReport() {
-        return false;
-    }
 
 	@Override
 	IWXPayDomain getWXPayDomain() {
