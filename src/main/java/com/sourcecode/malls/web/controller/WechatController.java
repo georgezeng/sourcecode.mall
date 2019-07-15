@@ -315,8 +315,9 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/pay/notify/params/{token}")
-	public void notify(@PathVariable String token) {
+	@RequestMapping(path = "/pay/notify")
+	public void notify(@RequestBody String payload) {
+		logger.info(payload);
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
