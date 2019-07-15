@@ -239,6 +239,7 @@ public class OrderService {
 		int leftInventory = property.getInventory() - nums;
 		AssertUtil.assertTrue(leftInventory >= 0, item.getName() + "库存不足");
 		property.setInventory(leftInventory);
+		sub.setPropertyId(property.getId());
 		subs.add(sub);
 	}
 
@@ -321,11 +322,18 @@ public class OrderService {
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
 		order.get().setStatus(OrderStatus.Canceled);
 		orderRepository.save(order.get());
-//		List<SubOrder> list = order.get().getSubList();
-//		if(list != null) {
-//			for(SubOrder sub : list) {
-//			}
-//		}
+		List<SubOrder> list = order.get().getSubList();
+		if (list != null) {
+			for (SubOrder sub : list) {
+				Optional<GoodsItemProperty> propertyOp = goodsItemPropertyRepository.findById(sub.getPropertyId());
+				if (propertyOp.isPresent()) {
+					GoodsItemProperty property = propertyOp.get();
+					em.lock(property, LockModeType.PESSIMISTIC_WRITE);
+					property.setInventory(property.getInventory() + sub.getNums());
+					goodsItemPropertyRepository.save(property);
+				}
+			}
+		}
 		if (paid) {
 			// 自动退款
 		}
