@@ -2,4 +2,4 @@ wechat:
   api:
     url:
       pay:
-        notify_url: 'https://mall-server.bsxkj.com/client/wechat/pay/notify'
+        notify: 'https://mall-server.bsxkj.com/client/wechat/pay/notify'

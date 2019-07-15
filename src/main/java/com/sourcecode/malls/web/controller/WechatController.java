@@ -91,8 +91,8 @@ public class WechatController {
 	@Autowired
 	private FileOnlineSystemService fileService;
 
-	@Value("${wechat.user.url.login}")
-	private String loginUrl;
+	@Value("${wechat.user.url.authorization}")
+	private String authorizationUrl;
 
 	@Value("${wechat.user.url.access_token}")
 	private String accessTokenUrl;
@@ -109,7 +109,7 @@ public class WechatController {
 	@Value("${wechat.api.url.file}")
 	private String fileApiUrl;
 
-	@Value("${wechat.api.url.pay.notify_url}")
+	@Value("${wechat.api.url.pay.notify}")
 	private String notifyUrl;
 
 	@Value("${user.type.name}")
@@ -198,8 +198,8 @@ public class WechatController {
 		return new ResultBean<>(filePath);
 	}
 
-	@RequestMapping(path = "/loginUrl")
-	public ResultBean<String> wechatLoginUrl(HttpServletRequest request) throws Exception {
+	@RequestMapping(path = "/authorize/params/{url}")
+	public ResultBean<String> authorize(HttpServletRequest request, @PathVariable String uri) throws Exception {
 		String origin = request.getHeader("Origin");
 		String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
@@ -214,8 +214,8 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		String url = String.format(loginUrl, developerSetting.get().getAccount(),
-				URLEncoder.encode(origin + "/#/WechatLogin", "UTF-8"), token);
+		String url = String.format(authorizationUrl, developerSetting.get().getAccount(),
+				URLEncoder.encode(uri, "UTF-8"), token);
 		return new ResultBean<>(url);
 	}
 
