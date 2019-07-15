@@ -198,8 +198,8 @@ public class WechatController {
 		return new ResultBean<>(filePath);
 	}
 
-	@RequestMapping(path = "/authorize/params/{url}")
-	public ResultBean<String> authorize(HttpServletRequest request, @PathVariable String uri) throws Exception {
+	@RequestMapping(path = "/authorize")
+	public ResultBean<String> authorize(HttpServletRequest request, @RequestParam("uri") String uri) throws Exception {
 		String origin = request.getHeader("Origin");
 		String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
@@ -214,7 +214,8 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		String url = String.format(authorizationUrl, developerSetting.get().getAccount(), uri, token);
+		String url = String.format(authorizationUrl, developerSetting.get().getAccount(),
+				URLEncoder.encode(uri, "UTF-8"), token);
 		return new ResultBean<>(url);
 	}
 
