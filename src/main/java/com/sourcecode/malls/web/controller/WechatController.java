@@ -329,7 +329,7 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/pay/success")
+	@RequestMapping(path = "/pay/notify")
 	public void notify(@RequestBody String payload) throws Exception {
 		logger.info(payload);
 		String orderId = WXPayUtil.xmlToMap(payload).get("out_trade_no");

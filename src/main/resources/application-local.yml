@@ -8,4 +8,4 @@ wechat:
   api:
     url:
       pay:
-        notify_url: 'http://localhost:9002/client/wechat/pay/success'
+        notify_url: 'http://localhost:9002/client/wechat/pay/notify'
