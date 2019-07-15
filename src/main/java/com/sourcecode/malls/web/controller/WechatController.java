@@ -214,8 +214,7 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		String url = String.format(authorizationUrl, developerSetting.get().getAccount(),
-				URLEncoder.encode(uri, "UTF-8"), token);
+		String url = String.format(authorizationUrl, developerSetting.get().getAccount(), uri, token);
 		return new ResultBean<>(url);
 	}
 
