@@ -243,7 +243,7 @@ public class OrderService {
 
 	public void afterPayment(String orderId) {
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
-		if (orderOp.isPresent()) {
+		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
 			Order order = orderOp.get();
 			order.setStatus(OrderStatus.Paid);
 			order.setPayTime(new Date());

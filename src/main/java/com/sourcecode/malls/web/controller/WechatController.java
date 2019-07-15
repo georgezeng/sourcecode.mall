@@ -331,9 +331,12 @@ public class WechatController {
 
 	@RequestMapping(path = "/pay/notify")
 	public void notify(@RequestBody String payload) throws Exception {
-		logger.info(payload);
-		String orderId = WXPayUtil.xmlToMap(payload).get("out_trade_no");
-		orderService.afterPayment(orderId);
+		String token = WXPayUtil.xmlToMap(payload).get("out_trade_no");
+		Optional<CodeStore> tokenStore = codeStoreRepository.findByCategoryAndKey(WECHAT_PAY_TOKEN_CATEGORY, token);
+		if (tokenStore.isPresent()) {
+			orderService.afterPayment(tokenStore.get().getValue());
+			codeStoreRepository.delete(tokenStore.get());
+		}
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
@@ -347,12 +350,19 @@ public class WechatController {
 		AssertUtil.assertTrue(
 				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
 		Order order = orderOp.get();
+		String token = UUID.randomUUID().toString();
+		CodeStore tokenStore = new CodeStore();
+		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
+		tokenStore.setKey(token);
+		tokenStore.setValue(order.getOrderId());
+		codeStoreRepository.save(tokenStore);
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
 		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
-		data.put("out_trade_no", order.getOrderId());
+//		data.put("out_trade_no", order.getOrderId());
+		data.put("out_trade_no", token);
 		data.put("device_info", "WEB");
 		data.put("fee_type", "CNY");
 		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
@@ -361,12 +371,6 @@ public class WechatController {
 			data.put("total_fee", "1");
 		}
 		data.put("spbill_create_ip", ip);
-		String token = UUID.randomUUID().toString();
-		CodeStore tokenStore = new CodeStore();
-		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
-		tokenStore.setKey(token);
-		tokenStore.setValue(order.getOrderId());
-		codeStoreRepository.save(tokenStore);
 		data.put("notify_url", notifyUrl);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
