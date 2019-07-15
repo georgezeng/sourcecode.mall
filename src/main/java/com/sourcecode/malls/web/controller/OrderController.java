@@ -65,9 +65,8 @@ public class OrderController {
 	}
 
 	@RequestMapping(path = "/create")
-	public ResultBean<Void> create(@RequestBody SettleAccountDTO dto) {
-		orderService.generateOrder(ClientContext.get(), dto);
-		return new ResultBean<>();
+	public ResultBean<Long> create(@RequestBody SettleAccountDTO dto) {
+		return new ResultBean<>(orderService.generateOrder(ClientContext.get(), dto));
 	}
 
 	@RequestMapping(path = "/list")

@@ -146,7 +146,7 @@ public class OrderService {
 		return sdf.format(new Date()) + new Random().nextInt(9999);
 	}
 
-	public void generateOrder(Client client, SettleAccountDTO dto) {
+	public Long generateOrder(Client client, SettleAccountDTO dto) {
 		AssertUtil.assertNotNull(dto.getAddress(), "收货地址不能为空");
 		BigDecimal totalPrice = BigDecimal.ZERO;
 		Order order = new Order();
@@ -199,6 +199,7 @@ public class OrderService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
+		return order.getId();
 	}
 
 	private void settleItem(Client client, GoodsItem item, GoodsItemProperty property, Order parent, int nums,
@@ -320,6 +321,11 @@ public class OrderService {
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
 		order.get().setStatus(OrderStatus.Canceled);
 		orderRepository.save(order.get());
+//		List<SubOrder> list = order.get().getSubList();
+//		if(list != null) {
+//			for(SubOrder sub : list) {
+//			}
+//		}
 		if (paid) {
 			// 自动退款
 		}

@@ -350,7 +350,7 @@ public class WechatController {
 		AssertUtil.assertTrue(
 				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
 		Order order = orderOp.get();
-		String token = UUID.randomUUID().toString();
+		String token = UUID.randomUUID().toString().replaceAll("-", "");
 		CodeStore tokenStore = new CodeStore();
 		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
 		tokenStore.setKey(token);
