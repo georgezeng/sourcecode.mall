@@ -331,6 +331,7 @@ public class WechatController {
 
 	@RequestMapping(path = "/pay/success")
 	public void notify(@RequestBody String payload) throws Exception {
+		logger.info(payload);
 		String orderId = WXPayUtil.xmlToMap(payload).get("out_trade_no");
 		orderService.afterPayment(orderId);
 	}
