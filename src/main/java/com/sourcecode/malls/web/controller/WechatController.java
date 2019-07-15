@@ -16,6 +16,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wxpay.sdk.WXPay;
 import com.github.wxpay.sdk.WXPayUtil;
 import com.github.wxpay.sdk.WePayConfig;
+import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -126,6 +129,9 @@ public class WechatController {
 
 	@Autowired
 	private OrderService orderService;
+
+	@Autowired
+	private Environment env;
 
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
@@ -348,7 +354,11 @@ public class WechatController {
 		data.put("out_trade_no", order.getOrderId());
 		data.put("device_info", "WEB");
 		data.put("fee_type", "CNY");
-		data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
+		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
+			data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
+		} else {
+			data.put("total_fee", "1");
+		}
 		data.put("spbill_create_ip", ip);
 		String token = UUID.randomUUID().toString();
 		CodeStore tokenStore = new CodeStore();
