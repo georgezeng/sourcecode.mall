@@ -268,7 +268,8 @@ public class WechatController {
 		tokens.setAccessToken(accessInfo.getAccessToken());
 		tokens.setRefreshToken(accessInfo.getRefreshToken());
 		wechatTokenRepository.save(tokens);
-		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, 30 * 3600 * 24, true, true);
+		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, 30 * 3600 * 24,
+				true, true);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
@@ -370,10 +371,9 @@ public class WechatController {
 		data.put("notify_url", notifyUrl);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
-			Optional<WechatToken> wechatToken = wechatTokenRepository
-					.findByOpenId(CookieUtil.getValue(request, SystemConstant.WECHAT_OPENID_KEY, true));
-			AssertUtil.assertTrue(wechatToken.isPresent(), "无法获取微信账号信息，请重新登录");
-			data.put("openid", wechatToken.get().getOpenId());
+			String openId = CookieUtil.getValue(request, SystemConstant.WECHAT_OPENID_KEY, true);
+			AssertUtil.assertTrue(!StringUtils.isEmpty(openId), "无法获取微信账号信息，请重新登录");
+			data.put("openid", openId);
 		}
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
