@@ -224,6 +224,9 @@ public class WechatController {
 	@RequestMapping(path = "/loginInfo")
 	public ResultBean<LoginInfo> getLoginInfo(HttpServletRequest request, HttpServletResponse response,
 			@RequestBody LoginInfo loginInfo) throws Exception {
+		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY,
+				loginInfo.getUsername());
+		AssertUtil.assertTrue(storeOp.isPresent(), "获取微信信息有误");
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -231,9 +234,6 @@ public class WechatController {
 		Merchant merchant = apOp.get().getMerchant();
 		Optional<DeveloperSettingDTO> developerSetting = settingService.loadWechatGzh(merchant.getId());
 		AssertUtil.assertTrue(developerSetting.isPresent(), "商户不存在");
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.WECHAT_TOKEN_CATEGORY,
-				loginInfo.getUsername());
-		AssertUtil.assertTrue(storeOp.isPresent(), "登录信息有误");
 		String result = httpClient.getForObject(String.format(accessTokenUrl, developerSetting.get().getAccount(),
 				developerSetting.get().getSecret(), loginInfo.getPassword()), String.class);
 		WechatAccessInfo accessInfo = mapper.readValue(result, WechatAccessInfo.class);
