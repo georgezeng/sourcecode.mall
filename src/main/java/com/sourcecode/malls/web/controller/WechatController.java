@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.service.impl.WechatSettingService;
 import com.sourcecode.malls.util.AssertUtil;
+import com.sourcecode.malls.util.CookieUtil;
 
 @RestController
 @RequestMapping(path = "/client/wechat")
@@ -214,15 +216,14 @@ public class WechatController {
 		store.setKey(token);
 		store.setValue(token);
 		codeStoreRepository.save(store);
-		logger.info(uri);
 		String url = String.format(authorizationUrl, developerSetting.get().getAccount(),
 				URLEncoder.encode(uri, "UTF-8"), token);
 		return new ResultBean<>(url);
 	}
 
 	@RequestMapping(path = "/loginInfo")
-	public ResultBean<LoginInfo> getLoginInfo(HttpServletRequest request, @RequestBody LoginInfo loginInfo)
-			throws Exception {
+	public ResultBean<LoginInfo> getLoginInfo(HttpServletRequest request, HttpServletResponse response,
+			@RequestBody LoginInfo loginInfo) throws Exception {
 		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
 		AssertUtil.assertNotEmpty(domain, "商户不存在");
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
@@ -255,21 +256,22 @@ public class WechatController {
 		store.setKey(loginInfo.getUsername());
 		store.setValue(mapper.writeValueAsString(userInfo));
 		codeStoreRepository.save(store);
+		Optional<WechatToken> tokensOp = wechatTokenRepository.findByOpenId(accessInfo.getOpenId());
+		WechatToken tokens = null;
+		if (!tokensOp.isPresent()) {
+			tokens = new WechatToken();
+			tokens.setOpenId(accessInfo.getOpenId());
+			tokens.setMerchantId(merchant.getId());
+		} else {
+			tokens = tokensOp.get();
+		}
+		tokens.setAccessToken(accessInfo.getAccessToken());
+		tokens.setRefreshToken(accessInfo.getRefreshToken());
+		wechatTokenRepository.save(tokens);
+		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, -1, true, true);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
-			Optional<WechatToken> tokensOp = wechatTokenRepository.findByUserId(user.get().getId());
-			WechatToken tokens = null;
-			if (!tokensOp.isPresent()) {
-				tokens = new WechatToken();
-				tokens.setUserId(user.get().getId());
-			} else {
-				tokens = tokensOp.get();
-			}
-			tokens.setAccessToken(accessInfo.getAccessToken());
-			tokens.setOpenId(accessInfo.getOpenId());
-			tokens.setRefreshToken(accessInfo.getRefreshToken());
-			wechatTokenRepository.save(tokens);
 			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
 			info.setPassword(loginInfo.getUsername());
@@ -321,12 +323,6 @@ public class WechatController {
 			user.setSex(Sex.Secret);
 		}
 		clientRepository.save(user);
-		WechatToken tokens = new WechatToken();
-		tokens.setUserId(user.getId());
-		tokens.setAccessToken(userInfo.getAccessToken());
-		tokens.setRefreshToken(userInfo.getRefreshToken());
-		tokens.setOpenId(userInfo.getOpenId());
-		wechatTokenRepository.save(tokens);
 		return new ResultBean<>();
 	}
 
@@ -362,7 +358,6 @@ public class WechatController {
 		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
-//		data.put("out_trade_no", order.getOrderId());
 		data.put("out_trade_no", token);
 		data.put("device_info", "WEB");
 		data.put("fee_type", "CNY");
@@ -375,7 +370,8 @@ public class WechatController {
 		data.put("notify_url", notifyUrl);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
-			Optional<WechatToken> wechatToken = wechatTokenRepository.findByUserId(ClientContext.get().getId());
+			Optional<WechatToken> wechatToken = wechatTokenRepository
+					.findByOpenId(CookieUtil.getValue(request, SystemConstant.WECHAT_OPENID_KEY, true));
 			AssertUtil.assertTrue(wechatToken.isPresent(), "无法获取微信账号信息，请重新登录");
 			data.put("openid", wechatToken.get().getOpenId());
 		}
