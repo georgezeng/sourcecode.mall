@@ -270,6 +270,8 @@ public class WechatController {
 		wechatTokenRepository.save(tokens);
 		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, 30 * 3600 * 24,
 				true, true);
+		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_FLAG_KEY, "true", true, 30 * 3600 * 24, true,
+				false);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = null;
 		if (user.isPresent()) {
