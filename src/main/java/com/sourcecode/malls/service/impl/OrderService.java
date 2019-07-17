@@ -247,6 +247,7 @@ public class OrderService {
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
 		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
 			Order order = orderOp.get();
+			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 			order.setStatus(OrderStatus.Paid);
 			order.setPayTime(new Date());
 			orderRepository.save(order);
@@ -274,7 +275,7 @@ public class OrderService {
 			}
 		};
 		Page<Order> orders = orderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
-		return new PageResult<>(orders.get().map(order -> order.asDTO()).collect(Collectors.toList()),
+		return new PageResult<>(orders.get().map(order -> order.asDTO(true, false)).collect(Collectors.toList()),
 				orders.getTotalElements());
 	}
 
@@ -283,7 +284,7 @@ public class OrderService {
 		Optional<Order> order = orderRepository.findById(id);
 		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
-		return order.get().asDTO();
+		return order.get().asDTO(true, true);
 	}
 
 	@Transactional(readOnly = true)
@@ -320,6 +321,7 @@ public class OrderService {
 		OrderStatus status = order.get().getStatus();
 		boolean paid = OrderStatus.Paid.equals(status);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
+		em.lock(order.get(), LockModeType.PESSIMISTIC_WRITE);
 		order.get().setStatus(OrderStatus.Canceled);
 		orderRepository.save(order.get());
 		List<SubOrder> list = order.get().getSubList();
@@ -344,6 +346,7 @@ public class OrderService {
 		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.get().getStatus()), "不能确认收货，订单状态有误");
+		em.lock(order.get(), LockModeType.PESSIMISTIC_WRITE);
 		order.get().setStatus(OrderStatus.Finished);
 		orderRepository.save(order.get());
 	}
