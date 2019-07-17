@@ -80,6 +80,7 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 		} else {
 			user = userOp.get();
 		}
+		codeStoreRepository.delete(codeStoreOp.get());
 		return new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities());
 	}
 

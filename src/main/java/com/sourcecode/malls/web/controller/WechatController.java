@@ -41,6 +41,7 @@ import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.domain.redis.WechatStore;
 import com.sourcecode.malls.dto.LoginInfo;
 import com.sourcecode.malls.dto.WechatJsApiConfig;
 import com.sourcecode.malls.dto.WechatUserInfo;
@@ -54,6 +55,7 @@ import com.sourcecode.malls.repository.jpa.impl.client.WechatTokenRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.repository.redis.impl.WechatStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.OrderService;
@@ -137,14 +139,17 @@ public class WechatController {
 
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
+	
+	@Autowired
+	private WechatStoreRepository wechatStoreRepository;
 
 	@RequestMapping(path = "/jsconfig")
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
 		Optional<DeveloperSettingDTO> setting = settingService.loadWechatGzh(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "商户信息不存在，请联系商城客服");
 		String key = "merchant_" + ClientContext.getMerchantId();
-		Optional<CodeStore> storeOp = codeStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
-		CodeStore store = null;
+		Optional<WechatStore> storeOp = wechatStoreRepository.findByCategoryAndKey(WECHAT_JSAPI_TICKET_CATEGORY, key);
+		WechatStore store = null;
 		if (!storeOp.isPresent()) {
 			String result = httpClient.getForObject(
 					String.format(apiAccessTokenUrl, setting.get().getAccount(), setting.get().getSecret()),
@@ -160,11 +165,11 @@ public class WechatController {
 				logger.warn("wechat error: [" + accessInfo.getErrcode() + "] - " + accessInfo.getErrmsg());
 				throw new BusinessException("获取微信信息有误");
 			}
-			store = new CodeStore();
+			store = new WechatStore();
 			store.setCategory(WECHAT_JSAPI_TICKET_CATEGORY);
 			store.setKey(key);
 			store.setValue(accessInfo.getTicket());
-			codeStoreRepository.save(store);
+			wechatStoreRepository.save(store);
 		} else {
 			store = storeOp.get();
 		}

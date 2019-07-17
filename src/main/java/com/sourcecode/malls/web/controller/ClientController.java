@@ -136,6 +136,7 @@ public class ClientController {
 		Client user = ClientContext.get();
 		user.setPassword(encoder.encode(dto.getPassword()));
 		clientService.save(user);
+		codeStoreRepository.delete(codeStoreOp.get());
 		return new ResultBean<>();
 	}
 

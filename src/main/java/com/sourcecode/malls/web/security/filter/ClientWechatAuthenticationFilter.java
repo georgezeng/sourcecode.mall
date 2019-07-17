@@ -72,6 +72,7 @@ public class ClientWechatAuthenticationFilter extends AbstractAuthenticationProc
 			throw new AuthenticationServiceException("登录参数有误");
 		}
 		Client user = userOp.get();
+		codeStoreRepository.delete(store.get());
 		return new UsernamePasswordAuthenticationToken(user, userOp.get().getPassword(), user.getAuthorities());
 	}
 
