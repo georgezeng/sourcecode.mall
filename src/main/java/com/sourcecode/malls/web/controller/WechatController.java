@@ -332,7 +332,7 @@ public class WechatController {
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/pay/notify")
+	@RequestMapping(path = "/notify/pay")
 	public void payNotify(@RequestBody String payload) throws Exception {
 		Map<String, String> result = WXPayUtil.xmlToMap(payload);
 		String token = result.get("out_trade_no");
@@ -344,7 +344,7 @@ public class WechatController {
 		}
 	}
 
-	@RequestMapping(path = "/refund/notify")
+	@RequestMapping(path = "/notify/refund")
 	public void refundNotify(@RequestBody String payload) throws Exception {
 		Map<String, String> result = WXPayUtil.xmlToMap(payload);
 		String orderId = result.get("out_refund_no");
