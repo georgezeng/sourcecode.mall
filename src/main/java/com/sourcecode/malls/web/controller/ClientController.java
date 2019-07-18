@@ -68,18 +68,28 @@ public class ClientController {
 
 	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
-//		Client client = ClientContext.get();
-		String rootPath = userDir + "/";// + client.getId() + "/";
-		AssertUtil.assertTrue(filePath.startsWith(rootPath) && filePath.endsWith("avatar.png"),
+		Client client = ClientContext.get();
+		String rootPath = userDir + "/" + client.getId() + "/";
+		AssertUtil.assertTrue(filePath.startsWith(rootPath),
 				ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
 		return new ByteArrayResource(fileService.load(false, filePath));
 	}
 
 	@RequestMapping(value = "/avatar/upload")
-	public ResultBean<String> upload(@RequestParam("file") MultipartFile file) throws IOException {
+	public ResultBean<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
 		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar" + extend;
 		fileService.upload(true, filePath, file.getInputStream());
+		Client client = ClientContext.get();
+		client.setAvatar(filePath);
+		clientService.save(client);
+		return new ResultBean<>(filePath);
+	}
+
+	@RequestMapping(value = "/identity/upload")
+	public ResultBean<String> uploadIdentity(@RequestParam("file") MultipartFile file) throws IOException {
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/identity/" + file.getOriginalFilename();
+		fileService.upload(false, filePath, file.getInputStream());
 		return new ResultBean<>(filePath);
 	}
 
