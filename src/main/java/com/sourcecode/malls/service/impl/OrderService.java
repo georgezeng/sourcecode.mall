@@ -370,6 +370,10 @@ public class OrderService {
 				|| OrderStatus.Paid.equals(orderOp.get().getStatus()))) {
 			Order order = orderOp.get();
 			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+			if (OrderStatus.Paid.equals(order.getStatus())) {
+				order.setCancelForRefund(true);
+				order.setRefundTime(new Date());
+			}
 			order.setStatus(OrderStatus.Canceled);
 			orderRepository.save(order);
 			List<SubOrder> list = order.getSubList();
