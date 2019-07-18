@@ -22,6 +22,8 @@ import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,6 +33,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.github.wxpay.sdk.WXPay;
 import com.github.wxpay.sdk.WePayConfig;
+import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
@@ -106,9 +109,12 @@ public class OrderService {
 	private WechatSettingService wechatSettingService;
 
 	private String fileDir = "order";
-	
+
 	@Value("${wechat.api.url.refund.notify}")
 	private String refundNotifyUrl;
+
+	@Autowired
+	private Environment env;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -344,6 +350,9 @@ public class OrderService {
 				data.put("transaction_id", order.getTransactionId());
 				data.put("out_refund_no", order.getOrderId());
 				String fee = order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "";
+				if (!env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
+					fee = "1";
+				}
 				data.put("total_fee", fee);
 				data.put("refund_fee", fee);
 				data.put("notify_url", refundNotifyUrl);
