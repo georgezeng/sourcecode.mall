@@ -355,14 +355,13 @@ public class OrderService {
 				}
 				data.put("total_fee", fee);
 				data.put("refund_fee", fee);
-				data.put("notify_url", refundNotifyUrl);
+//				data.put("notify_url", refundNotifyUrl);
 				Map<String, String> resp = wxpay.refund(data);
 				AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 				AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 			}
-		} else {
-			afterCancel(order.getOrderId());
 		}
+		afterCancel(order.getOrderId());
 	}
 
 	public void afterCancel(String orderId) {

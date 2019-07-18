@@ -344,14 +344,6 @@ public class WechatController {
 		}
 	}
 
-	@RequestMapping(path = "/notify/refund")
-	public void refundNotify(@RequestBody String payload) throws Exception {
-		logger.info(payload);
-		Map<String, String> result = WXPayUtil.xmlToMap(payload);
-		String orderId = result.get("out_refund_no");
-		orderService.afterCancel(orderId);
-	}
-
 	@RequestMapping(path = "/unifiedOrder")
 	public ResultBean<Map<String, String>> unifiedOrder(HttpServletRequest request,
 			@RequestBody Map<String, String> params) throws Exception {
