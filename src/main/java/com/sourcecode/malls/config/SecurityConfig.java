@@ -57,7 +57,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/wechat/jsconfig").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/code/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/notify/**").permitAll();
-		http.authorizeRequests().antMatchers("/index/**").permitAll();
+		http.authorizeRequests().antMatchers("/index").permitAll();
 		http.authorizeRequests().antMatchers("/role/**").hasAuthority(adminProperties.getAuthority());
 		http.authorizeRequests().antMatchers("/user/**").hasAuthority(adminProperties.getAuthority());
 		http.authorizeRequests().antMatchers("/authority/**").hasAuthority(adminProperties.getAuthority());
