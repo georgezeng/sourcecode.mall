@@ -90,7 +90,7 @@ public class OrderController {
 	}
 
 	@RequestMapping(path = "/cancel/params/{id}")
-	public ResultBean<Void> cancel(@PathVariable Long id) {
+	public ResultBean<Void> cancel(@PathVariable Long id) throws Exception {
 		orderService.cancel(ClientContext.get(), id);
 		return new ResultBean<>();
 	}

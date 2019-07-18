@@ -3,3 +3,5 @@ wechat:
     url:
       pay:
         notify: 'https://mall-server.bsxkj.com/client/wechat/pay/notify'
+      refund:
+        notify: 'https://mall-server.bsxkj.com/client/wechat/refund/notify'  

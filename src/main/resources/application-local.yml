@@ -9,3 +9,5 @@ wechat:
     url:
       pay:
         notify: 'http://localhost:9002/client/wechat/pay/notify'
+      refund:
+        notify: 'http://localhost:9002/client/wechat/refund/notify'  

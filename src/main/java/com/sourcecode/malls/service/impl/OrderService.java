@@ -5,7 +5,9 @@ import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -26,6 +28,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.github.wxpay.sdk.WXPay;
+import com.github.wxpay.sdk.WePayConfig;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
@@ -46,6 +50,7 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.enums.Payment;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
@@ -95,6 +100,9 @@ public class OrderService {
 
 	@Autowired
 	protected EntityManager em;
+
+	@Autowired
+	private WechatSettingService wechatSettingService;
 
 	private String fileDir = "order";
 
@@ -315,29 +323,54 @@ public class OrderService {
 		return orders.getTotalElements();
 	}
 
-	public void cancel(Client client, Long id) {
-		Optional<Order> order = orderRepository.findById(id);
-		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+	public void cancel(Client client, Long id) throws Exception {
+		Optional<Order> orderOp = orderRepository.findById(id);
+		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
-		OrderStatus status = order.get().getStatus();
+		Order order = orderOp.get();
+		OrderStatus status = order.getStatus();
 		boolean paid = OrderStatus.Paid.equals(status);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
-		em.lock(order.get(), LockModeType.PESSIMISTIC_WRITE);
-		order.get().setStatus(OrderStatus.Canceled);
-		orderRepository.save(order.get());
-		List<SubOrder> list = order.get().getSubList();
-		if (list != null) {
-			for (SubOrder sub : list) {
-				GoodsItemProperty property = sub.getProperty();
-				if (property != null) {
-					em.lock(property, LockModeType.PESSIMISTIC_WRITE);
-					property.setInventory(property.getInventory() + sub.getNums());
-					goodsItemPropertyRepository.save(property);
-				}
-			}
-		}
 		if (paid) {
 			// 自动退款
+			if (Payment.WePay.equals(order.getPayment())) {
+				WePayConfig config = wechatSettingService.createWePayConfig(client.getMerchant().getId());
+				WXPay wxpay = new WXPay(config);
+				Map<String, String> data = new HashMap<String, String>();
+				data.put("transaction_id", order.getTransactionId());
+				data.put("out_refund_no", order.getOrderId());
+				String fee = order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "";
+				data.put("total_fee", fee);
+				data.put("refund_fee", fee);
+				data.put("notify_url", fee);
+				Map<String, String> resp = wxpay.refund(data);
+				AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
+				AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
+			}
+		} else {
+			afterCancel(order.getOrderId());
+		}
+	}
+
+	public void afterCancel(String orderId) {
+		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
+		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())
+				|| OrderStatus.Paid.equals(orderOp.get().getStatus())) {
+			Order order = orderOp.get();
+			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+			order.setStatus(OrderStatus.Canceled);
+			orderRepository.save(order);
+			List<SubOrder> list = order.getSubList();
+			if (list != null) {
+				for (SubOrder sub : list) {
+					GoodsItemProperty property = sub.getProperty();
+					if (property != null) {
+						em.lock(property, LockModeType.PESSIMISTIC_WRITE);
+						property.setInventory(property.getInventory() + sub.getNums());
+						goodsItemPropertyRepository.save(property);
+					}
+				}
+			}
 		}
 	}
 

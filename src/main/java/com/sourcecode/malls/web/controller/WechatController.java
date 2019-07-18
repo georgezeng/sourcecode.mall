@@ -114,7 +114,7 @@ public class WechatController {
 	private String fileApiUrl;
 
 	@Value("${wechat.api.url.pay.notify}")
-	private String notifyUrl;
+	private String payNotifyUrl;
 
 	@Value("${user.type.name}")
 	private String userDir;
@@ -333,7 +333,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/pay/notify")
-	public void notify(@RequestBody String payload) throws Exception {
+	public void payNotify(@RequestBody String payload) throws Exception {
 		Map<String, String> result = WXPayUtil.xmlToMap(payload);
 		String token = result.get("out_trade_no");
 		Optional<CodeStore> tokenStore = codeStoreRepository.findByCategoryAndKey(WECHAT_PAY_TOKEN_CATEGORY, token);
@@ -342,6 +342,13 @@ public class WechatController {
 			orderService.afterPayment(tokenStore.get().getValue(), transactionId);
 			codeStoreRepository.delete(tokenStore.get());
 		}
+	}
+
+	@RequestMapping(path = "/refund/notify")
+	public void refundNotify(@RequestBody String payload) throws Exception {
+		Map<String, String> result = WXPayUtil.xmlToMap(payload);
+		String orderId = result.get("out_refund_no");
+		orderService.afterCancel(orderId);
 	}
 
 	@RequestMapping(path = "/unifiedOrder")
@@ -375,7 +382,7 @@ public class WechatController {
 			data.put("total_fee", "1");
 		}
 		data.put("spbill_create_ip", ip);
-		data.put("notify_url", notifyUrl);
+		data.put("notify_url", payNotifyUrl);
 		data.put("trade_type", params.get("type"));
 		if ("JSAPI".equals(params.get("type"))) {
 			String openId = CookieUtil.getValue(request, SystemConstant.WECHAT_OPENID_KEY, true);
