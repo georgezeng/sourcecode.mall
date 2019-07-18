@@ -239,17 +239,18 @@ public class OrderService {
 		int leftInventory = property.getInventory() - nums;
 		AssertUtil.assertTrue(leftInventory >= 0, item.getName() + "库存不足");
 		property.setInventory(leftInventory);
-		sub.setPropertyId(property.getId());
+		sub.setProperty(property);
 		subs.add(sub);
 	}
 
-	public void afterPayment(String orderId) {
+	public void afterPayment(String orderId, String transactionId) {
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
 		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
 			Order order = orderOp.get();
 			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 			order.setStatus(OrderStatus.Paid);
 			order.setPayTime(new Date());
+			order.setTransactionId(transactionId);
 			orderRepository.save(order);
 		}
 	}
@@ -327,9 +328,8 @@ public class OrderService {
 		List<SubOrder> list = order.get().getSubList();
 		if (list != null) {
 			for (SubOrder sub : list) {
-				Optional<GoodsItemProperty> propertyOp = goodsItemPropertyRepository.findById(sub.getPropertyId());
-				if (propertyOp.isPresent()) {
-					GoodsItemProperty property = propertyOp.get();
+				GoodsItemProperty property = sub.getProperty();
+				if (property != null) {
 					em.lock(property, LockModeType.PESSIMISTIC_WRITE);
 					property.setInventory(property.getInventory() + sub.getNums());
 					goodsItemPropertyRepository.save(property);

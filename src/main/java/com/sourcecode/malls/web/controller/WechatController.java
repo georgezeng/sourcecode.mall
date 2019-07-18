@@ -139,7 +139,7 @@ public class WechatController {
 
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
-	
+
 	@Autowired
 	private WechatStoreRepository wechatStoreRepository;
 
@@ -334,10 +334,12 @@ public class WechatController {
 
 	@RequestMapping(path = "/pay/notify")
 	public void notify(@RequestBody String payload) throws Exception {
-		String token = WXPayUtil.xmlToMap(payload).get("out_trade_no");
+		Map<String, String> result = WXPayUtil.xmlToMap(payload);
+		String token = result.get("out_trade_no");
 		Optional<CodeStore> tokenStore = codeStoreRepository.findByCategoryAndKey(WECHAT_PAY_TOKEN_CATEGORY, token);
 		if (tokenStore.isPresent()) {
-			orderService.afterPayment(tokenStore.get().getValue());
+			String transactionId = result.get("transaction_id");
+			orderService.afterPayment(tokenStore.get().getValue(), transactionId);
 			codeStoreRepository.delete(tokenStore.get());
 		}
 	}
