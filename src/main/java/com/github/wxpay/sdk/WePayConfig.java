@@ -2,13 +2,19 @@ package com.github.wxpay.sdk;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.io.Serializable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
 
-public class WePayConfig extends WXPayConfig {
+public class WePayConfig extends WXPayConfig implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private String appId;
 	private String key;
