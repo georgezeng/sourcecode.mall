@@ -51,8 +51,8 @@ public class SecurityConfig extends BaseSecurityConfig {
 		rememberMeServices.setAlwaysRemember(true);
 		http.rememberMe().key(rememberMeServices.getKey()).rememberMeServices(rememberMeServices);
 		http.authorizeRequests().antMatchers("/goods/**").permitAll();
-		http.authorizeRequests().antMatchers("/client/wechat/authorize/**").permitAll();
-		http.authorizeRequests().antMatchers("/client/wechat/info").permitAll();
+		http.authorizeRequests().antMatchers("/client/wechat/authorize").permitAll();
+		http.authorizeRequests().antMatchers("/client/wechat/loginInfo").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/register").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/jsconfig").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/code/**").permitAll();
