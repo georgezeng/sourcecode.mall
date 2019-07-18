@@ -1,5 +1,6 @@
 package com.sourcecode.malls.web.controller;
 
+import java.io.IOException;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
@@ -71,6 +73,14 @@ public class ClientController {
 		AssertUtil.assertTrue(filePath.startsWith(rootPath) && filePath.endsWith("avatar.png"),
 				ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
 		return new ByteArrayResource(fileService.load(false, filePath));
+	}
+
+	@RequestMapping(value = "/avatar/upload")
+	public ResultBean<String> upload(@RequestParam("file") MultipartFile file) throws IOException {
+		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar" + extend;
+		fileService.upload(true, filePath, file.getInputStream());
+		return new ResultBean<>(filePath);
 	}
 
 	@RequestMapping(path = "/save")
