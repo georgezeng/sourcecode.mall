@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -66,6 +69,9 @@ public class ClientController {
 	@Value("${user.type.name}")
 	private String userDir;
 
+	@Autowired
+	private Environment env;
+
 	@RequestMapping(path = "/img/load", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
@@ -78,7 +84,12 @@ public class ClientController {
 	@RequestMapping(value = "/avatar/upload")
 	public ResultBean<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar" + extend;
+		String filePath = userDir + "/" + ClientContext.get().getId();
+		if (env.acceptsProfiles(Profiles.of(EnvConstant.LOCAL))) {
+			filePath += "/avatar_" + System.currentTimeMillis() + extend;
+		} else {
+			filePath += "/avatar" + extend;
+		}
 		fileService.upload(true, filePath, file.getInputStream());
 		Client client = ClientContext.get();
 		client.setAvatar(filePath);

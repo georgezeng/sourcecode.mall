@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 
+import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.web.security.filter.ClientSessionFilter;
 import com.sourcecode.malls.web.security.filter.ClientUsernamePasswordAuthenticationFilter;
@@ -39,6 +40,9 @@ public class SecurityConfig extends BaseSecurityConfig {
 	@Autowired
 	private ClientRememberMeServices rememberMeServices;
 	
+	@Autowired
+	private SuperAdminProperties adminProperties;
+	
 	private CompositeSessionAuthenticationStrategy sessionStrategy = new CompositeSessionAuthenticationStrategy(
 			Arrays.asList(new ChangeSessionIdAuthenticationStrategy()));
 
@@ -54,6 +58,9 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/wechat/code/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/notify/**").permitAll();
 		http.authorizeRequests().antMatchers("/index").permitAll();
+		http.authorizeRequests().antMatchers("/role/**").hasAuthority(adminProperties.getAuthority());
+		http.authorizeRequests().antMatchers("/user/**").hasAuthority(adminProperties.getAuthority());
+		http.authorizeRequests().antMatchers("/authority/**").hasAuthority(adminProperties.getAuthority());
 		http.authorizeRequests().anyRequest().authenticated();
 	}
 
