@@ -346,6 +346,7 @@ public class WechatController {
 
 	@RequestMapping(path = "/notify/refund")
 	public void refundNotify(@RequestBody String payload) throws Exception {
+		logger.info(payload);
 		Map<String, String> result = WXPayUtil.xmlToMap(payload);
 		String orderId = result.get("out_refund_no");
 		orderService.afterCancel(orderId);

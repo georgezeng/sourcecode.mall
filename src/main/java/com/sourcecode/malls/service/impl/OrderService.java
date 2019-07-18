@@ -367,8 +367,8 @@ public class OrderService {
 
 	public void afterCancel(String orderId) {
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
-		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())
-				|| OrderStatus.Paid.equals(orderOp.get().getStatus())) {
+		if (orderOp.isPresent() && (OrderStatus.UnPay.equals(orderOp.get().getStatus())
+				|| OrderStatus.Paid.equals(orderOp.get().getStatus()))) {
 			Order order = orderOp.get();
 			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 			order.setStatus(OrderStatus.Canceled);
