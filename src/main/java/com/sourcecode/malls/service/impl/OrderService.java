@@ -21,6 +21,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -105,6 +106,9 @@ public class OrderService {
 	private WechatSettingService wechatSettingService;
 
 	private String fileDir = "order";
+	
+	@Value("${wechat.api.url.refund.notify}")
+	private String refundNotifyUrl;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -342,7 +346,7 @@ public class OrderService {
 				String fee = order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "";
 				data.put("total_fee", fee);
 				data.put("refund_fee", fee);
-				data.put("notify_url", fee);
+				data.put("notify_url", refundNotifyUrl);
 				Map<String, String> resp = wxpay.refund(data);
 				AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 				AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
