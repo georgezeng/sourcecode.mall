@@ -31,6 +31,7 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemProperty;
+import com.sourcecode.malls.domain.goods.GoodsItemRank;
 import com.sourcecode.malls.domain.goods.GoodsItemValue;
 import com.sourcecode.malls.domain.order.Invoice;
 import com.sourcecode.malls.domain.order.Order;
@@ -47,6 +48,7 @@ import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemValueRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.InvoiceRepository;
@@ -92,6 +94,9 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private GoodsItemRepository goodsItemRepository;
+
+	@Autowired
+	private GoodsItemRankRepository rankRepository;
 
 	@Autowired
 	protected EntityManager em;
@@ -372,6 +377,17 @@ public class OrderService implements BaseService {
 		em.lock(order.get(), LockModeType.PESSIMISTIC_WRITE);
 		order.get().setStatus(OrderStatus.Finished);
 		orderRepository.save(order.get());
+		if (!CollectionUtils.isEmpty(order.get().getSubList())) {
+			for (SubOrder sub : order.get().getSubList()) {
+				Optional<GoodsItem> item = goodsItemRepository.findById(sub.getItemId());
+				if (item.isPresent()) {
+					GoodsItemRank rank = item.get().getRank();
+					em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
+					rank.setOrderNums(rank.getOrderNums() + 1);
+					rankRepository.save(rank);
+				}
+			}
+		}
 	}
 
 	public void delete(Client client, Long id) {
