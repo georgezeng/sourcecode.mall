@@ -2,14 +2,10 @@ package com.sourcecode.malls.service.impl;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -21,9 +17,6 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -31,9 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import com.github.wxpay.sdk.WXPay;
 import com.github.wxpay.sdk.WePayConfig;
-import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
@@ -54,7 +45,6 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
-import com.sourcecode.malls.enums.Payment;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
@@ -64,11 +54,12 @@ import com.sourcecode.malls.repository.jpa.impl.order.OrderAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
+import com.sourcecode.malls.service.base.BaseService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @Service
 @Transactional
-public class OrderService {
+public class OrderService implements BaseService {
 	@Autowired
 	private GoodsItemService itemService;
 
@@ -106,15 +97,9 @@ public class OrderService {
 	protected EntityManager em;
 
 	@Autowired
-	private WechatSettingService wechatSettingService;
+	private WechatService wechatService;
 
 	private String fileDir = "order";
-
-	@Value("${wechat.api.url.refund.notify}")
-	private String refundNotifyUrl;
-
-	@Autowired
-	private Environment env;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -159,18 +144,13 @@ public class OrderService {
 		return previewDTO;
 	}
 
-	public String generateOrderId() {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
-		return sdf.format(new Date()) + new Random().nextInt(9999);
-	}
-
 	public Long generateOrder(Client client, SettleAccountDTO dto) {
 		AssertUtil.assertNotNull(dto.getAddress(), "收货地址不能为空");
 		BigDecimal totalPrice = BigDecimal.ZERO;
 		Order order = new Order();
 		order.setClient(client);
 		order.setMerchant(client.getMerchant());
-		order.setOrderId(generateOrderId());
+		order.setOrderId(generateId());
 		order.setStatus(OrderStatus.UnPay);
 		order.setPayment(dto.getPayment());
 		order.setRemark(dto.getRemark());
@@ -257,6 +237,7 @@ public class OrderService {
 		int leftInventory = property.getInventory() - nums;
 		AssertUtil.assertTrue(leftInventory >= 0, item.getName() + "库存不足");
 		property.setInventory(leftInventory);
+		propertyRepository.save(property);
 		sub.setProperty(property);
 		subs.add(sub);
 	}
@@ -343,22 +324,16 @@ public class OrderService {
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
 		if (paid) {
 			// 自动退款
-			if (Payment.WePay.equals(order.getPayment())) {
-				WePayConfig config = wechatSettingService.createWePayConfig(client.getMerchant().getId());
-				WXPay wxpay = new WXPay(config);
-				Map<String, String> data = new HashMap<String, String>();
-				data.put("transaction_id", order.getTransactionId());
-				data.put("out_refund_no", order.getOrderId());
-				String fee = order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "";
-				if (!env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
-					fee = "1";
-				}
-				data.put("total_fee", fee);
-				data.put("refund_fee", fee);
-//				data.put("notify_url", refundNotifyUrl);
-				Map<String, String> resp = wxpay.refund(data);
-				AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
-				AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
+			switch (order.getPayment()) {
+			case WePay: {
+				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
+				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getTotalPrice());
+			}
+				break;
+			case AliPay: {
+
+			}
+				break;
 			}
 		}
 		afterCancel(order.getOrderId());
@@ -371,7 +346,6 @@ public class OrderService {
 			Order order = orderOp.get();
 			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 			if (OrderStatus.Paid.equals(order.getStatus())) {
-				order.setCancelForRefund(true);
 				order.setRefundTime(new Date());
 			}
 			order.setStatus(OrderStatus.Canceled);

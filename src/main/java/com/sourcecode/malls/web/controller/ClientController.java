@@ -99,7 +99,9 @@ public class ClientController {
 
 	@RequestMapping(value = "/identity/upload")
 	public ResultBean<String> uploadIdentity(@RequestParam("file") MultipartFile file) throws IOException {
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/identity/" + file.getOriginalFilename();
+		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/identity/" + System.currentTimeMillis()
+				+ extend;
 		fileService.upload(false, filePath, file.getInputStream());
 		return new ResultBean<>(filePath);
 	}

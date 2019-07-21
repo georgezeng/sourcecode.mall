@@ -60,7 +60,7 @@ import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
-import com.sourcecode.malls.service.impl.WechatSettingService;
+import com.sourcecode.malls.service.impl.WechatService;
 import com.sourcecode.malls.util.AssertUtil;
 import com.sourcecode.malls.util.CookieUtil;
 
@@ -126,7 +126,7 @@ public class WechatController {
 	private MerchantSettingService settingService;
 
 	@Autowired
-	private WechatSettingService wechatSettingService;
+	private WechatService wechatService;
 
 	@Autowired
 	private OrderRepository orderRepository;
@@ -362,7 +362,7 @@ public class WechatController {
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
-		WePayConfig config = wechatSettingService.createWePayConfig(ClientContext.getMerchantId());
+		WePayConfig config = wechatService.createWePayConfig(ClientContext.getMerchantId());
 		WXPay wxpay = new WXPay(config);
 		Map<String, String> data = new HashMap<String, String>();
 		data.put("body", "[" + shop.get().getName() + "]商品订单支付");
