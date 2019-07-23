@@ -66,9 +66,10 @@ public class GoodsItemController {
 	public ResultBean<GoodsItemDTO> load(@PathVariable("id") Long id) {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		Optional<GoodsItem> item = service.findById(dto.getId());
-		Optional<GoodsItemEvaluation> eva = evaluationRepository.findFirstByItemOrderByCreateTimeDesc(item.get());
+		Optional<GoodsItemEvaluation> eva = evaluationRepository
+				.findFirstByItemAndPassedOrderByCreateTimeDesc(item.get(), true);
 		if (eva.isPresent()) {
-			dto.setTopEvaluation(eva.get().asDTO());
+			dto.setTopEvaluation(eva.get().asDTO(false));
 		}
 		return new ResultBean<>(dto);
 	}

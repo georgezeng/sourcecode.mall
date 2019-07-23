@@ -215,7 +215,7 @@ public class OrderService implements BaseService {
 		sub.setDealPrice(dealPrice);
 		sub.setItemCode(item.getCode());
 		sub.setItemContent(item.getContent());
-		sub.setItemId(item.getId());
+		sub.setItem(item);
 		sub.setItemName(item.getName());
 		sub.setMarketPrice(item.getMarketPrice());
 		sub.setNums(nums);
@@ -379,9 +379,8 @@ public class OrderService implements BaseService {
 		orderRepository.save(order.get());
 		if (!CollectionUtils.isEmpty(order.get().getSubList())) {
 			for (SubOrder sub : order.get().getSubList()) {
-				Optional<GoodsItem> item = goodsItemRepository.findById(sub.getItemId());
-				if (item.isPresent()) {
-					GoodsItemRank rank = item.get().getRank();
+				if (sub.getItem() != null && sub.getItem().getId() != null) {
+					GoodsItemRank rank = sub.getItem().getRank();
 					em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
 					rank.setOrderNums(rank.getOrderNums() + 1);
 					rankRepository.save(rank);
