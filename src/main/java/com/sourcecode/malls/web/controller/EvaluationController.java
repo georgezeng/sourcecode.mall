@@ -87,9 +87,9 @@ public class EvaluationController {
 	}
 
 	@RequestMapping(path = "/goodsItem/list")
-	public ResultBean<PageResult<GoodsItemEvaluationDTO>> listCommentForGoodsItem(
+	public ResultBean<GoodsItemEvaluationDTO> listCommentForGoodsItem(
 			@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo));
+		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo).getList());
 	}
 
 	@RequestMapping(path = "/goodsItem/count")

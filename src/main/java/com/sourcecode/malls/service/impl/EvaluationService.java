@@ -123,10 +123,10 @@ public class EvaluationService {
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
-				predicate.add(criteriaBuilder.equal(root.get("show"), true));
+				predicate.add(criteriaBuilder.equal(root.get("open"), true));
 				if (queryInfo.getData() != null) {
 					if (queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0) {
-						predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData()));
+						predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData().getId()));
 					}
 					if (queryInfo.getData().getValue() != null) {
 						predicate.add(criteriaBuilder.equal(root.get("value"), queryInfo.getData().getValue()));
