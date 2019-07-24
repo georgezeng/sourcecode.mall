@@ -64,35 +64,35 @@ public class EvaluationController {
 		return new ResultBean<>(filePaths);
 	}
 
-	@RequestMapping(path = "/list/uncomment")
+	@RequestMapping(path = "/uncomment/list")
 	public ResultBean<SubOrderDTO> listUnComment(@RequestBody QueryInfo<Long> queryInfo) {
 		return new ResultBean<>(service.getUnCommentList(ClientContext.get(), queryInfo).getList());
 	}
 
-	@RequestMapping(path = "/count/uncomment")
+	@RequestMapping(path = "/uncomment/count")
 	public ResultBean<Long> countUnComment(@RequestBody QueryInfo<Long> queryInfo) {
 		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(service.getUnCommentList(ClientContext.get(), queryInfo).getTotal());
 	}
 
-	@RequestMapping(path = "/list/comment")
+	@RequestMapping(path = "/comment/list")
 	public ResultBean<GoodsItemEvaluationDTO> listComment(@RequestBody QueryInfo<Long> queryInfo) {
 		return new ResultBean<>(service.getCommentList(ClientContext.get(), queryInfo).getList());
 	}
 
-	@RequestMapping(path = "/count/comment")
+	@RequestMapping(path = "/comment/count")
 	public ResultBean<Long> countComment(@RequestBody QueryInfo<Long> queryInfo) {
 		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(service.getCommentList(ClientContext.get(), queryInfo).getTotal());
 	}
 
-	@RequestMapping(path = "/list/goodsItem")
+	@RequestMapping(path = "/goodsItem/list")
 	public ResultBean<PageResult<GoodsItemEvaluationDTO>> listCommentForGoodsItem(
 			@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo));
 	}
 
-	@RequestMapping(path = "/count/goodsItem")
+	@RequestMapping(path = "/goodsItem/count")
 	public ResultBean<Long> countCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo).getTotal());

@@ -16,9 +16,11 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.dto.query.PageInfo;
+import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.service.base.JpaService;
 
 @Service
@@ -27,7 +29,8 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Transactional(readOnly = true)
-	public Page<GoodsItem> findByCategory(Long merchantId, Long categoryId, String type, PageInfo pageInfo) {
+	public Page<GoodsItem> findByCategory(Long merchantId, Long categoryId, String type, QueryInfo<String> queryInfo) {
+		PageInfo pageInfo = queryInfo.getPage();
 		Specification<GoodsItem> spec = new Specification<GoodsItem>() {
 
 			/**
@@ -43,6 +46,10 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 				if (categoryId > 0) {
 					predicate.add(criteriaBuilder.equal(root.get("category"), categoryId));
 				}
+				if (!StringUtils.isEmpty(queryInfo.getData())) {
+					String like = "%" + queryInfo.getData() + "%";
+					predicate.add(criteriaBuilder.like(root.get("name"), like));
+				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
@@ -51,7 +58,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		case "putTime":
 			return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "putTime"));
 		case "price": {
-			if (Direction.ASC.equals(pageInfo.getOrder())) {
+			if (Direction.ASC.name().equals(pageInfo.getOrder())) {
 				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
 			} else {
 				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
