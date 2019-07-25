@@ -226,6 +226,7 @@ public class OrderService implements BaseService {
 		sub.setParent(parent);
 		sub.setUnitPrice(property.getPrice());
 		sub.setSellingPoints(item.getSellingPoints());
+		sub.setItemNumber(item.getNumber());
 		List<GoodsItemValue> values = valueRepository.findAllByUid(property.getUid());
 		StringBuilder spec = new StringBuilder();
 		int index = 0;
