@@ -23,7 +23,6 @@ import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.order.SubOrderDTO;
-import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;

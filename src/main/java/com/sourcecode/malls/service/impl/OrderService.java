@@ -17,6 +17,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -104,7 +105,10 @@ public class OrderService implements BaseService {
 	@Autowired
 	private WechatService wechatService;
 
-	private String fileDir = "order";
+	@Value("${user.type.name}")
+	private String userDir;
+
+	private String fileDir = "subOrder";
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -233,17 +237,17 @@ public class OrderService implements BaseService {
 			index++;
 		}
 		sub.setSpecificationValues(spec.toString());
-		byte[] buf = fileService.load(true, item.getThumbnail());
-		String filePath = fileDir + "/" + client.getMerchant().getId() + "/" + client.getId() + "/" + sub.getId()
-				+ "/thumb.png";
-		fileService.upload(true, filePath, new ByteArrayInputStream(buf));
-		sub.setThumbnail(filePath);
 		em.lock(property, LockModeType.PESSIMISTIC_WRITE);
 		int leftInventory = property.getInventory() - nums;
 		AssertUtil.assertTrue(leftInventory >= 0, item.getName() + "库存不足");
 		property.setInventory(leftInventory);
 		propertyRepository.save(property);
 		sub.setProperty(property);
+		subOrderRepository.save(sub);
+		byte[] buf = fileService.load(true, item.getThumbnail());
+		String filePath = userDir + "/" + client.getId() + "/" + fileDir + "/" + sub.getId() + "/thumb.png";
+		fileService.upload(true, filePath, new ByteArrayInputStream(buf));
+		sub.setThumbnail(filePath);
 		subs.add(sub);
 	}
 
