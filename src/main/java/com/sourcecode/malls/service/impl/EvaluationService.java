@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -23,13 +25,16 @@ import org.springframework.util.CollectionUtils;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluationPhoto;
+import com.sourcecode.malls.domain.goods.GoodsItemRank;
 import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.order.SubOrderDTO;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
+import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationPhotoRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -46,6 +51,12 @@ public class EvaluationService {
 
 	@Autowired
 	private SubOrderRepository subOrderRepository;
+	
+	@Autowired
+	private GoodsItemRankRepository rankRepository;
+
+	@Autowired
+	protected EntityManager em;
 
 	@Transactional(readOnly = true)
 	public PageResult<SubOrderDTO> getUnCommentList(Client client, QueryInfo<Long> queryInfo) {
@@ -167,6 +178,7 @@ public class EvaluationService {
 		data.setOpen(false);
 		repository.save(data);
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
+			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {
 				GoodsItemEvaluationPhoto photo = new GoodsItemEvaluationPhoto();
 				photo.setEvaluation(data);
@@ -176,6 +188,22 @@ public class EvaluationService {
 		}
 		subOrder.get().setComment(true);
 		subOrderRepository.save(subOrder.get());
+		GoodsItemRank rank = subOrder.get().getItem().getRank();
+		em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
+		switch (data.getValue()) {
+		case Bad:
+			rank.setBadEvaluations(rank.getBadEvaluations() + 1);
+			break;
+		case Neutrality:
+			rank.setNeutralityEvaluations(rank.getNeutralityEvaluations() + 1);
+			break;
+		case Good:
+			rank.setGoodEvaluations(rank.getGoodEvaluations() + 1);
+			break;
+		default:
+			throw new BusinessException("不支持的评价级别");
+		}
+		rankRepository.save(rank);
 	}
 
 	public void saveAdditional(Client client, GoodsItemEvaluationDTO dto) {
@@ -203,6 +231,7 @@ public class EvaluationService {
 		evaluation.setAdditionalEvaluation(data);
 		repository.save(evaluation);
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
+			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {
 				GoodsItemEvaluationPhoto photo = new GoodsItemEvaluationPhoto();
 				photo.setEvaluation(data);

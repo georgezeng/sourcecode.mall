@@ -20,16 +20,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
-import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.aftersale.AfterSalePhoto;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.order.Order;
+import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.AfterSaleType;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSalePhotoRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
@@ -49,21 +50,60 @@ public class AfterSaleService implements BaseService {
 	@Autowired
 	private OrderRepository orderRepository;
 
-	public void applyAfterSale(AfterSaleApplicationDTO dto) {
+	public void applyRefund(Long clientId, AfterSaleApplicationDTO dto) {
 		AssertUtil.assertNotEmpty(dto.getDescription(), "描述不能为空");
 		AssertUtil.assertNotEmpty(dto.getReason(), "原因不能为空");
-		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
-		AssertUtil.assertTrue(
-				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		AfterSaleApplication data = dataOp.get();
-		AssertUtil.assertTrue(OrderStatus.Shipped.equals(data.getOrder().getStatus())
-				|| OrderStatus.Finished.equals(data.getOrder().getStatus()), "订单状态有误，不能申请售后");
-		if (OrderStatus.Shipped.equals(data.getOrder().getStatus())) {
-			AssertUtil.assertTrue(AfterSaleType.RefundOnly.equals(dto.getType()), "该商品目前只能进行仅退款");
-		} else {
-			AssertUtil.assertTrue(!AfterSaleType.RefundOnly.equals(dto.getType()), "该商品目前只能进行退货退款或者换货");
+		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
+			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 		}
+		AssertUtil.assertNotNull(dto.getId(), "订单序号不能为空");
+		Optional<Order> orderOp = orderRepository.findById(dto.getId());
+		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(clientId),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		Order order = orderOp.get();
+		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "订单状态有误，不能申请退款");
+		for (SubOrder sub : order.getSubList()) {
+			Optional<AfterSaleApplication> appOp = applicationRepository.findBySubOrder(sub);
+			AssertUtil.assertTrue(!appOp.isPresent(), "申请记录已存在");
+			AfterSaleApplication application = new AfterSaleApplication();
+			application.setClient(order.getClient());
+			application.setMerchant(order.getMerchant());
+			application.setOrder(order);
+			application.setSubOrder(sub);
+			application.setServiceId(generateId());
+			application.setType(AfterSaleType.RefundOnly);
+			application.setStatus(AfterSaleStatus.Processing);
+			application.setNums(sub.getNums());
+			application.setAmount(sub.getDealPrice());
+			application.setPostTime(new Date());
+			application.setDescription(dto.getDescription());
+			application.setReason(dto.getReason());
+			applicationRepository.save(application);
+			if (!CollectionUtils.isEmpty(dto.getPhotos())) {
+				for (String path : dto.getPhotos()) {
+					AfterSalePhoto photo = new AfterSalePhoto();
+					photo.setApplication(application);
+					photo.setPath(path);
+					photoRepository.save(photo);
+				}
+			}
+		}
+		order.setStatus(OrderStatus.Closed);
+		orderRepository.save(order);
+	}
+
+	public void apply(Long clientId, AfterSaleApplicationDTO dto) {
+		AssertUtil.assertNotEmpty(dto.getDescription(), "描述不能为空");
+		AssertUtil.assertNotEmpty(dto.getReason(), "原因不能为空");
+		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
+			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
+		}
+		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().getClient().getId().equals(clientId),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+
+		AfterSaleApplication data = dataOp.get();
+		AssertUtil.assertTrue(OrderStatus.Finished.equals(data.getOrder().getStatus()), "订单状态有误，不能申请售后");
 		AssertUtil.assertTrue(AfterSaleStatus.NotYet.equals(data.getStatus()), "已经申请过售后");
 		switch (dto.getType()) {
 		case Change: {
@@ -86,17 +126,14 @@ public class AfterSaleService implements BaseService {
 			data.setAddress(dto.getAddress().asAfterSaleAddressEntity());
 		}
 			break;
-		case RefundOnly: {
-			data.setNums(data.getSubOrder().getNums());
-			data.setAmount(data.getSubOrder().getDealPrice());
-		}
-			break;
 		case SalesReturn: {
 			AssertUtil.assertTrue(dto.getNums() > 0 && dto.getNums() <= data.getSubOrder().getNums(), "数量不正确");
 			data.setNums(dto.getNums());
 			data.setAmount(data.getSubOrder().getUnitPrice().multiply(new BigDecimal(dto.getNums())));
 		}
 			break;
+		default:
+			throw new BusinessException("目前只能进行退货退款或者换货");
 		}
 		data.setPostTime(new Date());
 		data.setDescription(dto.getDescription());

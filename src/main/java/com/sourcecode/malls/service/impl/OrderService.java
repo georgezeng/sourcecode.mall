@@ -28,6 +28,7 @@ import org.springframework.util.CollectionUtils;
 import com.github.wxpay.sdk.WePayConfig;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
 import com.sourcecode.malls.domain.goods.GoodsItem;
@@ -46,7 +47,9 @@ import com.sourcecode.malls.dto.order.OrderDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
+import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
@@ -104,6 +107,9 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private WechatService wechatService;
+
+	@Autowired
+	private AfterSaleApplicationRepository aftersaleApplicationRepository;
 
 	@Value("${user.type.name}")
 	private String userDir;
@@ -376,20 +382,32 @@ public class OrderService implements BaseService {
 	}
 
 	public void pickup(Client client, Long id) {
-		Optional<Order> order = orderRepository.findById(id);
-		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+		Optional<Order> orderOp = orderRepository.findById(id);
+		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
-		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.get().getStatus()), "不能确认收货，订单状态有误");
-		em.lock(order.get(), LockModeType.PESSIMISTIC_WRITE);
-		order.get().setStatus(OrderStatus.Finished);
-		orderRepository.save(order.get());
-		if (!CollectionUtils.isEmpty(order.get().getSubList())) {
-			for (SubOrder sub : order.get().getSubList()) {
+		Order order = orderOp.get();
+		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "不能确认收货，订单状态有误");
+		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+		order.setStatus(OrderStatus.Finished);
+		orderRepository.save(order);
+		if (!CollectionUtils.isEmpty(order.getSubList())) {
+			for (SubOrder sub : order.getSubList()) {
 				if (sub.getItem() != null && sub.getItem().getId() != null) {
 					GoodsItemRank rank = sub.getItem().getRank();
 					em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
 					rank.setOrderNums(rank.getOrderNums() + 1);
 					rankRepository.save(rank);
+				}
+				Optional<AfterSaleApplication> applicationOp = aftersaleApplicationRepository.findBySubOrder(sub);
+				if (!applicationOp.isPresent()) {
+					AfterSaleApplication application = new AfterSaleApplication();
+					application.setClient(order.getClient());
+					application.setMerchant(order.getMerchant());
+					application.setOrder(order);
+					application.setSubOrder(sub);
+					application.setServiceId(generateId());
+					application.setStatus(AfterSaleStatus.NotYet);
+					aftersaleApplicationRepository.save(application);
 				}
 			}
 		}

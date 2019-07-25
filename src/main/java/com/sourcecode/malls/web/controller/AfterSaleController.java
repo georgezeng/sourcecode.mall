@@ -95,9 +95,15 @@ public class AfterSaleController {
 		return new ResultBean<>(filePaths);
 	}
 
+	@RequestMapping(value = "/apply/refund")
+	public ResultBean<Void> applyRefund(@RequestBody AfterSaleApplicationDTO dto) {
+		service.applyRefund(ClientContext.get().getId(), dto);
+		return new ResultBean<>();
+	}
+
 	@RequestMapping(value = "/apply")
 	public ResultBean<Void> apply(@RequestBody AfterSaleApplicationDTO dto) {
-		service.applyAfterSale(dto);
+		service.apply(ClientContext.get().getId(), dto);
 		return new ResultBean<>();
 	}
 
