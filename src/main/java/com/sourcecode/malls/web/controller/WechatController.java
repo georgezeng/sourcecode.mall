@@ -372,7 +372,7 @@ public class WechatController {
 		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
 			data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
 		} else {
-			data.put("total_fee", "1");
+			data.put("total_fee", order.getSubList().size() + "");
 		}
 		data.put("spbill_create_ip", ip);
 		data.put("notify_url", payNotifyUrl);
