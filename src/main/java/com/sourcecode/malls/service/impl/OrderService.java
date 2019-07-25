@@ -338,7 +338,7 @@ public class OrderService implements BaseService {
 			case WePay: {
 				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
 				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getTotalPrice(),
-						order.getSubList() != null ? order.getSubList().size() : 0);
+						order.getTotalPrice(), order.getSubList().size());
 			}
 				break;
 			case AliPay: {
