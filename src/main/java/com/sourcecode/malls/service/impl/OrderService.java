@@ -285,7 +285,14 @@ public class OrderService implements BaseService {
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
 				if (queryInfo.getData() != null) {
-					predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
+					if (!OrderStatus.Finished.equals(queryInfo.getData())) {
+						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
+					} else {
+						predicate
+								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
+					}
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
