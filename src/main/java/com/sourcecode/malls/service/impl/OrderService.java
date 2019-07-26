@@ -16,8 +16,12 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.github.wxpay.sdk.WePayConfig;
+import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
@@ -66,6 +71,8 @@ import com.sourcecode.malls.util.AssertUtil;
 @Service
 @Transactional
 public class OrderService implements BaseService {
+	Logger logger = LoggerFactory.getLogger(getClass());
+
 	@Autowired
 	private GoodsItemService itemService;
 
@@ -115,6 +122,9 @@ public class OrderService implements BaseService {
 	private String userDir;
 
 	private String fileDir = "subOrder";
+
+	@Autowired
+	private Environment env;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -251,10 +261,18 @@ public class OrderService implements BaseService {
 		propertyRepository.save(property);
 		sub.setProperty(property);
 		subOrderRepository.save(sub);
-		byte[] buf = fileService.load(true, item.getThumbnail());
-		String filePath = userDir + "/" + client.getId() + "/" + fileDir + "/" + sub.getId() + "/thumb.png";
-		fileService.upload(true, filePath, new ByteArrayInputStream(buf));
-		sub.setThumbnail(filePath);
+		try {
+			byte[] buf = fileService.load(true, item.getThumbnail());
+			String filePath = userDir + "/" + client.getId() + "/" + fileDir + "/" + sub.getId() + "/thumb";
+			if (env.acceptsProfiles(Profiles.of(EnvConstant.LOCAL))) {
+				filePath += "_" + System.currentTimeMillis();
+			}
+			filePath += ".png";
+			fileService.upload(true, filePath, new ByteArrayInputStream(buf));
+			sub.setThumbnail(filePath);
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+		}
 		subs.add(sub);
 	}
 

@@ -2,8 +2,6 @@ package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -25,6 +23,7 @@ import org.springframework.web.client.RestTemplate;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
+import com.alipay.api.domain.AlipayTradeWapPayModel;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.constants.EnvConstant;
@@ -32,6 +31,7 @@ import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -99,9 +99,8 @@ public class AlipayController {
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
 
-
 	@RequestMapping(path = "/prepare/params/{id}")
-	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
+	public ResultBean<String> prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(gateway, setting.get().getAccount(),
@@ -120,29 +119,30 @@ public class AlipayController {
 		tokenStore.setKey(token);
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
-
-		Map<String, String> data = new HashMap<>();
-		data.put("out_trade_no", token);
-		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
-			data.put("total_amount", order.getTotalPrice() + "");
-		} else {
-			data.put("total_amount", new BigDecimal(order.getSubList().size()).multiply(new BigDecimal("0.01")) + "");
-		}
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
-		data.put("subject", "[" + shop.get().getName() + "]商品订单支付");
-		alipayRequest.setBizContent(mapper.writeValueAsString(data));// 填充业务参数
+		AlipayTradeWapPayModel model = new AlipayTradeWapPayModel();
+		model.setOutTradeNo(token);
+		model.setSubject("[" + shop.get().getName() + "]商品订单支付");
+		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
+			model.setTotalAmount(order.getTotalPrice() + "");
+		} else {
+			model.setTotalAmount(new BigDecimal(order.getSubList().size()).multiply(new BigDecimal("0.01")) + "");
+		}
+		model.setTimeoutExpress("5m");
+		model.setProductCode("QUICK_WAP_WAY");
+		alipayRequest.setBizModel(model);// 填充业务参数
 		String form = "";
 		try {
 			form = alipayClient.pageExecute(alipayRequest).getBody(); // 调用SDK生成表单
 		} catch (AlipayApiException e) {
 			throw new BusinessException(e.getMessage(), e);
 		}
-		return form;
+		return new ResultBean<>(form);
 	}
-	
+
 	@RequestMapping(path = "/notify/paySuccess")
 	public void prepare(@RequestBody String payload) throws ServletException, IOException {
 		logger.info(payload);
-		
+
 	}
 }
