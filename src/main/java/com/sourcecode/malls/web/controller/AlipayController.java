@@ -15,35 +15,27 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
 
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.domain.AlipayTradeWapPayModel;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
-import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
 import com.sourcecode.malls.exception.BusinessException;
-import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.client.WechatTokenRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
-import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.OrderService;
-import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
@@ -68,25 +60,7 @@ public class AlipayController {
 	private MerchantSettingService settingService;
 
 	@Autowired
-	private VerifyCodeService verifyCodeService;
-
-	@Autowired
-	private ClientRepository clientRepository;
-
-	@Autowired
 	private CodeStoreRepository codeStoreRepository;
-
-	@Autowired
-	private WechatTokenRepository wechatTokenRepository;
-
-	@Autowired
-	private RestTemplate httpClient;
-
-	@Autowired
-	private ObjectMapper mapper;
-
-	@Autowired
-	private FileOnlineSystemService fileService;
 
 	@Autowired
 	private OrderRepository orderRepository;
@@ -110,7 +84,7 @@ public class AlipayController {
 				setting.get().getSecret(), "json", charset, publicKey, "RSA2"); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
 		String returnUrl = "https://" + shop.get().getDomain();
-		alipayRequest.setReturnUrl(returnUrl + "/#/alipaySuccess");
+		alipayRequest.setReturnUrl(returnUrl + "/#/Order/List/All");
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(id);
@@ -145,8 +119,12 @@ public class AlipayController {
 	}
 
 	@RequestMapping(path = "/notify/paySuccess")
-	public void prepare(@RequestBody String payload) throws ServletException, IOException {
-		logger.info(payload);
-
+	public void prepare(@RequestParam("out_trade_no") String token, @RequestParam("trade_no") String transactionId)
+			throws ServletException, IOException {
+		Optional<CodeStore> tokenStore = codeStoreRepository.findByCategoryAndKey(ALIPAY_TOKEN_CATEGORY, token);
+		if (tokenStore.isPresent()) {
+			orderService.afterPayment(tokenStore.get().getValue(), transactionId);
+			codeStoreRepository.delete(tokenStore.get());
+		}
 	}
 }
