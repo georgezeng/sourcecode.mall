@@ -100,7 +100,7 @@ public class AlipayController {
 	private MerchantShopApplicationRepository merchantShopRepository;
 
 	@RequestMapping(path = "/prepare/params/{id}")
-	public ResultBean<String> prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
+	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(gateway, setting.get().getAccount(),
@@ -137,7 +137,7 @@ public class AlipayController {
 		} catch (AlipayApiException e) {
 			throw new BusinessException(e.getMessage(), e);
 		}
-		return new ResultBean<>(form);
+		return form;
 	}
 
 	@RequestMapping(path = "/notify/paySuccess")
