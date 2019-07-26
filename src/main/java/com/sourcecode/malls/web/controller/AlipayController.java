@@ -2,7 +2,6 @@ package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.net.URLDecoder;
 import java.util.Optional;
 
 import javax.servlet.ServletException;
@@ -88,9 +87,9 @@ public class AlipayController {
 				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		String returnUrl = "https://" + shop.get().getDomain();
-		logger.info(to);
-		alipayRequest.setReturnUrl(returnUrl + "/?uid=" + userId + "#" + URLDecoder.decode(to, config.getCharset()));
+		String returnUrl = "https://" + shop.get().getDomain() + "/?uid=" + userId + "#" + to;
+		alipayRequest.setReturnUrl(returnUrl);
+		logger.info(returnUrl);
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(orderId);
