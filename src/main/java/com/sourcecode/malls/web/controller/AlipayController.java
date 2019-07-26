@@ -76,7 +76,7 @@ public class AlipayController {
 	@Autowired
 	private ClientRepository clientRepository;
 
-	@RequestMapping(path = "/prepare/params/{uid}/{oid}/{to}", produces = "text/html")
+	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
 	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
 			@PathVariable("oid") Long orderId, @RequestParam("to") String to) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
