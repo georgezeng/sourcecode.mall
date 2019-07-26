@@ -384,7 +384,7 @@ public class WechatController {
 		}
 
 		Map<String, String> resp = wxpay.unifiedOrder(data);
-		logger.info(mapper.writeValueAsString(resp));
+//		logger.info(mapper.writeValueAsString(resp));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("return_code")), "支付失败: " + resp.get("return_msg"));
 		AssertUtil.assertTrue("SUCCESS".equals(resp.get("result_code")), "支付失败: " + resp.get("err_code_des"));
 

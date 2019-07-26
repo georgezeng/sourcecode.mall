@@ -10,4 +10,10 @@ wechat:
       pay:
         notify: 'http://localhost:9002/client/wechat/notify/pay'
       refund:
-        notify: 'http://localhost:9002/client/wechat/notify/refund'  
+        notify: 'http://localhost:9002/client/wechat/notify/refund'
+
+alipay:
+  api:
+    url:
+      pay:
+        notify: 'http://localhost:9002/client/alipay/notify/paySuccess'
