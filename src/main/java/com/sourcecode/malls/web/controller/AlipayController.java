@@ -87,7 +87,7 @@ public class AlipayController {
 				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		String returnUrl = "https://%s/#/Index";
+		String returnUrl = "https://%s/";
 		alipayRequest.setReturnUrl(String.format(returnUrl, shop.get().getDomain()));
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
