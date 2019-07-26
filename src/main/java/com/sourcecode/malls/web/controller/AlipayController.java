@@ -27,12 +27,14 @@ import com.alipay.api.request.AlipayTradeWapPayRequest;
 import com.sourcecode.malls.config.AlipayConfig;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
+import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -71,8 +73,12 @@ public class AlipayController {
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
 
-	@RequestMapping(path = "/prepare/params/{id}", produces = "text/html")
-	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
+	@Autowired
+	private ClientRepository clientRepository;
+
+	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
+	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
+			@PathVariable("oid") Long orderId) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
@@ -82,13 +88,13 @@ public class AlipayController {
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
 		String returnUrl = "https://" + shop.get().getDomain();
-		alipayRequest.setReturnUrl(returnUrl + "/#/Order/List/All");
+		alipayRequest.setReturnUrl(returnUrl + "/?uid=" + userId + "#/Order/List/All");
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
-		Optional<Order> orderOp = orderRepository.findById(id);
-//		AssertUtil.assertTrue(
-//				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
-		AssertUtil.assertTrue(orderOp.isPresent(), "订单不存在");
+		Optional<Order> orderOp = orderRepository.findById(orderId);
+		Optional<Client> userOp = clientRepository.findById(userId);
+		AssertUtil.assertTrue(orderOp.isPresent() && userOp.isPresent()
+				&& orderOp.get().getClient().getId().equals(userOp.get().getId()), "订单不存在");
 		Order order = orderOp.get();
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "订单状态有误，不能支付");
 		String token = DigestUtils.md5Hex(order.getOrderId());
