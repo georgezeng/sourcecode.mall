@@ -17,6 +17,7 @@ import org.springframework.core.env.Profiles;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
@@ -100,13 +101,13 @@ public class AlipayController {
 	private MerchantShopApplicationRepository merchantShopRepository;
 
 	@RequestMapping(path = "/prepare/params/{id}", produces = "text/html")
-	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
+	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id, @RequestParam("origin") String origin) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(gateway, setting.get().getAccount(),
 				setting.get().getSecret(), "json", charset, publicKey, "RSA2"); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		alipayRequest.setReturnUrl(httpRequest.getHeader("Origin") + "#/alipaySuccess");
+		alipayRequest.setReturnUrl(origin + "/#/alipaySuccess");
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(id);
