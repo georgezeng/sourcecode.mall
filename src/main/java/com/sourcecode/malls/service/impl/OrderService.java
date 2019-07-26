@@ -54,6 +54,7 @@ import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
@@ -114,6 +115,9 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private WechatService wechatService;
+
+	@Autowired
+	private AlipayService alipayService;
 
 	@Autowired
 	private AfterSaleApplicationRepository aftersaleApplicationRepository;
@@ -374,9 +378,12 @@ public class OrderService implements BaseService {
 			}
 				break;
 			case AliPay: {
-
+				alipayService.refund(client.getMerchant().getId(), order.getTransactionId(), order.getOrderId(),
+						order.getTotalPrice(), order.getTotalPrice(), order.getSubList().size());
 			}
 				break;
+			default:
+				throw new BusinessException("不支持的支付类型");
 			}
 		}
 		afterCancel(order.getOrderId());
