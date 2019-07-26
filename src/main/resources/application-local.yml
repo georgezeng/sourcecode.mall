@@ -16,4 +16,4 @@ alipay:
   api:
     url:
       pay:
-        notify: 'http://localhost:9002/client/alipay/notify/paySuccess'
+        notify: 'http://localhost:9002/client/alipay/notify/pay'

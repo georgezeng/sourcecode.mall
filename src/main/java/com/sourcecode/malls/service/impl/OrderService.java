@@ -277,6 +277,7 @@ public class OrderService implements BaseService {
 	}
 
 	public void afterPayment(String orderId, String transactionId) {
+		AssertUtil.assertNotEmpty(transactionId, "交易号有误");
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
 		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
 			Order order = orderOp.get();

@@ -3,11 +3,11 @@ package com.sourcecode.malls.web.controller;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,7 @@ import com.alipay.api.AlipayClient;
 import com.alipay.api.DefaultAlipayClient;
 import com.alipay.api.domain.AlipayTradeWapPayModel;
 import com.alipay.api.request.AlipayTradeWapPayRequest;
+import com.sourcecode.malls.config.AlipayConfig;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
@@ -45,16 +46,11 @@ public class AlipayController {
 
 	private static final String ALIPAY_TOKEN_CATEGORY = "alipay-token-category";
 
-	@Value("${alipay.api.url.gateway}")
-	private String gateway;
-
-	@Value("${alipay.api.public.key}")
-	private String publicKey;
+	@Autowired
+	private AlipayConfig config;
 
 	@Value("${alipay.api.url.pay.notify}")
 	private String notifyUrl;
-
-	private String charset = "UTF-8";
 
 	@Autowired
 	private MerchantSettingService settingService;
@@ -80,8 +76,9 @@ public class AlipayController {
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(shop.isPresent(), "找不到商家信息");
-		AlipayClient alipayClient = new DefaultAlipayClient(gateway, setting.get().getAccount(),
-				setting.get().getSecret(), "json", charset, publicKey, "RSA2"); // 获得初始化的AlipayClient
+		AlipayClient alipayClient = new DefaultAlipayClient(config.getGateway(), setting.get().getAccount(),
+				setting.get().getSecret(), config.getDataType(), config.getCharset(), config.getPublicKey(),
+				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
 		String returnUrl = "https://" + shop.get().getDomain();
 		alipayRequest.setReturnUrl(returnUrl + "/#/Order/List/All");
@@ -91,7 +88,7 @@ public class AlipayController {
 		AssertUtil.assertTrue(
 				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
 		Order order = orderOp.get();
-		String token = UUID.randomUUID().toString().replaceAll("-", "");
+		String token = DigestUtils.md5Hex(order.getOrderId());
 		CodeStore tokenStore = new CodeStore();
 		tokenStore.setCategory(ALIPAY_TOKEN_CATEGORY);
 		tokenStore.setKey(token);
@@ -118,7 +115,7 @@ public class AlipayController {
 		return form;
 	}
 
-	@RequestMapping(path = "/notify/paySuccess")
+	@RequestMapping(path = "/notify/pay")
 	public void prepare(@RequestParam("out_trade_no") String token, @RequestParam("trade_no") String transactionId)
 			throws ServletException, IOException {
 		Optional<CodeStore> tokenStore = codeStoreRepository.findByCategoryAndKey(ALIPAY_TOKEN_CATEGORY, token);
