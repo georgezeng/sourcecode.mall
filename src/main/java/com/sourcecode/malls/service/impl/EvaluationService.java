@@ -31,6 +31,7 @@ import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.order.SubOrderDTO;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
+import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationPhotoRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
@@ -51,7 +52,7 @@ public class EvaluationService {
 
 	@Autowired
 	private SubOrderRepository subOrderRepository;
-	
+
 	@Autowired
 	private GoodsItemRankRepository rankRepository;
 
@@ -72,6 +73,7 @@ public class EvaluationService {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
+				predicate.add(criteriaBuilder.equal(root.join("parent").get("status"), OrderStatus.Finished));
 				if (queryInfo.getData() != null && queryInfo.getData() > 0) {
 					predicate.add(criteriaBuilder.equal(root.get("parent"), queryInfo.getData()));
 				}
