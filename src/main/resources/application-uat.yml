@@ -6,9 +6,4 @@ wechat:
       refund:
         notify: 'https://mall-server.bsxkj.com/client/wechat/notify/refund'
        
-alipay:
-  api:
-    url:
-      pay:
-        notify: 'https://mall-server.bsxkj.com/client/alipay/notify/pay'
        

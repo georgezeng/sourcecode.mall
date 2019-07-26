@@ -77,7 +77,7 @@ public class AlipayController {
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(shop.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(config.getGateway(), setting.get().getAccount(),
-				setting.get().getSecret(), config.getDataType(), config.getCharset(), config.getPublicKey(),
+				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
 		String returnUrl = "https://" + shop.get().getDomain();
