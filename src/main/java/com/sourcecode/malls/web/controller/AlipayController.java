@@ -99,7 +99,7 @@ public class AlipayController {
 	@Autowired
 	private MerchantShopApplicationRepository merchantShopRepository;
 
-	@RequestMapping(path = "/prepare/params/{id}")
+	@RequestMapping(path = "/prepare/params/{id}", produces = "text/html")
 	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
