@@ -78,7 +78,7 @@ public class AlipayController {
 
 	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
 	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
-			@PathVariable("oid") Long orderId, @RequestParam("to") String to) throws ServletException, IOException {
+			@PathVariable("oid") Long orderId) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
@@ -87,7 +87,7 @@ public class AlipayController {
 				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		String returnUrl = "https://" + shop.get().getDomain() + "/?uid=" + userId + "#" + to;
+		String returnUrl = "https://" + shop.get().getDomain() + "/" + "#/Index";
 		alipayRequest.setReturnUrl(returnUrl);
 		logger.info(returnUrl);
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
