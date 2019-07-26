@@ -48,6 +48,7 @@ import com.sourcecode.malls.dto.WechatUserInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
 import com.sourcecode.malls.dto.wechat.WechatAccessInfo;
+import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -355,6 +356,7 @@ public class WechatController {
 		AssertUtil.assertTrue(
 				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
 		Order order = orderOp.get();
+		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "订单状态有误，不能支付");
 		CodeStore tokenStore = new CodeStore();
 		tokenStore.setCategory(WECHAT_PAY_TOKEN_CATEGORY);
 		String token = DigestUtils.md5Hex(order.getOrderId());

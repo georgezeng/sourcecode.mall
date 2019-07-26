@@ -31,6 +31,7 @@ import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.setting.DeveloperSettingDTO;
+import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
@@ -85,9 +86,11 @@ public class AlipayController {
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
+//		AssertUtil.assertTrue(
+//				orderOp.isPresent() && orderOp.get().getClient().getId().equals(ClientContext.get().getId()), "订单不存在");
+		AssertUtil.assertTrue(orderOp.isPresent(), "订单不存在");
 		Order order = orderOp.get();
+		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "订单状态有误，不能支付");
 		String token = DigestUtils.md5Hex(order.getOrderId());
 		CodeStore tokenStore = new CodeStore();
 		tokenStore.setCategory(ALIPAY_TOKEN_CATEGORY);

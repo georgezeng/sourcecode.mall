@@ -58,6 +58,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/wechat/code/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/wechat/notify/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/alipay/notify/**").permitAll();
+		http.authorizeRequests().antMatchers("/client/alipay/prepare/**").permitAll();
 		http.authorizeRequests().antMatchers("/evaluation/goodsItem/**").permitAll();
 		http.authorizeRequests().antMatchers("/index").permitAll();
 		http.authorizeRequests().antMatchers("/role/**").hasAuthority(adminProperties.getAuthority());
