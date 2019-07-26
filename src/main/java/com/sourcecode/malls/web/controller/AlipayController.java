@@ -101,13 +101,16 @@ public class AlipayController {
 	private MerchantShopApplicationRepository merchantShopRepository;
 
 	@RequestMapping(path = "/prepare/params/{id}", produces = "text/html")
-	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id, @RequestParam("origin") String origin) throws ServletException, IOException {
+	public String prepare(HttpServletRequest httpRequest, @PathVariable Long id) throws ServletException, IOException {
 		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
+		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(shop.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(gateway, setting.get().getAccount(),
 				setting.get().getSecret(), "json", charset, publicKey, "RSA2"); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		alipayRequest.setReturnUrl(origin + "/#/alipaySuccess");
+		String returnUrl = "https://" + shop.get().getDomain();
+		alipayRequest.setReturnUrl(returnUrl + "/#/alipaySuccess");
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(id);
@@ -120,7 +123,7 @@ public class AlipayController {
 		tokenStore.setKey(token);
 		tokenStore.setValue(order.getOrderId());
 		codeStoreRepository.save(tokenStore);
-		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
+
 		AlipayTradeWapPayModel model = new AlipayTradeWapPayModel();
 		model.setOutTradeNo(token);
 		model.setSubject("[" + shop.get().getName() + "]商品订单支付");
