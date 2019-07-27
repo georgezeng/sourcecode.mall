@@ -79,9 +79,12 @@ public class AlipayController {
 	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
 	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
 			@PathVariable("oid") Long orderId) throws ServletException, IOException {
-		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(ClientContext.getMerchantId());
+		Optional<Client> userOp = clientRepository.findById(userId);
+		AssertUtil.assertTrue(userOp.isPresent(), "用户不存在");
+		Client client = userOp.get();
+		Optional<DeveloperSettingDTO> setting = settingService.loadAlipay(client.getMerchant().getId());
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
-		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(ClientContext.getMerchantId());
+		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(shop.isPresent(), "找不到商家信息");
 		AlipayClient alipayClient = new DefaultAlipayClient(config.getGateway(), setting.get().getAccount(),
 				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
@@ -92,9 +95,7 @@ public class AlipayController {
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(orderId);
-		Optional<Client> userOp = clientRepository.findById(userId);
-		AssertUtil.assertTrue(orderOp.isPresent() && userOp.isPresent()
-				&& orderOp.get().getClient().getId().equals(userOp.get().getId()), "订单不存在");
+		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()), "订单不存在");
 		Order order = orderOp.get();
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "订单状态有误，不能支付");
 		String token = DigestUtils.md5Hex(order.getOrderId());
