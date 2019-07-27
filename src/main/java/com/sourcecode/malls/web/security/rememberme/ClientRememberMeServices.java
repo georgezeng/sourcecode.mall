@@ -36,7 +36,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 
 	@Autowired
 	public ClientRememberMeServices(ClientService clientService) {
-		super("Client_Remember_Key", clientService);
+		super("Client_Rememberme_Key", clientService);
 	}
 
 	private void setMerchantId(HttpServletRequest request) {
