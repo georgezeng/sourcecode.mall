@@ -106,4 +106,10 @@ public class OrderController {
 		orderService.delete(ClientContext.get(), id);
 		return new ResultBean<>();
 	}
+
+	@RequestMapping(path = "/checkPaid/params/{id}")
+	public ResultBean<Boolean> checkPaid(@PathVariable Long id) {
+		boolean paid = OrderStatus.Paid.equals(orderService.getOrder(ClientContext.get(), id).getStatus());
+		return new ResultBean<>(paid);
+	}
 }
