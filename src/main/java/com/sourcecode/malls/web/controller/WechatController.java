@@ -277,12 +277,11 @@ public class WechatController {
 		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, 30 * 3600 * 24,
 				true, true);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
-		LoginInfo info = null;
+		LoginInfo info = new LoginInfo();
 		if (user.isPresent()) {
-			info = new LoginInfo();
 			info.setUsername(user.get().getUsername());
-			info.setPassword(loginInfo.getUsername());
-		}
+		} 
+		info.setPassword(loginInfo.getUsername());
 		return new ResultBean<>(info);
 	}
 
