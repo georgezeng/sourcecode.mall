@@ -76,9 +76,9 @@ public class AlipayController {
 	@Autowired
 	private ClientRepository clientRepository;
 
-	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
+	@RequestMapping(path = "/prepare/params/{uid}/{oid}/{from}", produces = "text/html")
 	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
-			@PathVariable("oid") Long orderId) throws ServletException, IOException {
+			@PathVariable("oid") Long orderId, @PathVariable("from") String from) throws ServletException, IOException {
 		Optional<Client> userOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(userOp.isPresent(), "用户不存在");
 		Client client = userOp.get();
@@ -91,6 +91,9 @@ public class AlipayController {
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
 		String returnUrl = "https://%s/";
+		if (!"wechat".equalsIgnoreCase(from)) {
+			returnUrl += "#/Order/List/All";
+		}
 		alipayRequest.setReturnUrl(String.format(returnUrl, shop.get().getDomain()));
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
