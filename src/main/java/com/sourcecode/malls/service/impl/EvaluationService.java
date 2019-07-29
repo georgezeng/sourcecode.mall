@@ -71,7 +71,7 @@ public class EvaluationService {
 			@Override
 			public Predicate toPredicate(Root<SubOrder> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("client"), client.getId()));
 				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
 				predicate.add(criteriaBuilder.equal(root.join("parent").get("status"), OrderStatus.Finished));
 				if (queryInfo.getData() != null && queryInfo.getData() > 0) {
@@ -99,7 +99,7 @@ public class EvaluationService {
 			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query,
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("client"), client.getId()));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
 				if (queryInfo.getData() != null && queryInfo.getData() > 0) {
 					predicate.add(criteriaBuilder.equal(root.get("order"), queryInfo.getData()));
@@ -122,6 +122,9 @@ public class EvaluationService {
 	@Transactional(readOnly = true)
 	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Client client,
 			QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
+		AssertUtil.assertTrue(
+				queryInfo.getData() != null && queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0,
+				"查找不到商品信息");
 		Specification<GoodsItemEvaluation> spec = new Specification<GoodsItemEvaluation>() {
 
 			/**
@@ -133,17 +136,13 @@ public class EvaluationService {
 			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query,
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("merchant"), client.getMerchant().getId()));
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
 				predicate.add(criteriaBuilder.equal(root.get("open"), true));
-				if (queryInfo.getData() != null) {
-					if (queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0) {
-						predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData().getId()));
-					}
-					if (queryInfo.getData().getValue() != null) {
-						predicate.add(criteriaBuilder.equal(root.get("value"), queryInfo.getData().getValue()));
-					}
+				predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData().getId()));
+				if (queryInfo.getData().getValue() != null) {
+					predicate.add(criteriaBuilder.equal(root.get("value"), queryInfo.getData().getValue()));
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
