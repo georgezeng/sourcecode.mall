@@ -19,8 +19,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
 
 import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.context.UserContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.system.User;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.properties.SessionAttributesProperties;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -48,6 +50,7 @@ public class ClientSessionFilter extends GenericFilterBean {
 				if (userId > 0l) {
 					Optional<Client> user = clientService.findById(userId);
 					if (user.isPresent()) {
+						UserContext.set(new User(user.get().getUsername()));
 						ClientContext.set(user.get());
 						ClientContext.setMerchantId(user.get().getMerchant().getId());
 					}
@@ -77,6 +80,7 @@ public class ClientSessionFilter extends GenericFilterBean {
 							RememberMeAuthenticationToken rToken = (RememberMeAuthenticationToken) token;
 							UserDetails details = (UserDetails) rToken.getPrincipal();
 							Client client = clientService.findByMerchantAndUsername(merchantId, details.getUsername());
+							UserContext.set(new User(client.getUsername()));
 							ClientContext.set(client);
 							ClientContext.setMerchantId(merchantId);
 							session.setAttribute(sessionProperties.getUserId(), client.getId());

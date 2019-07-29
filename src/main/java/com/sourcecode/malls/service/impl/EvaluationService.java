@@ -229,6 +229,7 @@ public class EvaluationService {
 		data.setReply(null);
 		data.setAdditional(true);
 		data.setOpen(false);
+		data.setEvaluation(evaluation);
 		repository.save(data);
 		evaluation.setAdditionalEvaluation(data);
 		repository.save(evaluation);

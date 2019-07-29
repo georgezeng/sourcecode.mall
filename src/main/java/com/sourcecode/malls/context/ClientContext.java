@@ -24,6 +24,7 @@ public final class ClientContext {
 	}
 	
 	public static void clear() {
+		UserContext.set(null);
 		set(null);
 		setMerchantId(null);
 	}
