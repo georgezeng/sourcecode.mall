@@ -231,8 +231,6 @@ public class EvaluationService {
 		data.setOpen(false);
 		data.setEvaluation(evaluation);
 		repository.save(data);
-		evaluation.setAdditionalEvaluation(data);
-		repository.save(evaluation);
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {
