@@ -67,7 +67,7 @@ public class GoodsItemController {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		Optional<GoodsItem> item = service.findById(dto.getId());
 		Optional<GoodsItemEvaluation> eva = evaluationRepository
-				.findFirstByItemAndPassedOrderByCreateTimeDesc(item.get(), true);
+				.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
 		if (eva.isPresent()) {
 			dto.setTopEvaluation(eva.get().asDTO(false));
 		}
