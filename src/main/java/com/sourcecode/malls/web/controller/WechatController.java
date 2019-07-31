@@ -280,7 +280,7 @@ public class WechatController {
 		LoginInfo info = new LoginInfo();
 		if (user.isPresent()) {
 			info.setUsername(user.get().getUsername());
-		} 
+		}
 		info.setPassword(loginInfo.getUsername());
 		return new ResultBean<>(info);
 	}
@@ -306,27 +306,51 @@ public class WechatController {
 		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 		AssertUtil.assertTrue(apOp.isPresent(), "商户不存在");
 		Merchant merchant = apOp.get().getMerchant();
-		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
-		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
+//		AssertUtil.assertTrue(!userOp.isPresent(), "手机号已存在");
 		codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_USERINFO_CATEGORY, mobileInfo.getToken());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), "无法获取微信信息");
 		WechatUserInfo userInfo = mapper.readValue(codeStoreOp.get().getValue(), WechatUserInfo.class);
-		Client user = new Client();
-		user.setUsername(mobileInfo.getUsername());
-		user.setUnionId(userInfo.getUnionId());
-		user.setAvatar(userInfo.getHeadImgUrl());
-		user.setEnabled(true);
-		user.setMerchant(merchant);
-		user.setNickname(userInfo.getNickname());
-		switch (userInfo.getSex()) {
-		case 1:
-			user.setSex(Sex.Male);
-			break;
-		case 2:
-			user.setSex(Sex.Female);
-			break;
-		default:
-			user.setSex(Sex.Secret);
+		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, mobileInfo.getUsername());
+		Client user = null;
+		if (!userOp.isPresent()) {
+			user = new Client();
+			user.setUsername(mobileInfo.getUsername());
+			user.setUnionId(userInfo.getUnionId());
+			user.setAvatar(userInfo.getHeadImgUrl());
+			user.setEnabled(true);
+			user.setMerchant(merchant);
+			user.setNickname(userInfo.getNickname());
+			switch (userInfo.getSex()) {
+			case 1:
+				user.setSex(Sex.Male);
+				break;
+			case 2:
+				user.setSex(Sex.Female);
+				break;
+			default:
+				user.setSex(Sex.Secret);
+			}
+		} else {
+			user = userOp.get();
+			user.setUnionId(userInfo.getUnionId());
+			if (StringUtils.isEmpty(user.getAvatar())) {
+				user.setAvatar(userInfo.getHeadImgUrl());
+			}
+			if (StringUtils.isEmpty(user.getNickname())) {
+				user.setNickname(userInfo.getNickname());
+			}
+			if (user.getSex() == null) {
+				switch (userInfo.getSex()) {
+				case 1:
+					user.setSex(Sex.Male);
+					break;
+				case 2:
+					user.setSex(Sex.Female);
+					break;
+				default:
+					user.setSex(Sex.Secret);
+				}
+			}
 		}
 		clientRepository.save(user);
 		return new ResultBean<>();
