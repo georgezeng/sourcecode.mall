@@ -2,6 +2,8 @@ package com.sourcecode.malls.service.impl;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
@@ -72,6 +74,9 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Value("${share.image.background.path}")
 	private String shareBgPath;
+
+	@Value("${font.path}")
+	private String fontPath;
 
 	@Value("${user.avatar.default.path}")
 	private String userAvatarDefaultPath;
@@ -151,9 +156,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		AssertUtil.assertTrue(clientOp.isPresent(), "用户不存在");
 		Client client = clientOp.get();
 		String nickname = client.getNickname();
-		int adjust = 0;
 		if (StringUtils.isEmpty(nickname)) {
-			adjust = 100;
 			nickname = "****" + client.getUsername().substring(7);
 		}
 		String suffix = DigestUtils.md5Hex(userId + "_" + nickname) + ".png";
@@ -189,13 +192,12 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			Graphics2D g = (Graphics2D) result.getGraphics();
 			g.drawImage(qrCode, 320, 1000, null);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 			g.setColor(Color.DARK_GRAY);
-			g.setFont(new Font("STSong", Font.BOLD, 40));
-			g.drawString(nickname, (result.getWidth() - 42 * nickname.length()) / 2 + adjust, 275);
-			g.setFont(new Font("STSong", Font.BOLD, 50));
+			drawCenteredString(g, nickname, 0, 250, result.getWidth(), 40, new Font(font.getName(), Font.BOLD, 40));
 			g.setColor(Color.RED);
 			shopName = "邀请您注册" + shopName;
-			g.drawString(shopName, (result.getWidth() - 50 * shopName.length()) / 2, 350);
+			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, new Font(font.getName(), Font.BOLD, 50));
 			g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
 			g.drawImage(avatarImage, 410, 60, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -204,6 +206,20 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
 			return arr;
 		}
+	}
+
+	private void drawCenteredString(Graphics g, String text, int startX, int startY, int width, int height, Font font) {
+		// Get the FontMetrics
+		FontMetrics metrics = g.getFontMetrics(font);
+		// Determine the X coordinate for the text
+		int x = startX + (width - metrics.stringWidth(text)) / 2;
+		// Determine the Y coordinate for the text (note we add the ascent, as in java
+		// 2d 0 is top of the screen)
+		int y = startY + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
+		// Set the font
+		g.setFont(font);
+		// Draw the String
+		g.drawString(text, x, y);
 	}
 
 	@Transactional(readOnly = true)

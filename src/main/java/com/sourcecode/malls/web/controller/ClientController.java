@@ -227,7 +227,7 @@ public class ClientController {
 		return new ResultBean<>(clientService.getSubList(client, page));
 	}
 
-	@RequestMapping(path = "/poster", produces = { MediaType.IMAGE_PNG_VALUE })
+	@RequestMapping(path = "/poster.png", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadPoster() throws Exception {
 		Client client = ClientContext.get();
 		return new ByteArrayResource(clientService.loadPoster(client.getId()));

@@ -2,8 +2,10 @@ package com.sourcecode.test.images;
 
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
 import java.awt.image.BufferedImage;
@@ -56,17 +58,34 @@ public class ImgCombineTests {
 		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/share-info-bg.png"));
 		Graphics2D g = (Graphics2D)result.getGraphics();
 		g.drawImage(qrCode, 320, 1000, null);
-	    g.setColor(Color.DARK_GRAY);
-	    g.setFont(new Font("STSong", Font.BOLD, 40));
 	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-	    String name1 = "小兆";
-	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
-	    g.setFont(new Font("STSong", Font.BOLD, 50));
+	    Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/ms_song.ttf"));
+	    g.setColor(Color.DARK_GRAY);
+//	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
+	    String name1 = "George Zeng";
+//	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
+	    drawCenteredString(g, name1, 0, 250, result.getWidth(), 40, new Font(font.getName(), Font.BOLD, 40));
+//	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
 	    g.setColor(Color.RED);
 	    String name2 = "邀请您注册多呗家居商城";
-	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
+//	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
+	    drawCenteredString(g, name2, 0, 320, result.getWidth(), 50, new Font(font.getName(), Font.BOLD, 50));
 	    g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
 	    g.drawImage(avatar, 410, 60, avatarSize, avatarSize, null);
 		ImageIO.write(result, "png", new File("./src/test/resources/result.png"));
+		
+	}
+	
+	private void drawCenteredString(Graphics g, String text,  int startX, int startY, int width, int height, Font font) {
+	    // Get the FontMetrics
+	    FontMetrics metrics = g.getFontMetrics(font);
+	    // Determine the X coordinate for the text
+	    int x = startX + (width - metrics.stringWidth(text)) / 2;
+	    // Determine the Y coordinate for the text (note we add the ascent, as in java 2d 0 is top of the screen)
+	    int y = startY + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
+	    // Set the font
+	    g.setFont(font);
+	    // Draw the String
+	    g.drawString(text, x, y);
 	}
 }
