@@ -152,7 +152,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		Client client = clientOp.get();
 		String nickname = client.getNickname();
 		if (StringUtils.isEmpty(nickname)) {
-			nickname = "无名";
+			nickname = "****" + client.getUsername().substring(7);
 		}
 		String suffix = DigestUtils.md5Hex(userId + "_" + nickname) + ".png";
 		String posterPath = userDir + "/" + userId + "/invite/poster_" + suffix;
@@ -210,7 +210,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return result.stream().map(it -> {
 			ClientDTO dto = it.asDTO();
 			if (StringUtils.isEmpty(it.getNickname())) {
-				dto.setNickname("无名");
+				dto.setNickname("未设置昵称");
 			}
 			dto.setUsername("****" + dto.getUsername().substring(7));
 			return dto;
