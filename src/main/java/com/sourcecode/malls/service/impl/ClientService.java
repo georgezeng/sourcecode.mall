@@ -1,22 +1,51 @@
 package com.sourcecode.malls.service.impl;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Ellipse2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
+import javax.imageio.ImageIO;
+
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import com.alibaba.druid.util.StringUtils;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.client.j2se.MatrixToImageWriter;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.dto.client.ClientDTO;
+import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -30,7 +59,25 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	private MerchantRepository merchantRepository;
 
 	@Autowired
+	private MerchantShopApplicationRepository merchantShopRepository;
+
+	@Autowired
 	private SuperAdminProperties adminProperties;
+
+	@Autowired
+	private FileOnlineSystemService fileService;
+
+	@Autowired
+	private RestTemplate httpClient;
+
+	@Value("${share.image.background.path}")
+	private String shareBgPath;
+
+	@Value("${user.avatar.default.path}")
+	private String userAvatarDefaultPath;
+
+	@Value("${user.type.name}")
+	private String userDir;
 
 	@Transactional(readOnly = true)
 	@Override
@@ -87,6 +134,87 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	@Override
 	public JpaRepository<Client, Long> getRepository() {
 		return clientRepository;
+	}
+
+	public InputStream generateQRCodeImage(String url, int width, int height) throws Exception {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		Map<EncodeHintType, Object> hintMap = new HashMap<EncodeHintType, Object>();
+		hintMap.put(EncodeHintType.MARGIN, new Integer(1));
+		QRCodeWriter qrCodeWriter = new QRCodeWriter();
+		BitMatrix bitMatrix = qrCodeWriter.encode(url, BarcodeFormat.QR_CODE, width, height, hintMap);
+		MatrixToImageWriter.writeToStream(bitMatrix, "PNG", out);
+		return new ByteArrayInputStream(out.toByteArray());
+	}
+
+	public byte[] loadPoster(Long userId) throws Exception {
+		Optional<Client> clientOp = clientRepository.findById(userId);
+		AssertUtil.assertTrue(clientOp.isPresent(), "用户不存在");
+		Client client = clientOp.get();
+		String nickname = client.getNickname();
+		if (StringUtils.isEmpty(nickname)) {
+			nickname = "无名";
+		}
+		String suffix = DigestUtils.md5Hex(userId + "_" + nickname) + ".png";
+		String posterPath = userDir + "/" + userId + "/invite/poster_" + suffix;
+		try {
+			return fileService.load(true, posterPath);
+		} catch (Exception e) {
+			Optional<MerchantShopApplication> app = merchantShopRepository
+					.findByMerchantId(client.getMerchant().getId());
+			AssertUtil.assertTrue(clientOp.isPresent(), "商铺信息不存在");
+			String shareQrCodePath = userDir + "/" + userId + "/invite/qrcode_" + suffix;
+			InputStream in = null;
+			try {
+				in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
+			} catch (Exception e1) {
+				String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
+				in = generateQRCodeImage(shareQrCodeUrl, 350, 350);
+			}
+			BufferedImage qrCode = ImageIO.read(in);
+			String avatar = client.getAvatar();
+			in = null;
+			if (StringUtils.isEmpty(avatar)) {
+				in = new ByteArrayInputStream(fileService.load(true, userAvatarDefaultPath));
+			} else if (avatar.startsWith("http")) {
+				in = new ByteArrayInputStream(httpClient.getForEntity(avatar, byte[].class).getBody());
+			} else {
+				in = new ByteArrayInputStream(fileService.load(true, avatar));
+			}
+			String shopName = app.get().getName();
+			BufferedImage avatarImage = ImageIO.read(in);
+			int avatarSize = 160;
+			BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
+			Graphics2D g = (Graphics2D) result.getGraphics();
+			g.drawImage(qrCode, 320, 1000, null);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+			g.setColor(Color.DARK_GRAY);
+			g.setFont(new Font("STSong", Font.BOLD, 40));
+			g.drawString(nickname, (result.getWidth() - 42 * nickname.length()) / 2, 275);
+			g.setFont(new Font("STSong", Font.BOLD, 50));
+			g.setColor(Color.RED);
+			shopName = "邀请您注册" + shopName;
+			g.drawString(shopName, (result.getWidth() - 50 * shopName.length()) / 2, 350);
+			g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
+			g.drawImage(avatarImage, 410, 60, avatarSize, avatarSize, null);
+			ByteArrayOutputStream out = new ByteArrayOutputStream();
+			ImageIO.write(result, "png", out);
+			byte[] arr = out.toByteArray();
+			fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
+			return arr;
+		}
+	}
+
+	@Transactional(readOnly = true)
+	public List<ClientDTO> getSubList(Client parent, PageInfo page) {
+		List<Client> result = clientRepository.findAllByParent(parent, page.pageable());
+		return result.stream().map(it -> {
+			ClientDTO dto = it.asDTO();
+			if (StringUtils.isEmpty(it.getNickname())) {
+				dto.setNickname("无名");
+			}
+			dto.setUsername("****" + dto.getUsername().substring(7));
+			return dto;
+		}).collect(Collectors.toList());
 	}
 
 }

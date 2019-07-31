@@ -292,8 +292,7 @@ public class WechatController {
 	}
 
 	@RequestMapping(path = "/register")
-	public ResultBean<Void> wechatRegister(HttpServletRequest request, @RequestBody LoginInfo mobileInfo)
-			throws Exception {
+	public ResultBean<Void> register(HttpServletRequest request, @RequestBody LoginInfo mobileInfo) throws Exception {
 		AssertUtil.assertNotEmpty(mobileInfo.getUsername(), "手机号不能为空");
 		AssertUtil.assertNotEmpty(mobileInfo.getPassword(), "验证码不能为空");
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(WECHAT_REGISTER_CATEGORY,
@@ -320,6 +319,13 @@ public class WechatController {
 			user.setEnabled(true);
 			user.setMerchant(merchant);
 			user.setNickname(userInfo.getNickname());
+			Long pid = mobileInfo.getPid();
+			if (pid != null && pid > 0) {
+				Optional<Client> parentOp = clientRepository.findById(pid);
+				if (parentOp.isPresent()) {
+					user.setParent(parentOp.get());
+				}
+			}
 			switch (userInfo.getSex()) {
 			case 1:
 				user.setSex(Sex.Male);

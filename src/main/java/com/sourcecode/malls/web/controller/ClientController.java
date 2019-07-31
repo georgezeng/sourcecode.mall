@@ -32,6 +32,7 @@ import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
+import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -118,7 +119,7 @@ public class ClientController {
 	}
 
 	@RequestMapping(path = "/identity/load")
-	public ResultBean<ClientIdentityDTO> loadImg() {
+	public ResultBean<ClientIdentityDTO> loadIdentity() {
 		Client client = ClientContext.get();
 		ClientIdentity data = identityRepository.findByClient(client).orElse(null);
 		ClientIdentityDTO dto = null;
@@ -220,4 +221,15 @@ public class ClientController {
 		return new ResultBean<>();
 	}
 
+	@RequestMapping(path = "/list/sub")
+	public ResultBean<ClientDTO> listSub(@RequestBody PageInfo page) {
+		Client client = ClientContext.get();
+		return new ResultBean<>(clientService.getSubList(client, page));
+	}
+
+	@RequestMapping(path = "/poster", produces = { MediaType.IMAGE_PNG_VALUE })
+	public Resource loadPoster() throws Exception {
+		Client client = ClientContext.get();
+		return new ByteArrayResource(clientService.loadPoster(client.getId()));
+	}
 }

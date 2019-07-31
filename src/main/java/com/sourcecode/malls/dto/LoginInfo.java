@@ -4,6 +4,15 @@ public class LoginInfo {
 	private String username;
 	private String password;
 	private String token;
+	private Long pid;
+
+	public Long getPid() {
+		return pid;
+	}
+
+	public void setPid(Long pid) {
+		this.pid = pid;
+	}
 
 	public String getToken() {
 		return token;

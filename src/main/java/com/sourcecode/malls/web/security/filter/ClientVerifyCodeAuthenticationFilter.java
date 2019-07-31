@@ -65,10 +65,11 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 		if (StringUtils.isEmpty(username) || StringUtils.isEmpty(verifyCode)) {
 			throw new AuthenticationServiceException("手机号或验证码有误");
 		}
-		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-				username + "_" + merchant.getId());
+		Optional<CodeStore> codeStoreOp = codeStoreRepository
+				.findByCategoryAndKey(SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, username + "_" + merchant.getId());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(verifyCode), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(verifyCode),
+				ExceptionMessageConstant.VERIFY_CODE_INVALID);
 		Optional<Client> userOp = clientRepository.findByMerchantAndUsername(merchant, username);
 		Client user = null;
 		if (!userOp.isPresent()) {
@@ -76,6 +77,14 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 			user.setUsername(username);
 			user.setMerchant(merchant);
 			user.setEnabled(true);
+			String pidStr = request.getParameter("pid");
+			if (!StringUtils.isEmpty(pidStr)) {
+				Long pid = Long.valueOf(pidStr);
+				Optional<Client> parentOp = clientRepository.findById(pid);
+				if (parentOp.isPresent()) {
+					user.setParent(parentOp.get());
+				}
+			}
 			clientRepository.save(user);
 		} else {
 			user = userOp.get();
