@@ -194,10 +194,10 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 			g.setColor(Color.DARK_GRAY);
-			drawCenteredString(g, nickname, 0, 250, result.getWidth(), 40, new Font(font.getName(), Font.BOLD, 40));
+			drawCenteredString(g, nickname, 0, 250, result.getWidth(), 40, font.deriveFont(40f).deriveFont(Font.BOLD));
 			g.setColor(Color.RED);
 			shopName = "邀请您注册" + shopName;
-			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, new Font(font.getName(), Font.BOLD, 50));
+			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
 			g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
 			g.drawImage(avatarImage, 410, 60, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
