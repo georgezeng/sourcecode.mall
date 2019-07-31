@@ -151,7 +151,9 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		AssertUtil.assertTrue(clientOp.isPresent(), "用户不存在");
 		Client client = clientOp.get();
 		String nickname = client.getNickname();
+		int adjust = 0;
 		if (StringUtils.isEmpty(nickname)) {
+			adjust = 100;
 			nickname = "****" + client.getUsername().substring(7);
 		}
 		String suffix = DigestUtils.md5Hex(userId + "_" + nickname) + ".png";
@@ -189,7 +191,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			g.setColor(Color.DARK_GRAY);
 			g.setFont(new Font("STSong", Font.BOLD, 40));
-			g.drawString(nickname, (result.getWidth() - 42 * nickname.length()) / 2, 275);
+			g.drawString(nickname, (result.getWidth() - 42 * nickname.length()) / 2 + adjust, 275);
 			g.setFont(new Font("STSong", Font.BOLD, 50));
 			g.setColor(Color.RED);
 			shopName = "邀请您注册" + shopName;
