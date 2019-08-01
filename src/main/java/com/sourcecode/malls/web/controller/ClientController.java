@@ -27,6 +27,7 @@ import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientIdentity;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
@@ -35,6 +36,7 @@ import com.sourcecode.malls.dto.client.ClientIdentityDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.ClientService;
@@ -60,6 +62,9 @@ public class ClientController {
 
 	@Autowired
 	private ClientIdentityRepository identityRepository;
+
+	@Autowired
+	private MerchantShopApplicationRepository merchantApplicationRepository;
 
 	@Autowired
 	private PasswordEncoder encoder;
@@ -147,6 +152,10 @@ public class ClientController {
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
 		ClientDTO client = ClientContext.get().asDTO();
+		Optional<MerchantShopApplication> shop = merchantApplicationRepository
+				.findByMerchantId(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(shop.isPresent(), "无商铺信息");
+		client.setShopName(shop.get().getName());
 		return new ResultBean<>(client);
 	}
 
