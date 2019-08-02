@@ -88,13 +88,14 @@ public class EvaluationController {
 	@RequestMapping(path = "/goodsItem/list")
 	public ResultBean<GoodsItemEvaluationDTO> listCommentForGoodsItem(
 			@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo).getList());
+		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.getMerchantId(), queryInfo).getList());
 	}
 
 	@RequestMapping(path = "/goodsItem/count")
 	public ResultBean<Long> countCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		queryInfo.getPage().setSize(1);
-		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.get(), queryInfo).getTotal());
+		return new ResultBean<>(
+				service.getCommentListForGoodsItem(ClientContext.getMerchantId(), queryInfo).getTotal());
 	}
 
 	@RequestMapping(path = "/load/subOrder/params/{id}")

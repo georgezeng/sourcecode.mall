@@ -120,7 +120,7 @@ public class EvaluationService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Client client,
+	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId,
 			QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		AssertUtil.assertTrue(
 				queryInfo.getData() != null && queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0,
@@ -136,7 +136,7 @@ public class EvaluationService {
 			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query,
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("merchant"), client.getMerchant().getId()));
+				predicate.add(criteriaBuilder.equal(root.get("merchant"), merchantId));
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
 				predicate.add(criteriaBuilder.equal(root.get("open"), true));
