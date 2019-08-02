@@ -26,6 +26,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -83,6 +84,9 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Value("${user.type.name}")
 	private String userDir;
+	
+	@Autowired
+	private PasswordEncoder pwdEncoder;
 
 	@Transactional(readOnly = true)
 	@Override
@@ -106,7 +110,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		Client admin = new Client();
 		admin.setId(0l);
 		admin.setUsername(adminProperties.getUsername());
-		admin.setPassword(adminProperties.getPassword());
+		admin.setPassword(pwdEncoder.encode(adminProperties.getPassword()));
 		admin.setNickname("管理员");
 		admin.setSex(Sex.Secret);
 		admin.setEnabled(true);
