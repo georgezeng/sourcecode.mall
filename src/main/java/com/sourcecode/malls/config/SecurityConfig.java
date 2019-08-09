@@ -60,6 +60,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/alipay/notify/**").permitAll();
 		http.authorizeRequests().antMatchers("/client/alipay/prepare/**").permitAll();
 		http.authorizeRequests().antMatchers("/evaluation/goodsItem/**").permitAll();
+		http.authorizeRequests().antMatchers("/merchant/shopName").permitAll();
 		http.authorizeRequests().antMatchers("/index").permitAll();
 		http.authorizeRequests().antMatchers("/role/**").hasAuthority(adminProperties.getAuthority());
 		http.authorizeRequests().antMatchers("/user/**").hasAuthority(adminProperties.getAuthority());
