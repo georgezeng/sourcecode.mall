@@ -23,7 +23,7 @@ public class QrCodeTests {
 	private static void generateQRCodeImage(String text, int width, int height, String filePath)
             throws Exception {
 		Map<EncodeHintType, Object> hintMap = new HashMap<EncodeHintType, Object>();
-		hintMap.put(EncodeHintType.MARGIN, new Integer(1));
+		hintMap.put(EncodeHintType.MARGIN, new Integer(0));
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
         BitMatrix bitMatrix = qrCodeWriter.encode(text, BarcodeFormat.QR_CODE, width, height, hintMap);
 

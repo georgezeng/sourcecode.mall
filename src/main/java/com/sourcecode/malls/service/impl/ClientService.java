@@ -163,7 +163,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		if (StringUtils.isEmpty(nickname)) {
 			nickname = "****" + client.getUsername().substring(7);
 		}
-		String suffix = DigestUtils.md5Hex(userId + "_" + nickname) + ".png";
+		String suffix = DigestUtils.md5Hex(userId + "_" + nickname + "_" + client.getAvatar()) + ".png";
 		String posterPath = userDir + "/" + userId + "/invite/poster_" + suffix;
 		try {
 			return fileService.load(true, posterPath);
@@ -177,7 +177,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 				in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
 			} catch (Exception e1) {
 				String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-				in = generateQRCodeImage(shareQrCodeUrl, 350, 350);
+				in = generateQRCodeImage(shareQrCodeUrl, 300, 300);
 			}
 			BufferedImage qrCode = ImageIO.read(in);
 			String avatar = client.getAvatar();
