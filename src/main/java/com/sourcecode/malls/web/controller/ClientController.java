@@ -24,6 +24,7 @@ import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientIdentity;
+import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.PasswordDTO;
@@ -33,6 +34,8 @@ import com.sourcecode.malls.dto.client.ClientIdentityDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
+import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
@@ -53,6 +56,12 @@ public class ClientController {
 
 	@Autowired
 	private ClientService clientService;
+
+	@Autowired
+	private ClientRepository clientRepository;
+
+	@Autowired
+	private MerchantRepository merchantRepository;
 
 	@Autowired
 	private CodeStoreRepository codeStoreRepository;
@@ -189,8 +198,16 @@ public class ClientController {
 
 	@RequestMapping(path = "/login/code/{mobile}")
 	public ResultBean<Void> sendLoginVerifyCode(@PathVariable String mobile) {
-		verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-				ClientContext.getMerchantId() + "");
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(merchant.isPresent(), "找不到商户信息");
+		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), mobile);
+		if (client.isPresent()) {
+			verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
+					ClientContext.getMerchantId() + "");
+		} else {
+			verifyCodeService.sendRegisterCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
+					ClientContext.getMerchantId() + "");
+		}
 		return new ResultBean<>();
 	}
 
