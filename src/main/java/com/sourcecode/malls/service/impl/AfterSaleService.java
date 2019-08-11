@@ -128,7 +128,6 @@ public class AfterSaleService implements BaseService {
 //			propertyRepository.save(property);
 //			data.setSpecificationValues(dto.getSpecificationValues());
 			data.setNums(dto.getNums());
-			data.setAddress(dto.getAddress().asAfterSaleAddressEntity());
 		}
 			break;
 		case SalesReturn: {
