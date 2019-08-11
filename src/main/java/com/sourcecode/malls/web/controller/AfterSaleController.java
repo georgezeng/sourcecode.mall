@@ -115,7 +115,7 @@ public class AfterSaleController {
 				MerchantSettingConstant.RETURN_ADDRESS);
 		Map<String, String> map = null;
 		if (setting.isPresent()) {
-			map = mapper.readValue(setting.get().getCode(), Map.class);
+			map = mapper.readValue(setting.get().getValue(), Map.class);
 		}
 		return new ResultBean<>(map);
 	}

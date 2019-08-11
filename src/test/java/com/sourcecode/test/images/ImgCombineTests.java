@@ -29,7 +29,7 @@ import com.google.zxing.qrcode.QRCodeWriter;
 public class ImgCombineTests {
 	@Test
 	public void test() throws Exception {
-		InputStream is = generateQRCodeImage("https://www.baidu.com", 350, 350);
+		InputStream is = generateQRCodeImage("https://www.baidu.com", 250, 250);
 		generateBigImg(is);
 //		
 //		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -57,21 +57,21 @@ public class ImgCombineTests {
 		int avatarSize = 160;
 		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/share-info-bg.png"));
 		Graphics2D g = (Graphics2D)result.getGraphics();
-		g.drawImage(qrCode, 320, 1000, null);
+		g.drawImage(qrCode, 180, 750, null);
 	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 	    Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/ms_song.ttf"));
 	    g.setColor(Color.DARK_GRAY);
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
 	    String name1 = "George Zeng";
 //	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
-	    drawCenteredString(g, name1, 0, 250, result.getWidth(), 40, font.deriveFont(40f).deriveFont(Font.BOLD));
+	    drawCenteredString(g, name1, 0, 170, result.getWidth(), 40, font.deriveFont(40f).deriveFont(Font.BOLD));
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
-	    g.setColor(Color.RED);
-	    String name2 = "邀请您注册多呗家居商城";
-//	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
-	    drawCenteredString(g, name2, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
-	    g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
-	    g.drawImage(avatar, 410, 60, avatarSize, avatarSize, null);
+//	    g.setColor(Color.RED);
+//	    String name2 = "邀请您注册多呗家居商城";
+////	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
+//	    drawCenteredString(g, name2, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+	    g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
+	    g.drawImage(avatar, 300, 10, avatarSize, avatarSize, null);
 		ImageIO.write(result, "png", new File("./src/test/resources/result.png"));
 		
 	}
