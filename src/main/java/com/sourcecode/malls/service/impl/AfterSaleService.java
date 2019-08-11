@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
+import com.sourcecode.malls.domain.aftersale.AfterSaleAddress;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.aftersale.AfterSalePhoto;
 import com.sourcecode.malls.domain.client.Client;
@@ -31,6 +32,7 @@ import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.AfterSaleType;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
+import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSalePhotoRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
@@ -46,6 +48,9 @@ public class AfterSaleService implements BaseService {
 
 	@Autowired
 	private AfterSaleApplicationRepository applicationRepository;
+
+	@Autowired
+	private AfterSaleAddressRepository addressRepository;
 
 	@Autowired
 	private OrderRepository orderRepository;
@@ -141,6 +146,11 @@ public class AfterSaleService implements BaseService {
 		data.setType(dto.getType());
 		data.setStatus(AfterSaleStatus.Processing);
 		applicationRepository.save(data);
+		if (AfterSaleType.Change.equals(dto.getType())) {
+			AfterSaleAddress address = dto.getAddress().asAfterSaleAddressEntity();
+			address.setApplication(data);
+			addressRepository.save(address);
+		}
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 			for (String path : dto.getPhotos()) {
 				AfterSalePhoto photo = new AfterSalePhoto();
