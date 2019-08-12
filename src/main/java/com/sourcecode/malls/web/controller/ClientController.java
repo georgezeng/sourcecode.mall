@@ -242,9 +242,12 @@ public class ClientController {
 		return new ResultBean<>(clientService.getSubList(client, page));
 	}
 
-	@RequestMapping(path = "/poster.png", produces = { MediaType.IMAGE_PNG_VALUE })
-	public Resource loadPoster() throws Exception {
-		Client client = ClientContext.get();
-		return new ByteArrayResource(clientService.loadPoster(client.getId()));
+	@RequestMapping(path = "/{id}/poster.png", produces = { MediaType.IMAGE_PNG_VALUE })
+	public Resource loadPoster(@PathVariable("id") Long userId) throws Exception {
+		Optional<Client> client = clientRepository.findById(userId);
+		if (!client.isPresent()) {
+			return null;
+		}
+		return new ByteArrayResource(clientService.loadPoster(client.get().getId()));
 	}
 }
