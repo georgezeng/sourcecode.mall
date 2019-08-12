@@ -250,10 +250,4 @@ public class ClientController {
 		}
 		return new ByteArrayResource(clientService.loadPoster(client.get().getId()));
 	}
-	
-	@RequestMapping(path = "/poster.png", produces = { MediaType.IMAGE_PNG_VALUE })
-	public Resource loadPoster() throws Exception {
-		logger.info(ClientContext.get().getId() + "......");
-		return new ByteArrayResource(clientService.loadPoster(ClientContext.get().getId()));
-	}
 }
