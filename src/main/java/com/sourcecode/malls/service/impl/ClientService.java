@@ -177,7 +177,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 				in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
 			} catch (Exception e1) {
 				String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-				in = generateQRCodeImage(shareQrCodeUrl, 300, 300);
+				in = generateQRCodeImage(shareQrCodeUrl, 250, 250);
 			}
 			BufferedImage qrCode = ImageIO.read(in);
 			String avatar = client.getAvatar();
@@ -189,21 +189,21 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			} else {
 				in = new ByteArrayInputStream(fileService.load(true, avatar));
 			}
-			String shopName = app.get().getName();
+//			String shopName = app.get().getName();
 			BufferedImage avatarImage = ImageIO.read(in);
 			int avatarSize = 160;
 			BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
 			Graphics2D g = (Graphics2D) result.getGraphics();
-			g.drawImage(qrCode, 320, 1000, null);
+			g.drawImage(qrCode, 240, 770, null);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 			g.setColor(Color.DARK_GRAY);
-			drawCenteredString(g, nickname, 0, 250, result.getWidth(), 40, font.deriveFont(40f).deriveFont(Font.BOLD));
-			g.setColor(Color.RED);
-			shopName = "邀请您注册" + shopName;
-			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
-			g.setClip(new Ellipse2D.Float(410, 60, avatarSize, avatarSize));
-			g.drawImage(avatarImage, 410, 60, avatarSize, avatarSize, null);
+			drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
+//			g.setColor(Color.RED);
+//			shopName = "邀请您注册" + shopName;
+//			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
+		    g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ImageIO.write(result, "png", out);
 			byte[] arr = out.toByteArray();

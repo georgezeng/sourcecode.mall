@@ -57,14 +57,14 @@ public class ImgCombineTests {
 		int avatarSize = 160;
 		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/share-info-bg.png"));
 		Graphics2D g = (Graphics2D)result.getGraphics();
-		g.drawImage(qrCode, 180, 750, null);
+		g.drawImage(qrCode, 240, 770, null);
 	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 	    Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/ms_song.ttf"));
 	    g.setColor(Color.DARK_GRAY);
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
 	    String name1 = "George Zeng";
 //	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
-	    drawCenteredString(g, name1, 0, 170, result.getWidth(), 40, font.deriveFont(40f).deriveFont(Font.BOLD));
+	    drawCenteredString(g, name1, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
 //	    g.setColor(Color.RED);
 //	    String name2 = "邀请您注册多呗家居商城";
