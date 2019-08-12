@@ -48,7 +48,9 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 				}
 				if (!StringUtils.isEmpty(queryInfo.getData())) {
 					String like = "%" + queryInfo.getData() + "%";
-					predicate.add(criteriaBuilder.like(root.get("name"), like));
+					predicate.add(criteriaBuilder.or(criteriaBuilder.like(root.get("name"), like),
+							criteriaBuilder.like(root.get("sellingPoints"), like),
+							criteriaBuilder.like(root.join("brand").get("name"), like)));
 				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
