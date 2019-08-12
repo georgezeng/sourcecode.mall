@@ -189,7 +189,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 				in = new ByteArrayInputStream(fileService.load(true, avatar));
 			}
 //			String shopName = app.get().getName();
-			BufferedImage avatarImage = ImageIO.read(in);
+			BufferedImage avatarImage = ImageUtil.rotateImage(ImageIO.read(in), 90);
 			int avatarSize = 160;
 			BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
 			Graphics2D g = (Graphics2D) result.getGraphics();
@@ -203,7 +203,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 //			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
 			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
 			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
 		    g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ImageIO.write(result, "png", out);
