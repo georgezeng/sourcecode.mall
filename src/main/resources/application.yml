@@ -21,7 +21,7 @@ wechat:
       js: 'https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=%s&type=jsapi'
       file: 'http://file.api.weixin.qq.com/cgi-bin/media/get?access_token=%s&media_id=%s'
 
-share.image.background.path: common/client/share-info-bg.png
+share.image.background.path: common/client/invite-share-bg.png
 
 user.avatar.default.path: common/client/avatar.png
 

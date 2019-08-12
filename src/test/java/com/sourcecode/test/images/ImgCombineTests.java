@@ -55,7 +55,7 @@ public class ImgCombineTests {
 		BufferedImage qrCode = ImageIO.read(is);
 		BufferedImage avatar = ImageIO.read(new File("./src/test/resources/avatar.png"));
 		int avatarSize = 160;
-		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/share-info-bg.png"));
+		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/invite-share-bg.png"));
 		Graphics2D g = (Graphics2D)result.getGraphics();
 		g.drawImage(qrCode, 240, 770, null);
 	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
