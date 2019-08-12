@@ -201,6 +201,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 //			g.setColor(Color.RED);
 //			shopName = "邀请您注册" + shopName;
 //			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
 			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
 			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
 		    g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);

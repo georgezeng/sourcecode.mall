@@ -25,6 +25,7 @@ import com.google.zxing.EncodeHintType;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
+import com.sourcecode.malls.util.ImageUtil;
 
 public class ImgCombineTests {
 	@Test
@@ -64,14 +65,15 @@ public class ImgCombineTests {
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
 	    String name1 = "George Zeng";
 //	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
-	    drawCenteredString(g, name1, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
+	    drawCenteredString(g, name1, 0, 175, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
 //	    g.setColor(Color.RED);
 //	    String name2 = "邀请您注册多呗家居商城";
 ////	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
 //	    drawCenteredString(g, name2, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+	    avatar = ImageUtil.resizeImage(avatar, avatarSize, avatarSize);
 	    g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-	    g.drawImage(avatar, 300, 10, avatarSize, avatarSize, null);
+	    g.drawImage(ImageUtil.rotateImage(avatar, 90), 300, 10, avatarSize, avatarSize, null);
 		ImageIO.write(result, "png", new File("./src/test/resources/result.png"));
 		
 	}
