@@ -2,8 +2,6 @@ package com.sourcecode.malls.service.impl;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.Ellipse2D;
@@ -51,6 +49,7 @@ import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplication
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
+import com.sourcecode.malls.util.ImageUtil;
 
 @Service("ClientDetailsService")
 @Transactional
@@ -198,11 +197,12 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 			g.setColor(Color.DARK_GRAY);
-			drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
+			ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
 //			g.setColor(Color.RED);
 //			shopName = "邀请您注册" + shopName;
 //			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
 			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
+			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
 		    g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ImageIO.write(result, "png", out);
@@ -210,20 +210,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 			fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
 			return arr;
 		}
-	}
-
-	private void drawCenteredString(Graphics g, String text, int startX, int startY, int width, int height, Font font) {
-		// Get the FontMetrics
-		FontMetrics metrics = g.getFontMetrics(font);
-		// Determine the X coordinate for the text
-		int x = startX + (width - metrics.stringWidth(text)) / 2;
-		// Determine the Y coordinate for the text (note we add the ascent, as in java
-		// 2d 0 is top of the screen)
-		int y = startY + ((height - metrics.getHeight()) / 2) + metrics.getAscent();
-		// Set the font
-		g.setFont(font);
-		// Draw the String
-		g.drawString(text, x, y);
 	}
 
 	@Transactional(readOnly = true)
