@@ -83,7 +83,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Value("${user.type.name}")
 	private String userDir;
-	
+
 	@Autowired
 	private PasswordEncoder pwdEncoder;
 
@@ -189,21 +189,25 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 				in = new ByteArrayInputStream(fileService.load(true, avatar));
 			}
 //			String shopName = app.get().getName();
-			BufferedImage avatarImage = ImageUtil.rotateImage(ImageIO.read(in), 90);
 			int avatarSize = 160;
+			BufferedImage avatarImage = ImageIO.read(in);
+			if (avatarImage.getWidth() > avatarImage.getHeight()) {
+				avatarImage = ImageUtil.rotateImage(avatarImage, 90);
+				avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
+			}
 			BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
 			Graphics2D g = (Graphics2D) result.getGraphics();
 			g.drawImage(qrCode, 240, 770, null);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 			g.setColor(Color.DARK_GRAY);
-			ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
+			ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
+					font.deriveFont(30f).deriveFont(Font.BOLD));
 //			g.setColor(Color.RED);
 //			shopName = "邀请您注册" + shopName;
 //			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
-			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
 			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-		    g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
+			g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 			ByteArrayOutputStream out = new ByteArrayOutputStream();
 			ImageIO.write(result, "png", out);
 			byte[] arr = out.toByteArray();
