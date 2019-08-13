@@ -17,9 +17,9 @@ import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -154,7 +154,8 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return new ByteArrayInputStream(out.toByteArray());
 	}
 
-	public byte[] loadPoster(Long userId) throws Exception {
+	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")
+	public byte[] loadInvitePoster(Long userId) throws Exception {
 		Optional<Client> clientOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(clientOp.isPresent(), "用户不存在");
 		Client client = clientOp.get();
@@ -162,58 +163,59 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		if (StringUtils.isEmpty(nickname)) {
 			nickname = "****" + client.getUsername().substring(7);
 		}
-		String suffix = DigestUtils.md5Hex(userId + "_" + nickname + "_" + client.getAvatar()) + ".png";
-		String posterPath = userDir + "/" + userId + "/invite/poster_" + suffix;
+//		String suffix = DigestUtils.md5Hex(userId + "_" + nickname + "_" + client.getAvatar()) + ".png";
+		String suffix = System.nanoTime() + ".png";
+		String posterPath = userDir + "/" + userId + "/poster/invite_" + suffix;
+//		try {
+//			return fileService.load(true, posterPath);
+//		} catch (Exception e) {
+//			
+//		}
+		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
+		AssertUtil.assertTrue(clientOp.isPresent(), "商铺信息不存在");
+		String shareQrCodePath = userDir + "/" + userId + "/invite/qrcode_" + suffix;
+		InputStream in = null;
 		try {
-			return fileService.load(true, posterPath);
-		} catch (Exception e) {
-			Optional<MerchantShopApplication> app = merchantShopRepository
-					.findByMerchantId(client.getMerchant().getId());
-			AssertUtil.assertTrue(clientOp.isPresent(), "商铺信息不存在");
-			String shareQrCodePath = userDir + "/" + userId + "/invite/qrcode_" + suffix;
-			InputStream in = null;
-			try {
-				in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
-			} catch (Exception e1) {
-				String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-				in = generateQRCodeImage(shareQrCodeUrl, 250, 250);
-			}
-			BufferedImage qrCode = ImageIO.read(in);
-			String avatar = client.getAvatar();
-			in = null;
-			if (StringUtils.isEmpty(avatar)) {
-				in = new ByteArrayInputStream(fileService.load(true, userAvatarDefaultPath));
-			} else if (avatar.startsWith("http")) {
-				in = new ByteArrayInputStream(httpClient.getForEntity(avatar, byte[].class).getBody());
-			} else {
-				in = new ByteArrayInputStream(fileService.load(true, avatar));
-			}
-//			String shopName = app.get().getName();
-			int avatarSize = 160;
-			BufferedImage avatarImage = ImageIO.read(in);
-			if (avatarImage.getWidth() > avatarImage.getHeight()) {
-				avatarImage = ImageUtil.rotateImage(avatarImage, 90);
-				avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
-			}
-			BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
-			Graphics2D g = (Graphics2D) result.getGraphics();
-			g.drawImage(qrCode, 240, 770, null);
-			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-			Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
-			g.setColor(Color.DARK_GRAY);
-			ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
-					font.deriveFont(30f).deriveFont(Font.BOLD));
-//			g.setColor(Color.RED);
-//			shopName = "邀请您注册" + shopName;
-//			drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
-			g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-			g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			ImageIO.write(result, "png", out);
-			byte[] arr = out.toByteArray();
-			fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
-			return arr;
+			in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
+		} catch (Exception e1) {
+			String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
+			in = generateQRCodeImage(shareQrCodeUrl, 250, 250);
 		}
+		BufferedImage qrCode = ImageIO.read(in);
+		String avatar = client.getAvatar();
+		in = null;
+		if (StringUtils.isEmpty(avatar)) {
+			in = new ByteArrayInputStream(fileService.load(true, userAvatarDefaultPath));
+		} else if (avatar.startsWith("http")) {
+			in = new ByteArrayInputStream(httpClient.getForEntity(avatar, byte[].class).getBody());
+		} else {
+			in = new ByteArrayInputStream(fileService.load(true, avatar));
+		}
+//		String shopName = app.get().getName();
+		int avatarSize = 160;
+		BufferedImage avatarImage = ImageIO.read(in);
+		if (avatarImage.getWidth() > avatarImage.getHeight()) {
+			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
+			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
+		}
+		BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
+		Graphics2D g = (Graphics2D) result.getGraphics();
+		g.drawImage(qrCode, 240, 770, null);
+		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+		Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
+		g.setColor(Color.DARK_GRAY);
+		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
+				font.deriveFont(30f).deriveFont(Font.BOLD));
+//		g.setColor(Color.RED);
+//		shopName = "邀请您注册" + shopName;
+//		drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+		g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
+		g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ImageIO.write(result, "png", out);
+		byte[] arr = out.toByteArray();
+		fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
+		return arr;
 	}
 
 	@Transactional(readOnly = true)
