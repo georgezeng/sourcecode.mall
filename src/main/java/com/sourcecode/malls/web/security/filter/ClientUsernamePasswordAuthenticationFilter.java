@@ -90,6 +90,9 @@ public class ClientUsernamePasswordAuthenticationFilter extends AbstractAuthenti
 		if (!encoder.matches(password, userOp.get().getPassword())) {
 			throw new UsernameNotFoundException("账号或密码有误");
 		}
+		if (!userOp.get().isEnabled()) {
+			throw new UsernameNotFoundException("账号已被禁用");
+		}
 		Client user = userOp.get();
 		return new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities());
 	}

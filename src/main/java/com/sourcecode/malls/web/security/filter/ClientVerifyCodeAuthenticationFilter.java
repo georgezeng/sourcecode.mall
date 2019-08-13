@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.stereotype.Component;
@@ -88,6 +89,9 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 			clientRepository.save(user);
 		} else {
 			user = userOp.get();
+			if (!user.isEnabled()) {
+				throw new UsernameNotFoundException("账号已被禁用");
+			}
 		}
 		codeStoreRepository.delete(codeStoreOp.get());
 		return new UsernamePasswordAuthenticationToken(user, user.getPassword(), user.getAuthorities());
