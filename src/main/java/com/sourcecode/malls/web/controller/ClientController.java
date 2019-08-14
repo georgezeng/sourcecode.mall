@@ -248,6 +248,7 @@ public class ClientController {
 		if (!client.isPresent()) {
 			return null;
 		}
-		return new ByteArrayResource(clientService.loadInvitePoster(client.get().getId()));
+		byte[] data = clientService.loadInvitePoster(client.get().getId());
+		return new ByteArrayResource(data);
 	}
 }

@@ -15,12 +15,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -54,6 +59,8 @@ import com.sourcecode.malls.util.ImageUtil;
 @Service("ClientDetailsService")
 @Transactional
 public class ClientService implements UserDetailsService, JpaService<Client, Long> {
+	Logger logger = LoggerFactory.getLogger(getClass());
+
 	@Autowired
 	private ClientRepository clientRepository;
 
@@ -86,6 +93,13 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Autowired
 	private PasswordEncoder pwdEncoder;
+
+	private Font font;
+
+	@PostConstruct
+	public void init() throws Exception {
+		font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
+	}
 
 	@Transactional(readOnly = true)
 	@Override
@@ -154,6 +168,12 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return new ByteArrayInputStream(out.toByteArray());
 	}
 
+	@CacheEvict(allEntries = true, cacheNames = "client_invite_poster")
+	@Scheduled(fixedRate = 5 * 60 * 1000)
+	public void clearPoster() {
+		logger.info("clear invite poster............");
+	}
+
 	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")
 	public byte[] loadInvitePoster(Long userId) throws Exception {
 		Optional<Client> clientOp = clientRepository.findById(userId);
@@ -165,14 +185,14 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		}
 //		String suffix = DigestUtils.md5Hex(userId + "_" + nickname + "_" + client.getAvatar()) + ".png";
 		String suffix = System.nanoTime() + ".png";
-		String posterPath = userDir + "/" + userId + "/poster/invite_" + suffix;
+//		String posterPath = userDir + "/" + userId + "/poster/invite_" + suffix;
 //		try {
 //			return fileService.load(true, posterPath);
 //		} catch (Exception e) {
 //			
 //		}
 		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
-		AssertUtil.assertTrue(clientOp.isPresent(), "商铺信息不存在");
+		AssertUtil.assertTrue(app.isPresent(), "商铺信息不存在");
 		String shareQrCodePath = userDir + "/" + userId + "/invite/qrcode_" + suffix;
 		InputStream in = null;
 		try {
@@ -202,7 +222,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		Graphics2D g = (Graphics2D) result.getGraphics();
 		g.drawImage(qrCode, 240, 770, null);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		Font font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
 		g.setColor(Color.DARK_GRAY);
 		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
 				font.deriveFont(30f).deriveFont(Font.BOLD));
@@ -214,7 +233,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		ImageIO.write(result, "png", out);
 		byte[] arr = out.toByteArray();
-		fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
+//		fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
 		return arr;
 	}
 
