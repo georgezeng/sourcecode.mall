@@ -168,10 +168,8 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return new ByteArrayInputStream(out.toByteArray());
 	}
 
-	@CacheEvict(allEntries = true, cacheNames = "client_invite_poster")
-	@Scheduled(fixedRate = 5 * 60 * 1000)
-	public void clearPoster() {
-		logger.info("clear invite poster............");
+	@CacheEvict(cacheNames = "client_invite_poster", key = "#userId")
+	public void clearPoster(Long userId) {
 	}
 
 	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")

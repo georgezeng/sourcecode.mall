@@ -113,6 +113,11 @@ public class ClientController {
 	@RequestMapping(path = "/save")
 	public ResultBean<Void> save(@RequestBody ClientDTO dto) {
 		Client client = ClientContext.get();
+		boolean hasChanged = dto.getNickname() != null && !dto.getNickname().equals(client.getNickname())
+				|| dto.getAvatar() != null && !dto.getAvatar().equals(client.getAvatar());
+		if (hasChanged) {
+			clientService.clearPoster(client.getId());
+		}
 		client.setBirthday(dto.getBirthday());
 		client.setSex(dto.getSex());
 		client.setNickname(dto.getNickname());
