@@ -60,10 +60,10 @@ public class ImgCombineTests {
 		Graphics2D g = (Graphics2D)result.getGraphics();
 		g.drawImage(qrCode, 240, 770, null);
 	    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-	    Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/ms_song.ttf"));
+	    Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/msjh.ttf"));
 	    g.setColor(Color.DARK_GRAY);
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
-	    String name1 = "George Zeng";
+	    String name1 = "测试一下";
 //	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
 	    drawCenteredString(g, name1, 0, 175, result.getWidth(), 45, font.deriveFont(30f).deriveFont(Font.BOLD));
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
