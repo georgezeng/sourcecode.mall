@@ -203,6 +203,8 @@ public class AfterSaleService implements BaseService {
 //				}
 				if (!"all".equalsIgnoreCase(status)) {
 					predicate.add(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.valueOf(status)));
+				} else {
+					predicate.add(criteriaBuilder.notEqual(root.get("status"), AfterSaleStatus.NotYet));
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
