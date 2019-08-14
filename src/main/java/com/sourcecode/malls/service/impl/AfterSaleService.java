@@ -186,19 +186,22 @@ public class AfterSaleService implements BaseService {
 				} else {
 					predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				}
-				if ("WaitForProcess".equals(status)) {
-					predicate.add(
-							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReturn),
-									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForPickup)));
-				} else if ("WaitForConfirm".equals(status)) {
-					predicate.add(
-							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForRefund),
-									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReceive)));
-				} else if ("Finished".equals("status")) {
-					predicate
-							.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Finished),
-									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Rejected)));
-				} else {
+//				if ("WaitForProcess".equals(status)) {
+//					predicate.add(
+//							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReturn),
+//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForPickup)));
+//				} else if ("WaitForConfirm".equals(status)) {
+//					predicate.add(
+//							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForRefund),
+//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReceive)));
+//				} else if ("Finished".equals("status")) {
+//					predicate
+//							.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Finished),
+//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Rejected)));
+//				} else {
+//					predicate.add(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.valueOf(status)));
+//				}
+				if (!"all".equalsIgnoreCase(status)) {
 					predicate.add(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.valueOf(status)));
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
