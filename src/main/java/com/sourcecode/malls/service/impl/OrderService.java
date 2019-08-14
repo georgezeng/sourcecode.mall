@@ -321,8 +321,20 @@ public class OrderService implements BaseService {
 			}
 		};
 		Page<Order> orders = orderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
-		return new PageResult<>(orders.get().map(order -> order.asDTO(true, false)).collect(Collectors.toList()),
-				orders.getTotalElements());
+		return new PageResult<>(orders.get().map(order -> {
+			OrderDTO dto = order.asDTO(true, false);
+			if (!CollectionUtils.isEmpty(order.getSubList())) {
+				int count = 0;
+				for (SubOrder sub : order.getSubList()) {
+					Optional<AfterSaleApplication> app = aftersaleApplicationRepository.findBySubOrder(sub);
+					if (app.isPresent() && !AfterSaleStatus.NotYet.equals(app.get().getStatus())) {
+						count++;
+					}
+				}
+				dto.setApplied(count == order.getSubList().size());
+			}
+			return dto;
+		}).collect(Collectors.toList()), orders.getTotalElements());
 	}
 
 	@Transactional(readOnly = true)

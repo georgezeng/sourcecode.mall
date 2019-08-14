@@ -49,9 +49,9 @@ public class ClientCartService implements JpaService<ClientCartItem, Long> {
 		}
 		AssertUtil.assertNotNull(property, "商品没有规格");
 		Optional<ClientCartItem> cartItem = cartRepository.findByClientAndProperty(client, property);
-		AssertUtil.assertTrue(!cartItem.isPresent(), "已经添加过该商品");
-		ClientCartItem data = new ClientCartItem();
-		data.setNums(dto.getNums());
+//		AssertUtil.assertTrue(!cartItem.isPresent(), "已经添加过该商品");
+		ClientCartItem data = cartItem.orElseGet(ClientCartItem::new);
+		data.setNums(dto.getNums() + data.getNums());
 		data.setItem(item.get());
 		data.setProperty(property);
 		data.setClient(client);
