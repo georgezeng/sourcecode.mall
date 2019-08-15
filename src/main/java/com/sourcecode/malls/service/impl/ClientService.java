@@ -177,7 +177,7 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		}
 		BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
 		Graphics2D g = (Graphics2D) result.getGraphics();
-		g.drawImage(qrCode, 240, 770, null);
+		g.drawImage(qrCode, 250, 770, null);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(Color.DARK_GRAY);
 		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
