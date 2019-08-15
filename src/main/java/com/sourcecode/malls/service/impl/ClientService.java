@@ -9,13 +9,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.imageio.ImageIO;
 
 import org.slf4j.Logger;
@@ -34,11 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.druid.util.StringUtils;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.EncodeHintType;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.merchant.Merchant;
@@ -78,11 +70,11 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	@Autowired
 	private RestTemplate httpClient;
 
-	@Value("${share.image.background.path}")
-	private String shareBgPath;
+	@Autowired
+	private ImageService imageService;
 
-	@Value("${font.path}")
-	private String fontPath;
+	@Value("${invite.image.background.path}")
+	private String shareBgPath;
 
 	@Value("${user.avatar.default.path}")
 	private String userAvatarDefaultPath;
@@ -92,13 +84,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Autowired
 	private PasswordEncoder pwdEncoder;
-
-	private Font font;
-
-	@PostConstruct
-	public void init() throws Exception {
-		font = Font.createFont(Font.TRUETYPE_FONT, new ByteArrayInputStream(fileService.load(true, fontPath)));
-	}
 
 	@Transactional(readOnly = true)
 	@Override
@@ -157,18 +142,8 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		return clientRepository;
 	}
 
-	public InputStream generateQRCodeImage(String url, int width, int height) throws Exception {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		Map<EncodeHintType, Object> hintMap = new HashMap<EncodeHintType, Object>();
-		hintMap.put(EncodeHintType.MARGIN, new Integer(1));
-		QRCodeWriter qrCodeWriter = new QRCodeWriter();
-		BitMatrix bitMatrix = qrCodeWriter.encode(url, BarcodeFormat.QR_CODE, width, height, hintMap);
-		MatrixToImageWriter.writeToStream(bitMatrix, "PNG", out);
-		return new ByteArrayInputStream(out.toByteArray());
-	}
-
 	@CacheEvict(cacheNames = "client_invite_poster", key = "#userId")
-	public void clearPoster(Long userId) {
+	public void clearInvitePoster(Long userId) {
 	}
 
 	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")
@@ -180,27 +155,13 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		if (StringUtils.isEmpty(nickname)) {
 			nickname = "****" + client.getUsername().substring(7);
 		}
-//		String suffix = DigestUtils.md5Hex(userId + "_" + nickname + "_" + client.getAvatar()) + ".png";
-		String suffix = System.nanoTime() + ".png";
-//		String posterPath = userDir + "/" + userId + "/poster/invite_" + suffix;
-//		try {
-//			return fileService.load(true, posterPath);
-//		} catch (Exception e) {
-//			
-//		}
 		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(app.isPresent(), "商铺信息不存在");
-		String shareQrCodePath = userDir + "/" + userId + "/invite/qrcode_" + suffix;
-		InputStream in = null;
-		try {
-			in = new ByteArrayInputStream(fileService.load(true, shareQrCodePath));
-		} catch (Exception e1) {
-			String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-			in = generateQRCodeImage(shareQrCodeUrl, 250, 250);
-		}
-		BufferedImage qrCode = ImageIO.read(in);
+		String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
+		BufferedImage qrCode = ImageUtil.resizeImage(imageService.generateQRCodeImage(shareQrCodeUrl, 1000, 1000, 1),
+				250, 250);
 		String avatar = client.getAvatar();
-		in = null;
+		InputStream in = null;
 		if (StringUtils.isEmpty(avatar)) {
 			in = new ByteArrayInputStream(fileService.load(true, userAvatarDefaultPath));
 		} else if (avatar.startsWith("http")) {
@@ -208,7 +169,6 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		} else {
 			in = new ByteArrayInputStream(fileService.load(true, avatar));
 		}
-//		String shopName = app.get().getName();
 		int avatarSize = 160;
 		BufferedImage avatarImage = ImageIO.read(in);
 		if (avatarImage.getWidth() > avatarImage.getHeight()) {
@@ -221,16 +181,12 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(Color.DARK_GRAY);
 		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
-				font.deriveFont(30f).deriveFont(Font.BOLD));
-//		g.setColor(Color.RED);
-//		shopName = "邀请您注册" + shopName;
-//		drawCenteredString(g, shopName, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
+				imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD));
 		g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
 		g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		ImageIO.write(result, "png", out);
 		byte[] arr = out.toByteArray();
-//		fileService.upload(true, posterPath, new ByteArrayInputStream(arr));
 		return arr;
 	}
 

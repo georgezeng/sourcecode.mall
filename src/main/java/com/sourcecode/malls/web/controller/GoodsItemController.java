@@ -7,6 +7,9 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,4 +77,9 @@ public class GoodsItemController {
 		return new ResultBean<>(dto);
 	}
 
+	@RequestMapping(path = "/{itemId}/{userId}/poster/share.png", produces = { MediaType.IMAGE_PNG_VALUE })
+	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("userId") Long userId)
+			throws Exception {
+		return new ByteArrayResource(service.loadSharePoster(itemId, userId));
+	}
 }

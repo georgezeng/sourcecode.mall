@@ -116,7 +116,7 @@ public class ClientController {
 		boolean hasChanged = dto.getNickname() != null && !dto.getNickname().equals(client.getNickname())
 				|| dto.getAvatar() != null && !dto.getAvatar().equals(client.getAvatar());
 		if (hasChanged) {
-			clientService.clearPoster(client.getId());
+			clientService.clearInvitePoster(client.getId());
 		}
 		client.setBirthday(dto.getBirthday());
 		client.setSex(dto.getSex());
@@ -249,11 +249,6 @@ public class ClientController {
 
 	@RequestMapping(path = "/{id}/poster/invite.png", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadInvitePoster(@PathVariable("id") Long userId) throws Exception {
-		Optional<Client> client = clientRepository.findById(userId);
-		if (!client.isPresent()) {
-			return null;
-		}
-		byte[] data = clientService.loadInvitePoster(client.get().getId());
-		return new ByteArrayResource(data);
+		return new ByteArrayResource(clientService.loadInvitePoster(userId));
 	}
 }
