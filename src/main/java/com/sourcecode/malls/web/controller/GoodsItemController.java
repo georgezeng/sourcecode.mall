@@ -77,9 +77,9 @@ public class GoodsItemController {
 		return new ResultBean<>(dto);
 	}
 
-	@RequestMapping(path = "/{itemId}/{userId}/poster/share.png", produces = { MediaType.IMAGE_PNG_VALUE })
-	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("userId") Long userId)
+	@RequestMapping(path = "/{itemId}/{index}/{userId}/poster/share.png", produces = { MediaType.IMAGE_PNG_VALUE })
+	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("index") int index, @PathVariable("userId") Long userId)
 			throws Exception {
-		return new ByteArrayResource(service.loadSharePoster(itemId, userId));
+		return new ByteArrayResource(service.loadSharePoster(itemId, index, userId));
 	}
 }

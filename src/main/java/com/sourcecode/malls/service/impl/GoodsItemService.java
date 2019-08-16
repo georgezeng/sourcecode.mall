@@ -131,8 +131,8 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "goods_item_share_poster", key = "#itemId.toString().concat('-').concat(#userId.toString())")
-	public byte[] loadSharePoster(Long itemId, Long userId) throws Exception {
+	@Cacheable(cacheNames = "goods_item_share_poster", key = "#itemId.toString().concat('-').concat(#index.toString()).concat('-').concat(#userId.toString())")
+	public byte[] loadSharePoster(Long itemId, Integer index, Long userId) throws Exception {
 		Optional<Client> client = clientRepository.findById(userId);
 		Optional<GoodsItem> itemOp = itemRepository.findById(itemId);
 		AssertUtil.assertTrue(itemOp.isPresent(), ExceptionMessageConstant.NO_SUCH_RECORD);
@@ -156,7 +156,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 				imageService.getFont().deriveFont(25f).deriveFont(Font.BOLD));
 		String photo = item.getThumbnail();
 		if (!CollectionUtils.isEmpty(item.getPhotos())) {
-			photo = item.getPhotos().get(0).getPath();
+			photo = item.getPhotos().get(index).getPath();
 		}
 		BufferedImage goodsItem = ImageUtil.resizeImage(
 				ImageIO.read(new ByteArrayInputStream(fileService.load(true, photo))), result.getWidth(),
