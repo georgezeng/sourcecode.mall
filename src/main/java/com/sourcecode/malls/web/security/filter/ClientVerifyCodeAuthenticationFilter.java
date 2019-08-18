@@ -39,7 +39,7 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 
 	@Autowired
 	private ClientRepository clientRepository;
-	
+
 	@Autowired
 	private ClientService clientService;
 
@@ -88,11 +88,11 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
 					user.setParent(parentOp.get());
-					clientService.setInviteBonus(pid, merchant.getId());
+					clientService.setInviteBonus(pid);
 				}
 			}
 			clientRepository.save(user);
-			clientService.setRegistrationBonus(user.getId(), merchant.getId());
+			clientService.setRegistrationBonus(user.getId());
 		} else {
 			user = userOp.get();
 			if (!user.isEnabled()) {

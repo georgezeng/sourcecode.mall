@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.imageio.ImageIO;
+import javax.persistence.EntityManager;
+import javax.persistence.LockModeType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +50,7 @@ import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.CashCouponEventType;
 import com.sourcecode.malls.enums.ClientCouponStatus;
+import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -105,13 +108,16 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private PasswordEncoder pwdEncoder;
 
+	@Autowired
+	private EntityManager em;
+
 	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#order.client.id")
 	public void setConsumeBonus(Order order) {
 		if (CollectionUtils.isEmpty(order.getSubList())) {
 			return;
 		}
-		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(order.getMerchant(),
-				CashCouponEventType.Consume);
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+				order.getMerchant(), CashCouponEventType.Consume, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CashCouponSetting setting : list) {
 				if (setting.getConsumeSetting() != null) {
@@ -140,48 +146,46 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 						}
 					}
 					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
-						Optional<CashClientCoupon> couponOp = cashClientCouponRepository
-								.findByClientAndSetting(order.getClient(), setting);
-						if (!couponOp.isPresent()) {
-							CashClientCoupon coupon = couponOp.get();
-							coupon.setClient(order.getClient());
-							coupon.setMerchant(order.getMerchant());
-							coupon.setSetting(setting);
-							coupon.setCouponId(generateId());
-							coupon.setReceivedTime(new Date());
-							coupon.setStatus(ClientCouponStatus.UnUse);
-							cashClientCouponRepository.save(coupon);
-						}
+						createCouponIfNecessary(order.getClient(), setting);
 					}
 				}
 			}
 		}
 	}
 
+	private void createCouponIfNecessary(Client client, CashCouponSetting setting) {
+		Optional<CashClientCoupon> couponOp = cashClientCouponRepository.findByClientAndSetting(client, setting);
+		if (!couponOp.isPresent()) {
+			em.lock(setting, LockModeType.PESSIMISTIC_WRITE);
+			if (setting.getTotalNums() == 0 || setting.getUsedNums() < setting.getTotalNums()) {
+				CashClientCoupon coupon = couponOp.get();
+				coupon.setClient(client);
+				coupon.setMerchant(client.getMerchant());
+				coupon.setSetting(setting);
+				coupon.setCouponId(generateId());
+				coupon.setReceivedTime(new Date());
+				coupon.setStatus(ClientCouponStatus.UnUse);
+				cashClientCouponRepository.save(coupon);
+				setting.setUsedNums(setting.getUsedNums() + 1);
+				if (setting.getUsedNums() == setting.getTotalNums()) {
+					setting.setStatus(CouponSettingStatus.SentOut);
+				}
+				cashCouponSettingRepository.save(setting);
+			}
+		}
+	}
+
 	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
-	public void setInviteBonus(Long userId, Long merchantId) {
+	public void setInviteBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
-		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
-		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
-		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(merchant.get(),
-				CashCouponEventType.Invite);
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+				user.get().getMerchant(), CashCouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CashCouponSetting setting : list) {
 				if (setting.getInviteSetting() != null) {
 					if (user.get().getSubList().size() >= setting.getInviteSetting().getMemberNums()) {
-						Optional<CashClientCoupon> couponOp = cashClientCouponRepository
-								.findByClientAndSetting(user.get(), setting);
-						if (!couponOp.isPresent()) {
-							CashClientCoupon coupon = couponOp.get();
-							coupon.setClient(user.get());
-							coupon.setMerchant(merchant.get());
-							coupon.setSetting(setting);
-							coupon.setCouponId(generateId());
-							coupon.setReceivedTime(new Date());
-							coupon.setStatus(ClientCouponStatus.UnUse);
-							cashClientCouponRepository.save(coupon);
-						}
+						createCouponIfNecessary(user.get(), setting);
 					}
 				}
 			}
@@ -189,27 +193,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
-	public void setRegistrationBonus(Long userId, Long merchantId) {
+	public void setRegistrationBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
-		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
-		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
-		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(merchant.get(),
-				CashCouponEventType.Registration);
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+				user.get().getMerchant(), CashCouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CashCouponSetting setting : list) {
-				Optional<CashClientCoupon> couponOp = cashClientCouponRepository.findByClientAndSetting(user.get(),
-						setting);
-				if (!couponOp.isPresent()) {
-					CashClientCoupon coupon = couponOp.get();
-					coupon.setClient(user.get());
-					coupon.setMerchant(merchant.get());
-					coupon.setSetting(setting);
-					coupon.setCouponId(generateId());
-					coupon.setReceivedTime(new Date());
-					coupon.setStatus(ClientCouponStatus.UnUse);
-					cashClientCouponRepository.save(coupon);
-				}
+				createCouponIfNecessary(user.get(), setting);
 			}
 		}
 	}

@@ -328,7 +328,7 @@ public class WechatController {
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
 					user.setParent(parentOp.get());
-					clientService.setInviteBonus(pid, merchant.getId());
+					clientService.setInviteBonus(pid);
 				}
 			}
 			switch (userInfo.getSex()) {
@@ -365,7 +365,7 @@ public class WechatController {
 		}
 		clientRepository.save(user);
 		if (!userOp.isPresent()) {
-			clientService.setRegistrationBonus(user.getId(), merchant.getId());
+			clientService.setRegistrationBonus(user.getId());
 		}
 		return new ResultBean<>();
 	}
