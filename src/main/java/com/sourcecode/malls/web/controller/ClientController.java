@@ -1,7 +1,6 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -253,8 +252,8 @@ public class ClientController {
 		return new ByteArrayResource(clientService.loadInvitePoster(userId));
 	}
 
-	@RequestMapping(path = "/totalUnUseCouponAmount")
-	public ResultBean<BigDecimal> totalUnUseCouponAmount() {
-		return new ResultBean<>(clientService.sumUnUseCouponAmount(ClientContext.get().getId()));
+	@RequestMapping(path = "/totalUnUseCouponNums")
+	public ResultBean<Integer> totalUnUseCouponNums() {
+		return new ResultBean<>(clientService.countUnUseCouponNums(ClientContext.get().getId()));
 	}
 }

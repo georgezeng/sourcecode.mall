@@ -69,6 +69,8 @@ import com.sourcecode.malls.util.ImageUtil;
 public class ClientService implements BaseService, UserDetailsService, JpaService<Client, Long> {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
+	private static final String CACHE_NAME = "unuse_coupon_nums";
+
 	@Autowired
 	private ClientRepository clientRepository;
 
@@ -111,7 +113,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private EntityManager em;
 
-	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#order.client.id")
+	@CacheEvict(cacheNames = CACHE_NAME, key = "#order.client.id")
 	public void setConsumeBonus(Order order) {
 		if (CollectionUtils.isEmpty(order.getSubList())) {
 			return;
@@ -175,7 +177,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
+	@CacheEvict(cacheNames = CACHE_NAME, key = "#userId")
 	public void setInviteBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
@@ -192,7 +194,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
+	@CacheEvict(cacheNames = CACHE_NAME, key = "#userId")
 	public void setRegistrationBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
@@ -205,19 +207,13 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@Cacheable(cacheNames = "unuse_coupon_amount", key = "#userId")
-	public BigDecimal sumUnUseCouponAmount(Long userId) {
+	@Cacheable(cacheNames = CACHE_NAME, key = "#userId")
+	public int countUnUseCouponNums(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
-		BigDecimal total = BigDecimal.ZERO;
 		List<CashClientCoupon> list = cashClientCouponRepository.findAllByClientAndStatus(user.get(),
 				ClientCouponStatus.UnUse);
-		if (!CollectionUtils.isEmpty(list)) {
-			for (CashClientCoupon coupon : list) {
-				total = total.add(coupon.getSetting().getAmount());
-			}
-		}
-		return total;
+		return !CollectionUtils.isEmpty(list) ? list.size() : 0;
 	}
 
 	@Transactional(readOnly = true)
