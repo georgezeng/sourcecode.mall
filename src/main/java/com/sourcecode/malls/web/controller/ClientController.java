@@ -1,6 +1,7 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -250,5 +251,10 @@ public class ClientController {
 	@RequestMapping(path = "/{id}/poster/invite.png", produces = { MediaType.IMAGE_PNG_VALUE })
 	public Resource loadInvitePoster(@PathVariable("id") Long userId) throws Exception {
 		return new ByteArrayResource(clientService.loadInvitePoster(userId));
+	}
+
+	@RequestMapping(path = "/totalUnUseCouponAmount")
+	public ResultBean<BigDecimal> totalUnUseCouponAmount() {
+		return new ResultBean<>(clientService.sumUnUseCouponAmount(ClientContext.get().getId()));
 	}
 }

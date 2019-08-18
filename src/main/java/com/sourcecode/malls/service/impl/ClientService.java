@@ -105,6 +105,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private PasswordEncoder pwdEncoder;
 
+	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#order.client.id")
 	public void setConsumeBonus(Order order) {
 		if (CollectionUtils.isEmpty(order.getSubList())) {
 			return;
@@ -157,6 +158,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
+	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
 	public void setInviteBonus(Long userId, Long merchantId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
@@ -186,9 +188,10 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
+	@CacheEvict(cacheNames = "unuse_coupon_amount", key = "#userId")
 	public void setRegistrationBonus(Long userId, Long merchantId) {
 		Optional<Client> user = clientRepository.findById(userId);
-		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
+		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
 		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
 		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
 		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(merchant.get(),
@@ -209,6 +212,21 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				}
 			}
 		}
+	}
+
+	@Cacheable(cacheNames = "unuse_coupon_amount", key = "#userId")
+	public BigDecimal sumUnUseCouponAmount(Long userId) {
+		Optional<Client> user = clientRepository.findById(userId);
+		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
+		BigDecimal total = BigDecimal.ZERO;
+		List<CashClientCoupon> list = cashClientCouponRepository.findAllByClientAndStatus(user.get(),
+				ClientCouponStatus.UnUse);
+		if (!CollectionUtils.isEmpty(list)) {
+			for (CashClientCoupon coupon : list) {
+				total = total.add(coupon.getSetting().getAmount());
+			}
+		}
+		return total;
 	}
 
 	@Transactional(readOnly = true)
