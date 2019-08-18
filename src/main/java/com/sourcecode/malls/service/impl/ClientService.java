@@ -160,7 +160,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		if (!couponOp.isPresent()) {
 			em.lock(setting, LockModeType.PESSIMISTIC_WRITE);
 			if (setting.getTotalNums() == 0 || setting.getUsedNums() < setting.getTotalNums()) {
-				CashClientCoupon coupon = couponOp.get();
+				CashClientCoupon coupon = new CashClientCoupon();
 				coupon.setClient(client);
 				coupon.setMerchant(client.getMerchant());
 				coupon.setSetting(setting);
