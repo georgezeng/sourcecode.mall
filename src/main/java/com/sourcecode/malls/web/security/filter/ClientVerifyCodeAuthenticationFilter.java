@@ -28,6 +28,7 @@ import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
+import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @Component
@@ -38,6 +39,9 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 
 	@Autowired
 	private ClientRepository clientRepository;
+	
+	@Autowired
+	private ClientService clientService;
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
@@ -84,9 +88,11 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
 					user.setParent(parentOp.get());
+					clientService.setInviteBonus(pid, merchant.getId());
 				}
 			}
 			clientRepository.save(user);
+			clientService.setRegistrationBonus(user.getId(), merchant.getId());
 		} else {
 			user = userOp.get();
 			if (!user.isEnabled()) {

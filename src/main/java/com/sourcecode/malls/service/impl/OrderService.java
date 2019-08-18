@@ -120,6 +120,9 @@ public class OrderService implements BaseService {
 	private AlipayService alipayService;
 
 	@Autowired
+	private ClientService clientService;
+
+	@Autowired
 	private AfterSaleApplicationRepository aftersaleApplicationRepository;
 
 	@Value("${user.type.name}")
@@ -226,6 +229,7 @@ public class OrderService implements BaseService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
+		clientService.setConsumeBonus(order);
 		return order.getId();
 	}
 

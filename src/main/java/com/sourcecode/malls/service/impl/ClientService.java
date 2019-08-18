@@ -9,6 +9,8 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -28,28 +30,40 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.druid.util.StringUtils;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.coupon.cash.CashClientCoupon;
+import com.sourcecode.malls.domain.coupon.cash.CashCouponSetting;
+import com.sourcecode.malls.domain.goods.GoodsCategory;
+import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.order.Order;
+import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
+import com.sourcecode.malls.enums.CashCouponEventType;
+import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.CashClientCouponRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.CashCouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
+import com.sourcecode.malls.service.base.BaseService;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
 import com.sourcecode.malls.util.ImageUtil;
 
 @Service("ClientDetailsService")
 @Transactional
-public class ClientService implements UserDetailsService, JpaService<Client, Long> {
+public class ClientService implements BaseService, UserDetailsService, JpaService<Client, Long> {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Autowired
@@ -68,6 +82,12 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 	private FileOnlineSystemService fileService;
 
 	@Autowired
+	private CashCouponSettingRepository cashCouponSettingRepository;
+
+	@Autowired
+	private CashClientCouponRepository cashClientCouponRepository;
+
+	@Autowired
 	private RestTemplate httpClient;
 
 	@Autowired
@@ -84,6 +104,112 @@ public class ClientService implements UserDetailsService, JpaService<Client, Lon
 
 	@Autowired
 	private PasswordEncoder pwdEncoder;
+
+	public void setConsumeBonus(Order order) {
+		if (CollectionUtils.isEmpty(order.getSubList())) {
+			return;
+		}
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(order.getMerchant(),
+				CashCouponEventType.Consume);
+		if (!CollectionUtils.isEmpty(list)) {
+			for (CashCouponSetting setting : list) {
+				if (setting.getConsumeSetting() != null) {
+					BigDecimal upToAmount = BigDecimal.ZERO;
+					for (SubOrder sub : order.getSubList()) {
+						boolean match = setting.getConsumeSetting().isApplyToAll();
+						if (!match) {
+							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getCategories())) {
+								for (GoodsCategory category : setting.getConsumeSetting().getCategories()) {
+									if (sub.getItem().getCategory().getId().equals(category.getId())) {
+										match = true;
+										break;
+									}
+								}
+							} else if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getItems())) {
+								for (GoodsItem item : setting.getConsumeSetting().getItems()) {
+									if (sub.getItem().getId().equals(item.getId())) {
+										match = true;
+										break;
+									}
+								}
+							}
+						}
+						if (match) {
+							upToAmount = upToAmount.add(sub.getDealPrice());
+						}
+					}
+					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
+						Optional<CashClientCoupon> couponOp = cashClientCouponRepository
+								.findByClientAndSetting(order.getClient(), setting);
+						if (!couponOp.isPresent()) {
+							CashClientCoupon coupon = couponOp.get();
+							coupon.setClient(order.getClient());
+							coupon.setMerchant(order.getMerchant());
+							coupon.setSetting(setting);
+							coupon.setCouponId(generateId());
+							coupon.setReceivedTime(new Date());
+							coupon.setStatus(ClientCouponStatus.UnUse);
+							cashClientCouponRepository.save(coupon);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void setInviteBonus(Long userId, Long merchantId) {
+		Optional<Client> user = clientRepository.findById(userId);
+		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
+		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
+		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(merchant.get(),
+				CashCouponEventType.Invite);
+		if (!CollectionUtils.isEmpty(list)) {
+			for (CashCouponSetting setting : list) {
+				if (setting.getInviteSetting() != null) {
+					if (user.get().getSubList().size() >= setting.getInviteSetting().getMemberNums()) {
+						Optional<CashClientCoupon> couponOp = cashClientCouponRepository
+								.findByClientAndSetting(user.get(), setting);
+						if (!couponOp.isPresent()) {
+							CashClientCoupon coupon = couponOp.get();
+							coupon.setClient(user.get());
+							coupon.setMerchant(merchant.get());
+							coupon.setSetting(setting);
+							coupon.setCouponId(generateId());
+							coupon.setReceivedTime(new Date());
+							coupon.setStatus(ClientCouponStatus.UnUse);
+							cashClientCouponRepository.save(coupon);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	public void setRegistrationBonus(Long userId, Long merchantId) {
+		Optional<Client> user = clientRepository.findById(userId);
+		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
+		Optional<Merchant> merchant = merchantRepository.findById(merchantId);
+		AssertUtil.assertTrue(merchant.isPresent(), "商户不存在");
+		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventType(merchant.get(),
+				CashCouponEventType.Registration);
+		if (!CollectionUtils.isEmpty(list)) {
+			for (CashCouponSetting setting : list) {
+				Optional<CashClientCoupon> couponOp = cashClientCouponRepository.findByClientAndSetting(user.get(),
+						setting);
+				if (!couponOp.isPresent()) {
+					CashClientCoupon coupon = couponOp.get();
+					coupon.setClient(user.get());
+					coupon.setMerchant(merchant.get());
+					coupon.setSetting(setting);
+					coupon.setCouponId(generateId());
+					coupon.setReceivedTime(new Date());
+					coupon.setStatus(ClientCouponStatus.UnUse);
+					cashClientCouponRepository.save(coupon);
+				}
+			}
+		}
+	}
 
 	@Transactional(readOnly = true)
 	@Override
