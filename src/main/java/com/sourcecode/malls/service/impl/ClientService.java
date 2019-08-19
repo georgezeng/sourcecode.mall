@@ -148,16 +148,19 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 						}
 					}
 					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
-						createCouponIfNecessary(order.getClient(), setting);
+						createCoupon(order.getClient(), setting, true);
 					}
 				}
 			}
 		}
 	}
 
-	private void createCouponIfNecessary(Client client, CashCouponSetting setting) {
-		Optional<CashClientCoupon> couponOp = cashClientCouponRepository.findByClientAndSetting(client, setting);
-		if (!couponOp.isPresent()) {
+	private void createCoupon(Client client, CashCouponSetting setting, boolean require) {
+		if (!require) {
+			Optional<CashClientCoupon> couponOp = cashClientCouponRepository.findByClientAndSetting(client, setting);
+			require = !couponOp.isPresent();
+		}
+		if (require) {
 			em.lock(setting, LockModeType.PESSIMISTIC_WRITE);
 			if (setting.getTotalNums() == 0 || setting.getUsedNums() < setting.getTotalNums()) {
 				CashClientCoupon coupon = new CashClientCoupon();
@@ -179,15 +182,19 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	@CacheEvict(cacheNames = CACHE_NAME, key = "#userId")
 	public void setInviteBonus(Long userId) {
-		Optional<Client> user = clientRepository.findById(userId);
-		AssertUtil.assertTrue(user.isPresent(), "推荐用户不存在");
+		Optional<Client> userOp = clientRepository.findById(userId);
+		AssertUtil.assertTrue(userOp.isPresent(), "推荐用户不存在");
+		Client user = userOp.get();
 		List<CashCouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				user.get().getMerchant(), CashCouponEventType.Invite, CouponSettingStatus.PutAway, true);
+				user.getMerchant(), CashCouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CashCouponSetting setting : list) {
-				if (setting.getInviteSetting() != null) {
-					if (user.get().getSubList().size() >= setting.getInviteSetting().getMemberNums()) {
-						createCouponIfNecessary(user.get(), setting);
+				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(user.getSubList())) {
+					int times = user.getSubList().size() / setting.getInviteSetting().getMemberNums();
+					int nums = cashClientCouponRepository.findAllByClientAndSetting(user, setting).size();
+					while (nums < times) {
+						createCoupon(user, setting, true);
+						nums++;
 					}
 				}
 			}
@@ -202,7 +209,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				user.get().getMerchant(), CashCouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CashCouponSetting setting : list) {
-				createCouponIfNecessary(user.get(), setting);
+				createCoupon(user.get(), setting, false);
 			}
 		}
 	}
