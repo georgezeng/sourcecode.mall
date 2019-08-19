@@ -472,5 +472,5 @@ public class OrderService implements BaseService {
 		order.get().setDeleted(true);
 		orderRepository.save(order.get());
 	}
-
+	
 }

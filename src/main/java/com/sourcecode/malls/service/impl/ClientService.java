@@ -125,8 +125,12 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				if (setting.getConsumeSetting() != null) {
 					BigDecimal upToAmount = BigDecimal.ZERO;
 					for (SubOrder sub : order.getSubList()) {
-						boolean match = setting.getConsumeSetting().isApplyToAll();
-						if (!match) {
+						boolean match = false;
+						switch (setting.getConsumeSetting().getType()) {
+						case All:
+							match = true;
+							break;
+						case Category: {
 							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getCategories())) {
 								for (GoodsCategory category : setting.getConsumeSetting().getCategories()) {
 									if (sub.getItem().getCategory().getId().equals(category.getId())) {
@@ -134,7 +138,11 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 										break;
 									}
 								}
-							} else if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getItems())) {
+							}
+						}
+							break;
+						case Item: {
+							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getItems())) {
 								for (GoodsItem item : setting.getConsumeSetting().getItems()) {
 									if (sub.getItem().getId().equals(item.getId())) {
 										match = true;
@@ -142,6 +150,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 									}
 								}
 							}
+						}
+							break;
 						}
 						if (match) {
 							upToAmount = upToAmount.add(sub.getDealPrice());
