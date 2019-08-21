@@ -6,12 +6,12 @@ import java.util.List;
 
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
-import com.sourcecode.malls.enums.ClientCouponType;
+import com.sourcecode.malls.enums.CouponType;
 import com.sourcecode.malls.enums.CouponRelationType;
 
 public class ClientCouponDTO {
 	private Long id;
-	private ClientCouponType type;
+	private CouponType type;
 	private String title;
 	private BigDecimal amount;
 	private CouponRelationType hxType;
@@ -20,6 +20,15 @@ public class ClientCouponDTO {
 	private String description;
 	private List<GoodsAttributeDTO> categories;
 	private List<GoodsItemDTO> items;
+	private int limitedNums;
+
+	public int getLimitedNums() {
+		return limitedNums;
+	}
+
+	public void setLimitedNums(int limitedNums) {
+		this.limitedNums = limitedNums;
+	}
 
 	public String getTitle() {
 		return title;
@@ -37,11 +46,11 @@ public class ClientCouponDTO {
 		this.id = id;
 	}
 
-	public ClientCouponType getType() {
+	public CouponType getType() {
 		return type;
 	}
 
-	public void setType(ClientCouponType type) {
+	public void setType(CouponType type) {
 		this.type = type;
 	}
 

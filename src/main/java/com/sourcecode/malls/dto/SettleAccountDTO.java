@@ -13,6 +13,15 @@ public class SettleAccountDTO {
 	private boolean fromCart;
 	private InvoiceDTO invoice;
 	private String remark;
+	private List<ClientCouponDTO> coupons;
+
+	public List<ClientCouponDTO> getCoupons() {
+		return coupons;
+	}
+
+	public void setCoupons(List<ClientCouponDTO> coupons) {
+		this.coupons = coupons;
+	}
 
 	public String getRemark() {
 		return remark;

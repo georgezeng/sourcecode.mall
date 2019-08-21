@@ -1,5 +1,6 @@
 package com.sourcecode.malls.web.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -46,12 +47,18 @@ public class GoodsItemController {
 	@Autowired
 	private GoodsSpecificationDefinitionRepository definitionRepository;
 
-	@RequestMapping(path = "/list/params/{id}/{type}")
-	public ResultBean<GoodsItemDTO> list(@PathVariable("id") Long categoryId, @PathVariable("type") String type,
-			@RequestBody QueryInfo<String> queryInfo) {
-		return new ResultBean<>(transferFacade.pageToList(
-				Void -> service.findByCategory(ClientContext.getMerchantId(), categoryId, type, queryInfo),
-				entity -> entity.asDTO(false, false, false)));
+	@RequestMapping(path = "/list/params/{queryType}/{id}/{sortType}")
+	public ResultBean<GoodsItemDTO> list(@PathVariable("queryType") String queryType, @PathVariable("id") Long id,
+			@PathVariable("sortType") String sortType, @RequestBody QueryInfo<String> queryInfo) {
+		switch (queryType) {
+		case "category": {
+			return new ResultBean<>(service.findByCategory(ClientContext.getMerchantId(), id, sortType, queryInfo));
+		}
+		case "coupon": {
+			return new ResultBean<>(service.findByCoupon(ClientContext.getMerchantId(), id, sortType, queryInfo));
+		}
+		}
+		return new ResultBean<>(new ArrayList<>());
 	}
 
 	@RequestMapping(path = "/definitions/load")
@@ -78,8 +85,8 @@ public class GoodsItemController {
 	}
 
 	@RequestMapping(path = "/{itemId}/{index}/{userId}/poster/share.png", produces = { MediaType.IMAGE_PNG_VALUE })
-	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("index") int index, @PathVariable("userId") Long userId)
-			throws Exception {
+	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("index") int index,
+			@PathVariable("userId") Long userId) throws Exception {
 		return new ByteArrayResource(service.loadSharePoster(itemId, index, userId));
 	}
 }

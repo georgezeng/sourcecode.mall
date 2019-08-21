@@ -253,7 +253,7 @@ public class ClientController {
 	}
 
 	@RequestMapping(path = "/totalUnUseCouponNums")
-	public ResultBean<Integer> totalUnUseCouponNums() {
+	public ResultBean<Long> totalUnUseCouponNums() {
 		return new ResultBean<>(clientService.countUnUseCouponNums(ClientContext.get().getId()));
 	}
 }

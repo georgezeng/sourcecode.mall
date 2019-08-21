@@ -13,8 +13,12 @@ import java.text.AttributedString;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
+import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -38,11 +42,14 @@ import org.springframework.util.StringUtils;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
@@ -75,9 +82,17 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Autowired
 	private ClientRepository clientRepository;
 
+	@Autowired
+	private ClientCouponRepository cashClientCouponRepository;
+
+	@Autowired
+	private EntityManager em;
+
 	@Transactional(readOnly = true)
-	public Page<GoodsItem> findByCategory(Long merchantId, Long categoryId, String type, QueryInfo<String> queryInfo) {
+	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
+			QueryInfo<String> queryInfo) {
 		PageInfo pageInfo = queryInfo.getPage();
+		Page<GoodsItem> pageResult = null;
 		Specification<GoodsItem> spec = new Specification<GoodsItem>() {
 
 			/**
@@ -105,19 +120,102 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		};
 		switch (type) {
 		case "putTime":
-			return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "putTime"));
+			pageResult = itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "putTime"));
+			break;
 		case "price": {
 			if (Direction.ASC.name().equals(pageInfo.getOrder())) {
-				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
+				pageResult = itemRepository.findAll(spec,
+						pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
 			} else {
-				return itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
+				pageResult = itemRepository.findAll(spec,
+						pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
 			}
 		}
+			break;
 		default:
-			return itemRepository.findAll(spec,
+			pageResult = itemRepository.findAll(spec,
 					pageInfo.pageable(Direction.DESC, "rank.orderNums", "rank.goodEvaluations", "putTime"));
 		}
+		return pageResult.get().map(it -> it.asDTO(false, false, false)).collect(Collectors.toList());
+	}
 
+	@SuppressWarnings("unchecked")
+	@Transactional(readOnly = true)
+	public List<GoodsItemDTO> findByCoupon(Long merchantId, Long couponId, String type, QueryInfo<String> queryInfo) {
+		Optional<ClientCoupon> couponOp = cashClientCouponRepository.findById(couponId);
+		if (!couponOp.isPresent()) {
+			return new ArrayList<>();
+		}
+		ClientCoupon coupon = couponOp.get();
+		if (!coupon.getMerchant().getId().equals(merchantId)) {
+			return new ArrayList<>();
+		}
+//		if (!ClientCouponStatus.UnUse.equals(coupon.getStatus())
+//				|| !CouponSettingStatus.PutAway.equals(coupon.getSetting().getStatus())) {
+//			return Page.empty();
+//		}
+		List<Object> args = new ArrayList<>();
+		StringBuilder fromCondition = new StringBuilder();
+		fromCondition.append("from goods_item item").append("\n");
+		fromCondition.append("left join cash_coupon_goods_item ci on item.id = ci.item_id").append("\n");
+		fromCondition.append("left join cash_coupon_real_category cc on item.category_id = cc.category_id")
+				.append("\n");
+		fromCondition.append("inner join goods_brand b on item.brand_id = b.id").append("\n");
+		fromCondition.append("inner join goods_item_rank r on item.id = r.item_id").append("\n");
+		fromCondition.append("where (ci.id <> null or cc.id <> null)").append("\n");
+		fromCondition.append("and item.enabled=true").append("\n");
+		fromCondition.append("and item.merchant_id=?").append("\n");
+		args.add(merchantId);
+		if (!StringUtils.isEmpty(queryInfo.getData())) {
+			String like = "%" + queryInfo.getData() + "%";
+			fromCondition.append("and (item.name like ? or item.selling_points like ? or b.name like ?)").append("\n");
+			for (int i = 0; i < 3; i++) {
+				args.add(like);
+			}
+		}
+
+//		StringBuilder countSql = new StringBuilder("select count(item.id) ");
+//		countSql.append(fromCondition);
+//		Query query = em.createNativeQuery(countSql.toString());
+//		int pos = 1;
+//		for (Object arg : args) {
+//			query.setParameter(pos++, arg);
+//		}
+//		Long count = (Long) query.getSingleResult();
+//		if (count == 0) {
+//			return new PageResult<>();
+//		}
+
+		StringBuilder sql = new StringBuilder("select item.* ");
+		sql.append(fromCondition);
+
+		PageInfo pageInfo = queryInfo.getPage();
+		switch (type) {
+		case "putTime": {
+			sql.append("order by item.put_time " + pageInfo.getOrder().toLowerCase()).append("\n");
+		}
+			break;
+		case "price": {
+			if (Direction.ASC.name().equals(pageInfo.getOrder())) {
+				sql.append("order by item.min_price " + pageInfo.getOrder().toLowerCase()).append("\n");
+			} else {
+				sql.append("order by item.max_price " + pageInfo.getOrder().toLowerCase()).append("\n");
+			}
+		}
+		default: {
+			sql.append("order by r.order_nums, r.goods_evaluations, item.put_time desc").append("\n");
+		}
+		}
+		sql.append("limit ?, ?").append("\n");
+		args.add(pageInfo.getNum());
+		args.add(pageInfo.getSize());
+		Query query = em.createNativeQuery(sql.toString());
+		int pos = 1;
+		for (Object arg : args) {
+			query.setParameter(pos++, arg);
+		}
+		return ((Stream<GoodsItem>) query.getResultStream()).map(it -> it.asDTO(false, false, false))
+				.collect(Collectors.toList());
 	}
 
 	@Override

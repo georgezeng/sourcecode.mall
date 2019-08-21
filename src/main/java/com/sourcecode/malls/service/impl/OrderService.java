@@ -36,14 +36,18 @@ import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
+import com.sourcecode.malls.domain.coupon.ClientCoupon;
+import com.sourcecode.malls.domain.coupon.cash.CashCouponOrderLimitedSetting;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemProperty;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
 import com.sourcecode.malls.domain.goods.GoodsItemValue;
+import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.order.Invoice;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.OrderAddress;
 import com.sourcecode.malls.domain.order.SubOrder;
+import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.OrderItemDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
@@ -53,10 +57,15 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
+import com.sourcecode.malls.enums.ClientCouponStatus;
+import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.CashCouponOrderLimitedSettingRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
@@ -124,6 +133,15 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private AfterSaleApplicationRepository aftersaleApplicationRepository;
+
+	@Autowired
+	private CouponSettingRepository cashCouponSettingRepository;
+
+	@Autowired
+	private ClientCouponRepository cashClientCouponRepository;
+
+	@Autowired
+	private CashCouponOrderLimitedSettingRepository cashCouponOrderLimitedSettingRepository;
 
 	@Value("${user.type.name}")
 	private String userDir;
@@ -225,12 +243,48 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
+		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
+			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), totalPrice);
+			BigDecimal originalLimitedAmount = limitedAmount;
+			for (ClientCouponDTO couponDTO : dto.getCoupons()) {
+				switch (couponDTO.getType()) {
+				case Cash: {
+					Optional<ClientCoupon> couponOp = cashClientCouponRepository.findById(couponDTO.getId());
+					if (couponOp.isPresent()) {
+						limitedAmount = limitedAmount.subtract(couponDTO.getAmount());
+						AssertUtil.assertTrue(limitedAmount.signum() >= 0,
+								"超过优惠券限额，最多只能优惠" + originalLimitedAmount + "元");
+						ClientCoupon coupon = couponOp.get();
+						totalPrice = totalPrice.subtract(couponDTO.getAmount());
+						coupon.setUsedTime(new Date());
+						coupon.setStatus(ClientCouponStatus.Used);
+						coupon.setOrder(order);
+						cashClientCouponRepository.save(coupon);
+						em.lock(coupon.getSetting(), LockModeType.PESSIMISTIC_WRITE);
+						coupon.getSetting().setUsedNums(coupon.getSetting().getUsedNums() + 1);
+						cashCouponSettingRepository.save(coupon.getSetting());
+					}
+				}
+					break;
+				}
+			}
+		}
 		order.setTotalPrice(totalPrice);
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
 		clientService.setConsumeBonus(order);
 		return order.getId();
+	}
+
+	private BigDecimal getLimitedAmount(Merchant merchant, BigDecimal totalPrice) {
+		BigDecimal limitedAmount = BigDecimal.ZERO;
+		Optional<CashCouponOrderLimitedSetting> limitedOp = cashCouponOrderLimitedSettingRepository
+				.findFirstByMerchantAndOrderAmountLessThanEqualOrderByLimitedAmountDesc(merchant, totalPrice);
+		if (limitedOp.isPresent()) {
+			limitedAmount = limitedOp.get().getLimitedAmount();
+		}
+		return limitedAmount;
 	}
 
 	private void settleItem(Client client, GoodsItem item, GoodsItemProperty property, Order parent, int nums,
@@ -472,5 +526,73 @@ public class OrderService implements BaseService {
 		order.get().setDeleted(true);
 		orderRepository.save(order.get());
 	}
-	
+
+	@Transactional(readOnly = true)
+	public List<ClientCouponDTO> getAvailableCouponListForSettleAccount(Client client, OrderPreviewDTO dto) {
+		BigDecimal totalPrice = BigDecimal.ZERO;
+		for (OrderItemDTO item : dto.getItems()) {
+			totalPrice = totalPrice.add(item.getProperty().getPrice().multiply(new BigDecimal(item.getNums())));
+		}
+		BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), totalPrice);
+		List<ClientCoupon> selectedCoupons = new ArrayList<>();
+		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
+					CriteriaBuilder criteriaBuilder) {
+				List<Predicate> predicate = new ArrayList<>();
+				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
+				predicate.add(criteriaBuilder.equal(root.join("setting").get("status"), CouponSettingStatus.PutAway));
+				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
+			}
+		};
+		List<ClientCoupon> coupons = cashClientCouponRepository.findAll(spec);
+		if (!CollectionUtils.isEmpty(coupons)) {
+			for (ClientCoupon coupon : coupons) {
+				if (coupon.getSetting().getAmount().compareTo(limitedAmount) <= 0) {
+					for (OrderItemDTO item : dto.getItems()) {
+						boolean hasPut = false;
+						switch (coupon.getSetting().getHxType()) {
+						case All:
+							hasPut = putInSelectedCoupons(selectedCoupons, coupon);
+							break;
+						case Category: {
+							if (coupon.getSetting().getRealCategories().stream()
+									.anyMatch(it -> it.getId().equals(item.getItem().getCategoryId()))) {
+								hasPut = putInSelectedCoupons(selectedCoupons, coupon);
+							}
+						}
+							break;
+						case Item: {
+							if (coupon.getSetting().getItems().stream()
+									.anyMatch(it -> it.getId().equals(item.getItem().getId()))) {
+								hasPut = putInSelectedCoupons(selectedCoupons, coupon);
+							}
+						}
+							break;
+						}
+						if (hasPut) {
+							break;
+						}
+					}
+				}
+			}
+		}
+		return clientService.getCashCouponList(selectedCoupons.stream());
+	}
+
+	private boolean putInSelectedCoupons(List<ClientCoupon> selectedCoupons, ClientCoupon coupon) {
+		if (selectedCoupons.stream().filter(it -> it.getSetting().getId().equals(coupon.getSetting().getId()))
+				.count() < coupon.getSetting().getLimitedNums()) {
+			selectedCoupons.add(coupon);
+			return true;
+		}
+		return false;
+	}
 }
