@@ -58,11 +58,11 @@ import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
-import com.sourcecode.malls.dto.query.PageResult;
+import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.CashCouponEventType;
 import com.sourcecode.malls.enums.ClientCouponStatus;
-import com.sourcecode.malls.enums.CouponType;
 import com.sourcecode.malls.enums.CouponSettingStatus;
+import com.sourcecode.malls.enums.CouponType;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -99,10 +99,10 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	private FileOnlineSystemService fileService;
 
 	@Autowired
-	private CouponSettingRepository cashCouponSettingRepository;
+	private CouponSettingRepository couponSettingRepository;
 
 	@Autowired
-	private ClientCouponRepository cashClientCouponRepository;
+	private ClientCouponRepository clientCouponRepository;
 
 	@Autowired
 	private RestTemplate httpClient;
@@ -130,7 +130,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		if (CollectionUtils.isEmpty(order.getSubList())) {
 			return;
 		}
-		List<CouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
 				order.getMerchant(), CashCouponEventType.Consume, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
@@ -179,7 +179,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	private void createCoupon(Client client, CouponSetting setting, boolean require) {
 		if (!require) {
-			List<ClientCoupon> list = cashClientCouponRepository.findAllByClientAndSetting(client, setting);
+			List<ClientCoupon> list = clientCouponRepository.findAllByClientAndSetting(client, setting);
 			require = CollectionUtils.isEmpty(list);
 		}
 		if (require) {
@@ -192,12 +192,12 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				coupon.setCouponId(generateId());
 				coupon.setReceivedTime(new Date());
 				coupon.setStatus(ClientCouponStatus.UnUse);
-				cashClientCouponRepository.save(coupon);
+				clientCouponRepository.save(coupon);
 				setting.setSentNums(setting.getSentNums() + 1);
 				if (setting.getSentNums() == setting.getTotalNums()) {
 					setting.setStatus(CouponSettingStatus.SentOut);
 				}
-				cashCouponSettingRepository.save(setting);
+				couponSettingRepository.save(setting);
 			}
 		}
 	}
@@ -207,13 +207,13 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Optional<Client> userOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(userOp.isPresent(), "推荐用户不存在");
 		Client user = userOp.get();
-		List<CouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
 				user.getMerchant(), CashCouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
 				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(user.getSubList())) {
 					int times = user.getSubList().size() / setting.getInviteSetting().getMemberNums();
-					int nums = cashClientCouponRepository.findAllByClientAndSetting(user, setting).size();
+					int nums = clientCouponRepository.findAllByClientAndSetting(user, setting).size();
 					while (nums < times) {
 						createCoupon(user, setting, true);
 						nums++;
@@ -227,7 +227,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	public void setRegistrationBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
-		List<CouponSetting> list = cashCouponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
+		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
 				user.get().getMerchant(), CashCouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
@@ -253,11 +253,10 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), user.get()));
 				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
-				predicate.add(criteriaBuilder.equal(root.join("setting").get("status"), CouponSettingStatus.PutAway));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		return cashClientCouponRepository.count(spec);
+		return clientCouponRepository.count(spec);
 	}
 
 	@Transactional(readOnly = true)
@@ -379,7 +378,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
-	public PageResult<ClientCouponDTO> getUnUseCoupons(Client client, PageInfo page) {
+	public List<ClientCouponDTO> getCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
+		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
 
 			/**
@@ -392,17 +392,17 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
-				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
-				predicate.add(criteriaBuilder.equal(root.join("setting").get("status"), CouponSettingStatus.PutAway));
+				predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<ClientCoupon> pageResult = cashClientCouponRepository.findAll(spec, page.pageable());
-		return new PageResult<>(getCashCouponList(pageResult.get()), pageResult.getTotalElements());
+		Page<ClientCoupon> pageResult = clientCouponRepository.findAll(spec, queryInfo.getPage().pageable());
+		return getCashCouponList(pageResult.get());
 	}
 
 	@Transactional(readOnly = true)
-	public PageResult<ClientCouponDTO> getUsedCoupons(Client client, PageInfo page) {
+	public long countCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
+		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
 
 			/**
@@ -415,35 +415,11 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 					CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
-				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.Used));
+				predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<ClientCoupon> pageResult = cashClientCouponRepository.findAll(spec, page.pageable());
-		return new PageResult<>(getCashCouponList(pageResult.get()), pageResult.getTotalElements());
-	}
-
-	@Transactional(readOnly = true)
-	public PageResult<ClientCouponDTO> getSoldOutCoupons(Client client, PageInfo page) {
-		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
-
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
-				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("client"), client));
-				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
-				predicate.add(criteriaBuilder.equal(root.join("setting").get("status"), CouponSettingStatus.SoldOut));
-				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
-			}
-		};
-		Page<ClientCoupon> pageResult = cashClientCouponRepository.findAll(spec, page.pageable());
-		return new PageResult<>(getCashCouponList(pageResult.get()), pageResult.getTotalElements());
+		return clientCouponRepository.count(spec);
 	}
 
 	public List<ClientCouponDTO> getCashCouponList(Stream<ClientCoupon> stream) {

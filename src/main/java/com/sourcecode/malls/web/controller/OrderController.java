@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
@@ -111,5 +112,16 @@ public class OrderController {
 	public ResultBean<Boolean> checkPaid(@PathVariable Long id) {
 		boolean paid = OrderStatus.Paid.equals(orderService.getOrder(ClientContext.get(), id).getStatus());
 		return new ResultBean<>(paid);
+	}
+
+	@RequestMapping(path = "/coupon/available/params/{key}")
+	public ResultBean<ClientCouponDTO> availableCoupons(@PathVariable("key") String key) throws Exception {
+		Optional<CodeStore> store = codeStoreRepository.findByCategoryAndKey(SETTLE_ACCOUNT_CATEGORY, key);
+		OrderPreviewDTO dto = null;
+		if (store.isPresent()) {
+			dto = mapper.readValue(store.get().getValue(), OrderPreviewDTO.class);
+		}
+		AssertUtil.assertNotNull(dto, "结算信息失效，请重新下单");
+		return new ResultBean<>(orderService.getAvailableCouponListForSettleAccount(ClientContext.get(), dto));
 	}
 }

@@ -135,10 +135,10 @@ public class OrderService implements BaseService {
 	private AfterSaleApplicationRepository aftersaleApplicationRepository;
 
 	@Autowired
-	private CouponSettingRepository cashCouponSettingRepository;
+	private CouponSettingRepository couponSettingRepository;
 
 	@Autowired
-	private ClientCouponRepository cashClientCouponRepository;
+	private ClientCouponRepository clientCouponRepository;
 
 	@Autowired
 	private CashCouponOrderLimitedSettingRepository cashCouponOrderLimitedSettingRepository;
@@ -249,7 +249,7 @@ public class OrderService implements BaseService {
 			for (ClientCouponDTO couponDTO : dto.getCoupons()) {
 				switch (couponDTO.getType()) {
 				case Cash: {
-					Optional<ClientCoupon> couponOp = cashClientCouponRepository.findById(couponDTO.getId());
+					Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponDTO.getId());
 					if (couponOp.isPresent()) {
 						limitedAmount = limitedAmount.subtract(couponDTO.getAmount());
 						AssertUtil.assertTrue(limitedAmount.signum() >= 0,
@@ -259,10 +259,10 @@ public class OrderService implements BaseService {
 						coupon.setUsedTime(new Date());
 						coupon.setStatus(ClientCouponStatus.Used);
 						coupon.setOrder(order);
-						cashClientCouponRepository.save(coupon);
+						clientCouponRepository.save(coupon);
 						em.lock(coupon.getSetting(), LockModeType.PESSIMISTIC_WRITE);
 						coupon.getSetting().setUsedNums(coupon.getSetting().getUsedNums() + 1);
-						cashCouponSettingRepository.save(coupon.getSetting());
+						couponSettingRepository.save(coupon.getSetting());
 					}
 				}
 					break;
@@ -552,7 +552,7 @@ public class OrderService implements BaseService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		List<ClientCoupon> coupons = cashClientCouponRepository.findAll(spec);
+		List<ClientCoupon> coupons = clientCouponRepository.findAll(spec);
 		if (!CollectionUtils.isEmpty(coupons)) {
 			for (ClientCoupon coupon : coupons) {
 				if (coupon.getSetting().getAmount().compareTo(limitedAmount) <= 0) {

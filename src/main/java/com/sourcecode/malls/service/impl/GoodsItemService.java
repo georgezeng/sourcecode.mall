@@ -18,12 +18,12 @@ import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
+import org.hibernate.query.NativeQuery;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +83,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	private ClientRepository clientRepository;
 
 	@Autowired
-	private ClientCouponRepository cashClientCouponRepository;
+	private ClientCouponRepository clientCouponRepository;
 
 	@Autowired
 	private EntityManager em;
@@ -139,10 +139,10 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		return pageResult.get().map(it -> it.asDTO(false, false, false)).collect(Collectors.toList());
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "incomplete-switch" })
 	@Transactional(readOnly = true)
 	public List<GoodsItemDTO> findByCoupon(Long merchantId, Long couponId, String type, QueryInfo<String> queryInfo) {
-		Optional<ClientCoupon> couponOp = cashClientCouponRepository.findById(couponId);
+		Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponId);
 		if (!couponOp.isPresent()) {
 			return new ArrayList<>();
 		}
@@ -157,14 +157,33 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		List<Object> args = new ArrayList<>();
 		StringBuilder fromCondition = new StringBuilder();
 		fromCondition.append("from goods_item item").append("\n");
-		fromCondition.append("left join cash_coupon_goods_item ci on item.id = ci.item_id").append("\n");
-		fromCondition.append("left join cash_coupon_real_category cc on item.category_id = cc.category_id")
-				.append("\n");
+		switch (coupon.getSetting().getHxType()) {
+		case Category: {
+			fromCondition.append(
+					"left join coupon_setting_real_category cc on item.category_id = cc.category_id and ci.setting_id=?")
+					.append("\n");
+			args.add(coupon.getSetting().getId());
+		}
+			break;
+		case Item: {
+			fromCondition.append("left join coupon_setting_goods_item ci on item.id = ci.item_id and ci.setting_id=?")
+					.append("\n");
+			args.add(coupon.getSetting().getId());
+		}
+			break;
+		}
 		fromCondition.append("inner join goods_brand b on item.brand_id = b.id").append("\n");
 		fromCondition.append("inner join goods_item_rank r on item.id = r.item_id").append("\n");
-		fromCondition.append("where (ci.id <> null or cc.id <> null)").append("\n");
-		fromCondition.append("and item.enabled=true").append("\n");
+		fromCondition.append("where item.enabled=true").append("\n");
 		fromCondition.append("and item.merchant_id=?").append("\n");
+		switch (coupon.getSetting().getHxType()) {
+		case Category:
+			fromCondition.append("and cc.id <> null").append("\n");
+			break;
+		case Item:
+			fromCondition.append("and ci.id <> null").append("\n");
+			break;
+		}
 		args.add(merchantId);
 		if (!StringUtils.isEmpty(queryInfo.getData())) {
 			String like = "%" + queryInfo.getData() + "%";
@@ -203,17 +222,18 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			}
 		}
 		default: {
-			sql.append("order by r.order_nums, r.goods_evaluations, item.put_time desc").append("\n");
+			sql.append("order by r.order_nums, r.good_evaluations, item.put_time desc").append("\n");
 		}
 		}
 		sql.append("limit ?, ?").append("\n");
 		args.add(pageInfo.getNum());
 		args.add(pageInfo.getSize());
-		Query query = em.createNativeQuery(sql.toString());
+		NativeQuery<GoodsItem> query = (NativeQuery<GoodsItem>) em.createNativeQuery(sql.toString());
 		int pos = 1;
 		for (Object arg : args) {
 			query.setParameter(pos++, arg);
 		}
+		query.addEntity(GoodsItem.class);
 		return ((Stream<GoodsItem>) query.getResultStream()).map(it -> it.asDTO(false, false, false))
 				.collect(Collectors.toList());
 	}

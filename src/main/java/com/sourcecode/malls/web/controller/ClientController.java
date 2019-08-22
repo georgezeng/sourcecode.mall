@@ -27,11 +27,14 @@ import com.sourcecode.malls.domain.client.ClientIdentity;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
+import com.sourcecode.malls.dto.query.QueryInfo;
+import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -255,5 +258,15 @@ public class ClientController {
 	@RequestMapping(path = "/totalUnUseCouponNums")
 	public ResultBean<Long> totalUnUseCouponNums() {
 		return new ResultBean<>(clientService.countUnUseCouponNums(ClientContext.get().getId()));
+	}
+
+	@RequestMapping(path = "/coupon/list")
+	public ResultBean<ClientCouponDTO> coupons(@RequestBody QueryInfo<ClientCouponStatus> queryInfo) {
+		return new ResultBean<>(clientService.getCoupons(ClientContext.get(), queryInfo));
+	}
+	
+	@RequestMapping(path = "/coupon/count")
+	public ResultBean<Long> countCoupon(@RequestBody QueryInfo<ClientCouponStatus> queryInfo) {
+		return new ResultBean<>(clientService.countCoupons(ClientContext.get(), queryInfo));
 	}
 }

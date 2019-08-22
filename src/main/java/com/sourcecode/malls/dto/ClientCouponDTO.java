@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.enums.CouponType;
@@ -15,12 +16,23 @@ public class ClientCouponDTO {
 	private String title;
 	private BigDecimal amount;
 	private CouponRelationType hxType;
+	@JsonFormat(pattern = "yyyy.MM.dd", timezone = "GMT+8")
 	private Date startDate;
+	@JsonFormat(pattern = "yyyy.MM.dd", timezone = "GMT+8")
 	private Date endDate;
 	private String description;
 	private List<GoodsAttributeDTO> categories;
 	private List<GoodsItemDTO> items;
 	private int limitedNums;
+	private String imgPath;
+
+	public String getImgPath() {
+		return imgPath;
+	}
+
+	public void setImgPath(String imgPath) {
+		this.imgPath = imgPath;
+	}
 
 	public int getLimitedNums() {
 		return limitedNums;
