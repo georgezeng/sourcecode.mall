@@ -53,7 +53,6 @@ import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.SettleItemDTO;
 import com.sourcecode.malls.dto.order.OrderDTO;
-import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
@@ -63,8 +62,8 @@ import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
-import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.CashCouponOrderLimitedSettingRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
@@ -403,6 +402,36 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
+	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
+		Specification<Order> spec = new Specification<Order>() {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Predicate toPredicate(Root<Order> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+				List<Predicate> predicate = new ArrayList<>();
+				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
+				if (queryInfo.getData() != null) {
+					if (!OrderStatus.Finished.equals(queryInfo.getData())) {
+						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
+					} else {
+						predicate
+								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
+					}
+				}
+				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
+			}
+		};
+		return orderRepository.count(spec);
+	}
+
+	@Transactional(readOnly = true)
 	public OrderDTO getOrder(Client client, Long id) {
 		Optional<Order> order = orderRepository.findById(id);
 		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
@@ -430,11 +459,7 @@ public class OrderService implements BaseService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		PageInfo page = new PageInfo();
-		page.setNum(1);
-		page.setSize(1);
-		Page<SubOrder> orders = subOrderRepository.findAll(spec, page.pageable());
-		return orders.getTotalElements();
+		return subOrderRepository.count(spec);
 	}
 
 	public void cancel(Client client, Long id) throws Exception {

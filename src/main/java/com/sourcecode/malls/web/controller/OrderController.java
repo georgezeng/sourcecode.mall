@@ -82,7 +82,7 @@ public class OrderController {
 
 	@RequestMapping(path = "/count")
 	public ResultBean<Long> count(@RequestBody QueryInfo<OrderStatus> queryInfo) {
-		return new ResultBean<>(orderService.getOrders(ClientContext.get(), queryInfo).getTotal());
+		return new ResultBean<>(orderService.countOrders(ClientContext.get(), queryInfo));
 	}
 
 	@RequestMapping(path = "/count/uncomment")
