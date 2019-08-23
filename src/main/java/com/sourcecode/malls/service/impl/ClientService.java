@@ -170,14 +170,25 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 						}
 					}
 					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
-						createCoupon(order.getClient(), setting, true);
+						createCoupon(order, order.getClient(), setting, true);
 					}
 				}
 			}
 		}
 	}
 
-	private void createCoupon(Client client, CouponSetting setting, boolean require) {
+	@CacheEvict(cacheNames = CACHE_NAME, key = "#order.client.id")
+	public void disableCoupons(Order order) {
+		List<ClientCoupon> coupons = order.getGeneratedCoupons();
+		if (!CollectionUtils.isEmpty(coupons)) {
+			for (ClientCoupon coupon : coupons) {
+				coupon.setStatus(ClientCouponStatus.Out);
+			}
+			clientCouponRepository.saveAll(coupons);
+		}
+	}
+
+	private void createCoupon(Order order, Client client, CouponSetting setting, boolean require) {
 		if (!require) {
 			List<ClientCoupon> list = clientCouponRepository.findAllByClientAndSetting(client, setting);
 			require = CollectionUtils.isEmpty(list);
@@ -192,6 +203,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				coupon.setCouponId(generateId());
 				coupon.setReceivedTime(new Date());
 				coupon.setStatus(ClientCouponStatus.UnUse);
+				coupon.setFromOrder(order);
 				clientCouponRepository.save(coupon);
 				setting.setSentNums(setting.getSentNums() + 1);
 				if (setting.getSentNums() == setting.getTotalNums()) {
@@ -215,7 +227,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 					int times = user.getSubList().size() / setting.getInviteSetting().getMemberNums();
 					int nums = clientCouponRepository.findAllByClientAndSetting(user, setting).size();
 					while (nums < times) {
-						createCoupon(user, setting, true);
+						createCoupon(null, user, setting, true);
 						nums++;
 					}
 				}
@@ -231,7 +243,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				user.get().getMerchant(), CashCouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
-				createCoupon(user.get(), setting, false);
+				createCoupon(null, user.get(), setting, false);
 			}
 		}
 	}

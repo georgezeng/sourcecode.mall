@@ -280,7 +280,6 @@ public class OrderService implements BaseService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
-		clientService.setConsumeBonus(order);
 		return order.getId();
 	}
 
@@ -355,6 +354,7 @@ public class OrderService implements BaseService {
 			order.setPayTime(new Date());
 			order.setTransactionId(transactionId);
 			orderRepository.save(order);
+			clientService.setConsumeBonus(order);
 		}
 	}
 
@@ -478,7 +478,7 @@ public class OrderService implements BaseService {
 			order.setStatus(OrderStatus.Canceled);
 			orderRepository.save(order);
 			List<SubOrder> list = order.getSubList();
-			if (list != null) {
+			if (!CollectionUtils.isEmpty(list)) {
 				for (SubOrder sub : list) {
 					GoodsItemProperty property = sub.getProperty();
 					if (property != null) {
@@ -487,6 +487,9 @@ public class OrderService implements BaseService {
 						goodsItemPropertyRepository.save(property);
 					}
 				}
+			}
+			if (!CollectionUtils.isEmpty(order.getGeneratedCoupons())) {
+				clientService.disableCoupons(order);
 			}
 		}
 	}
