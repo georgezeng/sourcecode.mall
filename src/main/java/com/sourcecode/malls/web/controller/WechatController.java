@@ -409,7 +409,7 @@ public class WechatController {
 		data.put("device_info", "WEB");
 		data.put("fee_type", "CNY");
 		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
-			data.put("total_fee", order.getTotalPrice().multiply(new BigDecimal("100")).intValue() + "");
+			data.put("total_fee", order.getRealPrice().multiply(new BigDecimal("100")).intValue() + "");
 		} else {
 			data.put("total_fee", order.getSubList().size() + "");
 		}

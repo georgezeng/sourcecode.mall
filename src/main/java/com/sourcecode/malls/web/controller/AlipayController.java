@@ -111,7 +111,7 @@ public class AlipayController {
 		model.setOutTradeNo(token);
 		model.setSubject("[" + shop.get().getName() + "]商品订单支付");
 		if (env.acceptsProfiles(Profiles.of(EnvConstant.PROD))) {
-			model.setTotalAmount(order.getTotalPrice() + "");
+			model.setTotalAmount(order.getRealPrice() + "");
 		} else {
 			model.setTotalAmount(new BigDecimal(order.getSubList().size()).multiply(new BigDecimal("0.01")) + "");
 		}

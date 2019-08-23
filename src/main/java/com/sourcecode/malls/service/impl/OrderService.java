@@ -197,6 +197,7 @@ public class OrderService implements BaseService {
 	public Long generateOrder(Client client, SettleAccountDTO dto) {
 		AssertUtil.assertNotNull(dto.getAddress(), "收货地址不能为空");
 		BigDecimal totalPrice = BigDecimal.ZERO;
+		BigDecimal realPrice = BigDecimal.ZERO;
 		Order order = new Order();
 		order.setClient(client);
 		order.setMerchant(client.getMerchant());
@@ -205,6 +206,7 @@ public class OrderService implements BaseService {
 		order.setPayment(dto.getPayment());
 		order.setRemark(dto.getRemark());
 		order.setTotalPrice(totalPrice);
+		order.setRealPrice(realPrice);
 		orderRepository.save(order);
 		if (dto.getInvoice() != null) {
 			Invoice invoice = dto.getInvoice().asEntity();
@@ -243,8 +245,10 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
+		realPrice = totalPrice;
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
-			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), totalPrice);
+			BigDecimal couponAmount = BigDecimal.ZERO;
+			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), realPrice);
 			BigDecimal originalLimitedAmount = limitedAmount;
 			for (ClientCouponDTO couponDTO : dto.getCoupons()) {
 				switch (couponDTO.getType()) {
@@ -255,7 +259,8 @@ public class OrderService implements BaseService {
 						AssertUtil.assertTrue(limitedAmount.signum() >= 0,
 								"超过优惠券限额，最多只能优惠" + originalLimitedAmount + "元");
 						ClientCoupon coupon = couponOp.get();
-						totalPrice = totalPrice.subtract(couponDTO.getAmount());
+						realPrice = realPrice.subtract(couponDTO.getAmount());
+						couponAmount = couponAmount.add(couponDTO.getAmount());
 						coupon.setUsedTime(new Date());
 						coupon.setStatus(ClientCouponStatus.Used);
 						coupon.setOrder(order);
@@ -268,8 +273,10 @@ public class OrderService implements BaseService {
 					break;
 				}
 			}
+			order.setCouponAmount(couponAmount);
 		}
 		order.setTotalPrice(totalPrice);
+		order.setRealPrice(realPrice);
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
@@ -443,13 +450,13 @@ public class OrderService implements BaseService {
 			switch (order.getPayment()) {
 			case WePay: {
 				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
-				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getTotalPrice(),
-						order.getTotalPrice(), order.getSubList().size());
+				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getRealPrice(),
+						order.getRealPrice(), order.getSubList().size());
 			}
 				break;
 			case AliPay: {
 				alipayService.refund(client.getMerchant().getId(), order.getTransactionId(), order.getOrderId(),
-						order.getTotalPrice(), order.getTotalPrice(), order.getSubList().size());
+						order.getRealPrice(), order.getRealPrice(), order.getSubList().size());
 			}
 				break;
 			default:
