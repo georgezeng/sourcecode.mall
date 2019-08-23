@@ -2,7 +2,6 @@ package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,7 +27,6 @@ import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.order.ExpressDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
-import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.AfterSaleType;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleReasonSettingRepository;
@@ -122,37 +120,19 @@ public class AfterSaleController {
 
 	@RequestMapping(value = "/fillExpress")
 	public ResultBean<Void> fillExpress(@RequestBody ExpressDTO dto) {
-		AssertUtil.assertNotEmpty(dto.getCompany(), "物流公司不能为空");
-		AssertUtil.assertNotEmpty(dto.getNumber(), "物流单号不能为空");
-		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
-		AssertUtil.assertTrue(
-				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		AfterSaleApplication data = dataOp.get();
-		AssertUtil.assertTrue(
-				AfterSaleType.SalesReturn.equals(data.getType()) || AfterSaleType.Change.equals(data.getType()),
-				"售后类型不是退换货服务，不能提交运单信息");
-		AssertUtil.assertTrue(AfterSaleStatus.WaitForReturn.equals(data.getStatus()), "售后状态有误，不允许提交运单信息");
-		data.setClientExpressCompany(dto.getCompany());
-		data.setClientExpressNumber(dto.getNumber());
-		data.setStatus(AfterSaleStatus.WaitForReceive);
-		data.setReturnTime(new Date());
-		applicationRepository.save(data);
+		service.fillExpress(dto);
 		return new ResultBean<>();
 	}
 
 	@RequestMapping(value = "/pickup/params/{id}")
 	public ResultBean<Void> pickup(@PathVariable Long id) {
-		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(id);
-		AssertUtil.assertTrue(
-				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		AfterSaleApplication data = dataOp.get();
-		AssertUtil.assertTrue(AfterSaleStatus.WaitForPickup.equals(data.getStatus()), "售后记录状态有误，不能确认收货");
-		data.setStatus(AfterSaleStatus.Finished);
-		data.setPickupTime(new Date());
-		applicationRepository.save(data);
+		service.pickup(id);
 		return new ResultBean<>();
+	}
+	
+	@RequestMapping(value = "/count/unFinished")
+	public ResultBean<Long> countUnFinished() {
+		return new ResultBean<>(service.countUnFinished(ClientContext.get()));
 	}
 
 	@RequestMapping(value = "/load/params/{id}")

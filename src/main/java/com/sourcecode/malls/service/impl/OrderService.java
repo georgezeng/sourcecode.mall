@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
@@ -144,6 +145,9 @@ public class OrderService implements BaseService {
 
 	@Value("${user.type.name}")
 	private String userDir;
+
+	@Autowired
+	private CacheEvictService cacheEvictService;
 
 	private String fileDir = "subOrder";
 
@@ -271,6 +275,7 @@ public class OrderService implements BaseService {
 				}
 					break;
 				}
+				cacheEvictService.clearClientCoupons(order.getClient().getId());
 			}
 			order.setCouponAmount(couponAmount);
 		}
@@ -279,6 +284,7 @@ public class OrderService implements BaseService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
+		cacheEvictService.clearClientOrders(order.getClient().getId());
 		return order.getId();
 	}
 
@@ -354,6 +360,7 @@ public class OrderService implements BaseService {
 			order.setTransactionId(transactionId);
 			orderRepository.save(order);
 			clientService.setConsumeBonus(order);
+			cacheEvictService.clearClientOrders(order.getClient().getId());
 		}
 	}
 
@@ -402,6 +409,7 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "client_order_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
 	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
 		Specification<Order> spec = new Specification<Order>() {
 
@@ -440,6 +448,7 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "client_uncomment_nums", key = "#client.id")
 	public Long countUncommentOrders(Client client) {
 		Specification<SubOrder> spec = new Specification<SubOrder>() {
 
@@ -502,6 +511,7 @@ public class OrderService implements BaseService {
 			}
 			order.setStatus(OrderStatus.Canceled);
 			orderRepository.save(order);
+			cacheEvictService.clearClientOrders(order.getClient().getId());
 			List<SubOrder> list = order.getSubList();
 			if (!CollectionUtils.isEmpty(list)) {
 				for (SubOrder sub : list) {
@@ -513,8 +523,13 @@ public class OrderService implements BaseService {
 					}
 				}
 			}
-			if (!CollectionUtils.isEmpty(order.getGeneratedCoupons())) {
-				clientService.disableCoupons(order);
+			List<ClientCoupon> coupons = order.getGeneratedCoupons();
+			if (!CollectionUtils.isEmpty(coupons)) {
+				for (ClientCoupon coupon : coupons) {
+					coupon.setStatus(ClientCouponStatus.Out);
+				}
+				clientCouponRepository.saveAll(coupons);
+				cacheEvictService.clearClientCoupons(order.getClient().getId());
 			}
 		}
 	}

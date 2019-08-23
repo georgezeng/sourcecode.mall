@@ -42,6 +42,7 @@ import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
+import com.sourcecode.malls.service.impl.CacheEvictService;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -80,7 +81,10 @@ public class ClientController {
 
 	@Autowired
 	private FileOnlineSystemService fileService;
-
+	
+	@Autowired
+	private CacheEvictService cacheEvictService;
+	
 	@Value("${user.type.name}")
 	private String userDir;
 
@@ -119,7 +123,7 @@ public class ClientController {
 		boolean hasChanged = dto.getNickname() != null && !dto.getNickname().equals(client.getNickname())
 				|| dto.getAvatar() != null && !dto.getAvatar().equals(client.getAvatar());
 		if (hasChanged) {
-			clientService.clearInvitePoster(client.getId());
+			cacheEvictService.clearClientInvitePoster(client.getId());
 		}
 		client.setBirthday(dto.getBirthday());
 		client.setSex(dto.getSex());

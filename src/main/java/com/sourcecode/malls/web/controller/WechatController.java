@@ -36,7 +36,6 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
-import com.sourcecode.malls.domain.client.WechatToken;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
@@ -52,7 +51,6 @@ import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.client.WechatTokenRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -85,8 +83,8 @@ public class WechatController {
 	@Autowired
 	private CodeStoreRepository codeStoreRepository;
 
-	@Autowired
-	private WechatTokenRepository wechatTokenRepository;
+//	@Autowired
+//	private WechatTokenRepository wechatTokenRepository;
 
 	@Autowired
 	private RestTemplate httpClient;
@@ -266,19 +264,19 @@ public class WechatController {
 		store.setKey(loginInfo.getUsername());
 		store.setValue(mapper.writeValueAsString(userInfo));
 		codeStoreRepository.save(store);
-		Optional<WechatToken> tokensOp = wechatTokenRepository.findByOpenId(accessInfo.getOpenId());
-		WechatToken tokens = null;
-		if (!tokensOp.isPresent()) {
-			tokens = new WechatToken();
-			tokens.setOpenId(accessInfo.getOpenId());
-			tokens.setMerchantId(merchant.getId());
-		} else {
-			tokens = tokensOp.get();
-		}
-		tokens.setAccessToken(accessInfo.getAccessToken());
-		tokens.setRefreshToken(accessInfo.getRefreshToken());
-		wechatTokenRepository.save(tokens);
-		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, tokens.getOpenId(), true, 30 * 3600 * 24,
+//		Optional<WechatToken> tokensOp = wechatTokenRepository.findByOpenId(accessInfo.getOpenId());
+//		WechatToken tokens = null;
+//		if (!tokensOp.isPresent()) {
+//			tokens = new WechatToken();
+//			tokens.setOpenId(accessInfo.getOpenId());
+//			tokens.setMerchantId(merchant.getId());
+//		} else {
+//			tokens = tokensOp.get();
+//		}
+//		tokens.setAccessToken(accessInfo.getAccessToken());
+//		tokens.setRefreshToken(accessInfo.getRefreshToken());
+//		wechatTokenRepository.save(tokens);
+		CookieUtil.writeCookie(response, SystemConstant.WECHAT_OPENID_KEY, accessInfo.getOpenId(), true, 30 * 3600 * 24,
 				true, true);
 		Optional<Client> user = clientRepository.findByMerchantAndUnionId(merchant, userInfo.getUnionId());
 		LoginInfo info = new LoginInfo();

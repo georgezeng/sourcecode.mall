@@ -55,6 +55,9 @@ public class EvaluationService {
 
 	@Autowired
 	private GoodsItemRankRepository rankRepository;
+	
+	@Autowired
+	private CacheEvictService cacheEvictService;
 
 	@Autowired
 	protected EntityManager em;
@@ -178,6 +181,7 @@ public class EvaluationService {
 		data.setAdditional(false);
 		data.setOpen(false);
 		repository.save(data);
+		cacheEvictService.clearClientUnCommentNums(client.getId());
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {

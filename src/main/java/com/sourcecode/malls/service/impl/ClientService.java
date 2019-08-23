@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
@@ -81,8 +80,6 @@ import com.sourcecode.malls.util.ImageUtil;
 public class ClientService implements BaseService, UserDetailsService, JpaService<Client, Long> {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
-	private static final String CACHE_NAME = "unuse_coupon_nums";
-
 	@Autowired
 	private ClientRepository clientRepository;
 
@@ -124,8 +121,10 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	@Autowired
 	private EntityManager em;
+	
+	@Autowired
+	private CacheEvictService cacheEvictService;
 
-	@CacheEvict(cacheNames = CACHE_NAME, key = "#order.client.id")
 	public void setConsumeBonus(Order order) {
 		if (CollectionUtils.isEmpty(order.getSubList())) {
 			return;
@@ -177,17 +176,6 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@CacheEvict(cacheNames = CACHE_NAME, key = "#order.client.id")
-	public void disableCoupons(Order order) {
-		List<ClientCoupon> coupons = order.getGeneratedCoupons();
-		if (!CollectionUtils.isEmpty(coupons)) {
-			for (ClientCoupon coupon : coupons) {
-				coupon.setStatus(ClientCouponStatus.Out);
-			}
-			clientCouponRepository.saveAll(coupons);
-		}
-	}
-
 	private void createCoupon(Order order, Client client, CouponSetting setting, boolean require) {
 		if (!require) {
 			List<ClientCoupon> list = clientCouponRepository.findAllByClientAndSetting(client, setting);
@@ -210,11 +198,11 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 					setting.setStatus(CouponSettingStatus.SentOut);
 				}
 				couponSettingRepository.save(setting);
+				cacheEvictService.clearClientCoupons(client.getId());
 			}
 		}
 	}
 
-	@CacheEvict(cacheNames = CACHE_NAME, key = "#userId")
 	public void setInviteBonus(Long userId) {
 		Optional<Client> userOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(userOp.isPresent(), "推荐用户不存在");
@@ -235,7 +223,6 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@CacheEvict(cacheNames = CACHE_NAME, key = "#userId")
 	public void setRegistrationBonus(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
@@ -248,7 +235,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	@Cacheable(cacheNames = CACHE_NAME, key = "#userId")
+	@Cacheable(cacheNames = "client_unuse_coupon_nums", key = "#userId")
 	public long countUnUseCouponNums(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
@@ -326,10 +313,6 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Override
 	public JpaRepository<Client, Long> getRepository() {
 		return clientRepository;
-	}
-
-	@CacheEvict(cacheNames = "client_invite_poster", key = "#userId")
-	public void clearInvitePoster(Long userId) {
 	}
 
 	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")
@@ -413,6 +396,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "client_coupon_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
 	public long countCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
 		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {

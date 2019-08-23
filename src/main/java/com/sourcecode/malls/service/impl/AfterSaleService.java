@@ -13,6 +13,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
+import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleAddress;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.aftersale.AfterSalePhoto;
@@ -27,6 +29,7 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
+import com.sourcecode.malls.dto.order.ExpressDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.AfterSaleType;
@@ -54,6 +57,9 @@ public class AfterSaleService implements BaseService {
 
 	@Autowired
 	private OrderRepository orderRepository;
+	
+	@Autowired
+	private CacheEvictService cacheEvictService;
 
 	public void applyRefund(Long clientId, AfterSaleApplicationDTO dto) {
 		AssertUtil.assertNotEmpty(dto.getDescription(), "描述不能为空");
@@ -84,6 +90,7 @@ public class AfterSaleService implements BaseService {
 			application.setDescription(dto.getDescription());
 			application.setReason(dto.getReason());
 			applicationRepository.save(application);
+			cacheEvictService.clearClientAfterSaleUnFinishedtNums(clientId);
 			if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 				for (String path : dto.getPhotos()) {
 					AfterSalePhoto photo = new AfterSalePhoto();
@@ -145,6 +152,7 @@ public class AfterSaleService implements BaseService {
 		data.setType(dto.getType());
 		data.setStatus(AfterSaleStatus.Processing);
 		applicationRepository.save(data);
+		cacheEvictService.clearClientAfterSaleUnFinishedtNums(clientId);
 		if (AfterSaleType.Change.equals(dto.getType())) {
 			AfterSaleAddress address = dto.getAddress().asAfterSaleAddressEntity();
 			address.setApplication(data);
@@ -158,6 +166,39 @@ public class AfterSaleService implements BaseService {
 				photoRepository.save(photo);
 			}
 		}
+	}
+	
+	public void fillExpress(ExpressDTO dto) {
+		AssertUtil.assertNotEmpty(dto.getCompany(), "物流公司不能为空");
+		AssertUtil.assertNotEmpty(dto.getNumber(), "物流单号不能为空");
+		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
+		AssertUtil.assertTrue(
+				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AfterSaleApplication data = dataOp.get();
+		AssertUtil.assertTrue(
+				AfterSaleType.SalesReturn.equals(data.getType()) || AfterSaleType.Change.equals(data.getType()),
+				"售后类型不是退换货服务，不能提交运单信息");
+		AssertUtil.assertTrue(AfterSaleStatus.WaitForReturn.equals(data.getStatus()), "售后状态有误，不允许提交运单信息");
+		data.setClientExpressCompany(dto.getCompany());
+		data.setClientExpressNumber(dto.getNumber());
+		data.setStatus(AfterSaleStatus.WaitForReceive);
+		data.setReturnTime(new Date());
+		applicationRepository.save(data);
+		cacheEvictService.clearClientAfterSaleUnFinishedtNums(data.getClient().getId());
+	}
+	
+	public void pickup(Long id) {
+		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(id);
+		AssertUtil.assertTrue(
+				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AfterSaleApplication data = dataOp.get();
+		AssertUtil.assertTrue(AfterSaleStatus.WaitForPickup.equals(data.getStatus()), "售后记录状态有误，不能确认收货");
+		data.setStatus(AfterSaleStatus.Finished);
+		data.setPickupTime(new Date());
+		applicationRepository.save(data);
+		cacheEvictService.clearClientAfterSaleUnFinishedtNums(data.getClient().getId());
 	}
 
 	@Transactional(readOnly = true)
@@ -212,6 +253,28 @@ public class AfterSaleService implements BaseService {
 
 		Page<AfterSaleApplication> result = applicationRepository.findAll(spec, pageInfo.pageable());
 		return result.get().map(it -> it.asDTO()).collect(Collectors.toList());
+	}
+
+	@Cacheable(cacheNames = "client_aftersale_unfinished_nums", key = "#client.id")
+	public long countUnFinished(Client client) {
+		Specification<AfterSaleApplication> spec = new Specification<AfterSaleApplication>() {
+
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public Predicate toPredicate(Root<AfterSaleApplication> root, CriteriaQuery<?> query,
+					CriteriaBuilder criteriaBuilder) {
+				List<Predicate> predicate = new ArrayList<>();
+				predicate.add(criteriaBuilder.equal(root.get("client"), client));
+				predicate.add(criteriaBuilder.notEqual(root.get("status"), AfterSaleStatus.NotYet));
+				predicate.add(criteriaBuilder.notEqual(root.get("status"), AfterSaleStatus.Finished));
+				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
+			}
+		};
+		return applicationRepository.count(spec);
 	}
 
 }
