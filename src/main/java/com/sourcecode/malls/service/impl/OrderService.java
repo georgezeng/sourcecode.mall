@@ -615,8 +615,8 @@ public class OrderService implements BaseService {
 				order.isPresent() && !order.get().isDeleted() && order.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		OrderStatus status = order.get().getStatus();
-		AssertUtil.assertTrue(OrderStatus.Canceled.equals(status) || OrderStatus.Closed.equals(status)
-				|| OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
+		AssertUtil.assertTrue(OrderStatus.Refunded.equals(status) || OrderStatus.Canceled.equals(status)
+				|| OrderStatus.Closed.equals(status) || OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
 		order.get().setDeleted(true);
 		orderRepository.save(order.get());
 	}
