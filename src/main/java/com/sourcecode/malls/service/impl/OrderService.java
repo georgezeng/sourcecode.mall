@@ -678,7 +678,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		return clientService.getCashCouponList(selectedCoupons.stream());
+		return clientService.getCouponList(selectedCoupons.stream());
 	}
 
 	private boolean putInSelectedCoupons(List<ClientCoupon> selectedCoupons, ClientCoupon coupon) {

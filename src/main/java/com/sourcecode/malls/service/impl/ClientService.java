@@ -61,7 +61,6 @@ import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.CashCouponEventType;
 import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.CouponSettingStatus;
-import com.sourcecode.malls.enums.CouponType;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -392,7 +391,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			}
 		};
 		Page<ClientCoupon> pageResult = clientCouponRepository.findAll(spec, queryInfo.getPage().pageable());
-		return getCashCouponList(pageResult.get());
+		return getCouponList(pageResult.get());
 	}
 
 	@Transactional(readOnly = true)
@@ -418,12 +417,11 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		return clientCouponRepository.count(spec);
 	}
 
-	public List<ClientCouponDTO> getCashCouponList(Stream<ClientCoupon> stream) {
+	public List<ClientCouponDTO> getCouponList(Stream<ClientCoupon> stream) {
 		return stream.map(coupon -> {
 			ClientCouponDTO data = new ClientCouponDTO();
-			BeanUtils.copyProperties(coupon.getSetting(), data, "id", "categories", "item", "type");
+			BeanUtils.copyProperties(coupon.getSetting(), data, "id", "categories", "item");
 			data.setId(coupon.getId());
-			data.setType(CouponType.Cash);
 			if (coupon.getSetting().getItems() != null) {
 				data.setItems(coupon.getSetting().getItems().stream().map(item -> item.asDTO(false, false, false))
 						.collect(Collectors.toList()));
