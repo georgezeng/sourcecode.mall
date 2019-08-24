@@ -101,6 +101,12 @@ public class OrderController {
 		orderService.pickup(ClientContext.get(), id);
 		return new ResultBean<>();
 	}
+	
+	@RequestMapping(path = "/refundApply/params/{id}")
+	public ResultBean<Void> refundApply(@PathVariable Long id) {
+		orderService.refundApply(ClientContext.get(), id);
+		return new ResultBean<>();
+	}
 
 	@RequestMapping(path = "/delete/params/{id}")
 	public ResultBean<Void> delete(@PathVariable Long id) {

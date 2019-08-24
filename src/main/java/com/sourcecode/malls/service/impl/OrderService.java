@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
-import com.github.wxpay.sdk.WePayConfig;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -60,7 +59,6 @@ import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.OrderStatus;
-import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.CashCouponOrderLimitedSettingRepository;
@@ -122,11 +120,11 @@ public class OrderService implements BaseService {
 	@Autowired
 	protected EntityManager em;
 
-	@Autowired
-	private WechatService wechatService;
-
-	@Autowired
-	private AlipayService alipayService;
+//	@Autowired
+//	private WechatService wechatService;
+//
+//	@Autowired
+//	private AlipayService alipayService;
 
 	@Autowired
 	private ClientService clientService;
@@ -352,7 +350,7 @@ public class OrderService implements BaseService {
 	public void afterPayment(String orderId, String transactionId) {
 		AssertUtil.assertNotEmpty(transactionId, "交易号有误");
 		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
-		if (orderOp.isPresent() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
+		if (orderOp.isPresent() && !orderOp.get().isDeleted() && OrderStatus.UnPay.equals(orderOp.get().getStatus())) {
 			Order order = orderOp.get();
 			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 			order.setStatus(OrderStatus.Paid);
@@ -384,7 +382,7 @@ public class OrderService implements BaseService {
 					} else {
 						predicate
 								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded),
 										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
 					}
 				}
@@ -429,7 +427,7 @@ public class OrderService implements BaseService {
 					} else {
 						predicate
 								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded),
 										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
 					}
 				}
@@ -442,7 +440,8 @@ public class OrderService implements BaseService {
 	@Transactional(readOnly = true)
 	public OrderDTO getOrder(Client client, Long id) {
 		Optional<Order> order = orderRepository.findById(id);
-		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(
+				order.isPresent() && !order.get().isDeleted() && order.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		return order.get().asDTO(true, true);
 	}
@@ -473,70 +472,101 @@ public class OrderService implements BaseService {
 
 	public void cancel(Client client, Long id) throws Exception {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(
+				orderOp.isPresent() && !orderOp.get().isDeleted()
+						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		OrderStatus status = order.getStatus();
 		boolean paid = OrderStatus.Paid.equals(status);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
+//		if (paid) {
+//			// 自动退款
+//			switch (order.getPayment()) {
+//			case WePay: {
+//				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
+//				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getRealPrice(),
+//						order.getRealPrice(), order.getSubList().size());
+//			}
+//				break;
+//			case AliPay: {
+//				alipayService.refund(client.getMerchant().getId(), order.getTransactionId(), order.getOrderId(),
+//						order.getRealPrice(), order.getRealPrice(), order.getSubList().size());
+//			}
+//				break;
+//			default:
+//				throw new BusinessException("不支持的支付类型");
+//			}
+//		}
+//		afterCancel(order.getOrderId());
+		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		if (paid) {
-			// 自动退款
-			switch (order.getPayment()) {
-			case WePay: {
-				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
-				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getRealPrice(),
-						order.getRealPrice(), order.getSubList().size());
-			}
-				break;
-			case AliPay: {
-				alipayService.refund(client.getMerchant().getId(), order.getTransactionId(), order.getOrderId(),
-						order.getRealPrice(), order.getRealPrice(), order.getSubList().size());
-			}
-				break;
-			default:
-				throw new BusinessException("不支持的支付类型");
+			order.setStatus(OrderStatus.CanceledForRefund);
+		} else {
+			order.setStatus(OrderStatus.Canceled);
+		}
+		orderRepository.save(order);
+		cacheEvictService.clearClientOrders(order.getClient().getId());
+		List<SubOrder> list = order.getSubList();
+		if (!CollectionUtils.isEmpty(list)) {
+			for (SubOrder sub : list) {
+				GoodsItemProperty property = sub.getProperty();
+				if (property != null) {
+					em.lock(property, LockModeType.PESSIMISTIC_WRITE);
+					property.setInventory(property.getInventory() + sub.getNums());
+					goodsItemPropertyRepository.save(property);
+				}
 			}
 		}
-		afterCancel(order.getOrderId());
+		List<ClientCoupon> coupons = order.getGeneratedCoupons();
+		if (!CollectionUtils.isEmpty(coupons)) {
+			for (ClientCoupon coupon : coupons) {
+				coupon.setStatus(ClientCouponStatus.Out);
+			}
+			clientCouponRepository.saveAll(coupons);
+			cacheEvictService.clearClientCoupons(order.getClient().getId());
+		}
 	}
 
-	public void afterCancel(String orderId) {
-		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
-		if (orderOp.isPresent() && (OrderStatus.UnPay.equals(orderOp.get().getStatus())
-				|| OrderStatus.Paid.equals(orderOp.get().getStatus()))) {
-			Order order = orderOp.get();
-			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
-			if (OrderStatus.Paid.equals(order.getStatus())) {
-				order.setRefundTime(new Date());
-			}
-			order.setStatus(OrderStatus.Canceled);
-			orderRepository.save(order);
-			cacheEvictService.clearClientOrders(order.getClient().getId());
-			List<SubOrder> list = order.getSubList();
-			if (!CollectionUtils.isEmpty(list)) {
-				for (SubOrder sub : list) {
-					GoodsItemProperty property = sub.getProperty();
-					if (property != null) {
-						em.lock(property, LockModeType.PESSIMISTIC_WRITE);
-						property.setInventory(property.getInventory() + sub.getNums());
-						goodsItemPropertyRepository.save(property);
-					}
-				}
-			}
-			List<ClientCoupon> coupons = order.getGeneratedCoupons();
-			if (!CollectionUtils.isEmpty(coupons)) {
-				for (ClientCoupon coupon : coupons) {
-					coupon.setStatus(ClientCouponStatus.Out);
-				}
-				clientCouponRepository.saveAll(coupons);
-				cacheEvictService.clearClientCoupons(order.getClient().getId());
-			}
-		}
-	}
+//	public void afterCancel(String orderId) {
+//		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
+//		if (orderOp.isPresent() && (OrderStatus.UnPay.equals(orderOp.get().getStatus())
+//				|| OrderStatus.Paid.equals(orderOp.get().getStatus()))) {
+//			Order order = orderOp.get();
+//			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+//			if (OrderStatus.Paid.equals(order.getStatus())) {
+//				order.setRefundTime(new Date());
+//			}
+//			order.setStatus(OrderStatus.Canceled);
+//			orderRepository.save(order);
+//			cacheEvictService.clearClientOrders(order.getClient().getId());
+//			List<SubOrder> list = order.getSubList();
+//			if (!CollectionUtils.isEmpty(list)) {
+//				for (SubOrder sub : list) {
+//					GoodsItemProperty property = sub.getProperty();
+//					if (property != null) {
+//						em.lock(property, LockModeType.PESSIMISTIC_WRITE);
+//						property.setInventory(property.getInventory() + sub.getNums());
+//						goodsItemPropertyRepository.save(property);
+//					}
+//				}
+//			}
+//			List<ClientCoupon> coupons = order.getGeneratedCoupons();
+//			if (!CollectionUtils.isEmpty(coupons)) {
+//				for (ClientCoupon coupon : coupons) {
+//					coupon.setStatus(ClientCouponStatus.Out);
+//				}
+//				clientCouponRepository.saveAll(coupons);
+//				cacheEvictService.clearClientCoupons(order.getClient().getId());
+//			}
+//		}
+//	}
 
 	public void pickup(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(
+				orderOp.isPresent() && !orderOp.get().isDeleted()
+						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "不能确认收货，订单状态有误");
@@ -566,9 +596,23 @@ public class OrderService implements BaseService {
 		}
 	}
 
+	public void refundApply(Client client, Long id) {
+		Optional<Order> orderOp = orderRepository.findById(id);
+		AssertUtil.assertTrue(
+				orderOp.isPresent() && !orderOp.get().isDeleted()
+						&& orderOp.get().getClient().getId().equals(client.getId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		Order order = orderOp.get();
+		AssertUtil.assertTrue(OrderStatus.Canceled.equals(order.getStatus()), "状态有误，不能申请退款");
+		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+		order.setStatus(OrderStatus.RefundApplied);
+		orderRepository.save(order);
+	}
+
 	public void delete(Client client, Long id) {
 		Optional<Order> order = orderRepository.findById(id);
-		AssertUtil.assertTrue(order.isPresent() && order.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(
+				order.isPresent() && !order.get().isDeleted() && order.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		OrderStatus status = order.get().getStatus();
 		AssertUtil.assertTrue(OrderStatus.Canceled.equals(status) || OrderStatus.Closed.equals(status)
