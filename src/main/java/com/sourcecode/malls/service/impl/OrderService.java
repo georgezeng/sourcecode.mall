@@ -477,6 +477,7 @@ public class OrderService implements BaseService {
 						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
+		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		OrderStatus status = order.getStatus();
 		boolean paid = OrderStatus.Paid.equals(status);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
@@ -499,7 +500,6 @@ public class OrderService implements BaseService {
 //			}
 //		}
 //		afterCancel(order.getOrderId());
-		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		if (paid) {
 			order.setStatus(OrderStatus.CanceledForRefund);
 		} else {
@@ -603,8 +603,8 @@ public class OrderService implements BaseService {
 						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
-		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
+		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		order.setStatus(OrderStatus.RefundApplied);
 		orderRepository.save(order);
 	}
