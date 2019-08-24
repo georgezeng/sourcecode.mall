@@ -25,6 +25,7 @@ import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantSetting;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.dto.client.ClientAddressDTO;
 import com.sourcecode.malls.dto.order.ExpressDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.AfterSaleType;
@@ -51,12 +52,6 @@ public class AfterSaleController {
 
 //	@Autowired
 //	private GoodsItemService itemService;
-
-	@Autowired
-	private MerchantRepository merchantRepository;
-
-	@Autowired
-	private MerchantSettingRepository merchantSettingRepository;
 
 	@Autowired
 	private ObjectMapper mapper;
@@ -105,17 +100,24 @@ public class AfterSaleController {
 		return new ResultBean<>();
 	}
 
-	@SuppressWarnings("unchecked")
-	@RequestMapping(value = "/returnAddress/load")
-	public ResultBean<Map<String, String>> returnAddress() throws Exception {
-		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
-		Optional<MerchantSetting> setting = merchantSettingRepository.findByMerchantAndCode(merchant.get(),
-				MerchantSettingConstant.RETURN_ADDRESS);
-		Map<String, String> map = null;
-		if (setting.isPresent()) {
-			map = mapper.readValue(setting.get().getValue(), Map.class);
-		}
-		return new ResultBean<>(map);
+//	@SuppressWarnings("unchecked")
+//	@RequestMapping(value = "/returnAddress/load")
+//	public ResultBean<Map<String, String>> returnAddress() throws Exception {
+//		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+//		Optional<MerchantSetting> setting = merchantSettingRepository.findByMerchantAndCode(merchant.get(),
+//				MerchantSettingConstant.RETURN_ADDRESS);
+//		Map<String, String> map = null;
+//		if (setting.isPresent()) {
+//			map = mapper.readValue(setting.get().getValue(), Map.class);
+//		}
+//		return new ResultBean<>(map);
+//	}
+	
+	@RequestMapping(value = "/returnAddress/load/params/{id}")
+	public ResultBean<ClientAddressDTO> returnAddress(@PathVariable Long id) throws Exception {
+		Optional<AfterSaleApplication> data = applicationRepository.findById(id);
+		AssertUtil.assertTrue(data.isPresent() && data.get().getReturnAddress() != null, "尚未设置回寄地址，请联系客服");
+		return new ResultBean<>(data.get().getReturnAddress().asDTO());
 	}
 
 	@RequestMapping(value = "/fillExpress")
