@@ -603,7 +603,7 @@ public class OrderService implements BaseService {
 						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
-		AssertUtil.assertTrue(OrderStatus.Canceled.equals(order.getStatus()), "状态有误，不能申请退款");
+		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.RefundApplied);
 		orderRepository.save(order);
