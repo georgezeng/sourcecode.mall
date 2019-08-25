@@ -82,20 +82,19 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 			user.setUsername(username);
 			user.setMerchant(merchant);
 			user.setEnabled(true);
-			boolean invite = false;
-			Long pid = null;
+			Client parent = null;
 			String pidStr = request.getParameter("pid");
 			if (!StringUtils.isEmpty(pidStr)) {
-				pid = Long.valueOf(pidStr);
+				Long pid = Long.valueOf(pidStr);
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
-					invite = true;
-					user.setParent(parentOp.get());
+					parent = parentOp.get();
+					user.setParent(parent);
 				}
 			}
 			clientRepository.save(user);
-			if (invite) {
-				clientService.setInviteBonus(pid);
+			if (parent != null) {
+				clientService.setInviteBonus(user, parent);
 			}
 			clientService.setRegistrationBonus(user.getId());
 		} else {

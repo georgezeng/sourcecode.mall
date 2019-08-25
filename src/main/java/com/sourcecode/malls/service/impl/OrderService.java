@@ -57,7 +57,6 @@ import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.ClientCouponStatus;
-import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;

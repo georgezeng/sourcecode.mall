@@ -332,16 +332,17 @@ public class WechatController {
 				user.setSex(Sex.Secret);
 			}
 			Long pid = mobileInfo.getPid();
-			boolean invite = pid != null && pid > 0;
-			if (invite) {
+			Client parent = null;
+			if (pid != null && pid > 0) {
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
-					user.setParent(parentOp.get());
+					parent = parentOp.get();
+					user.setParent(parent);
 				}
 			}
 			clientRepository.save(user);
-			if(invite) {
-				clientService.setInviteBonus(pid);
+			if (parent != null) {
+				clientService.setInviteBonus(user, parent);
 			}
 		} else {
 			user = userOp.get();

@@ -58,8 +58,8 @@ import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
-import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.ClientCouponStatus;
+import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
@@ -168,14 +168,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 						}
 					}
 					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
-						createCoupon(order, order.getClient(), setting, true);
+						createCoupon(order, null, order.getClient(), setting, true);
 					}
 				}
 			}
 		}
 	}
 
-	private void createCoupon(Order order, Client client, CouponSetting setting, boolean require) {
+	private void createCoupon(Order order, Client invitee, Client client, CouponSetting setting, boolean require) {
 		if (!require) {
 			List<ClientCoupon> list = clientCouponRepository.findAllByClientAndSetting(client, setting);
 			require = CollectionUtils.isEmpty(list);
@@ -191,6 +191,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				coupon.setReceivedTime(new Date());
 				coupon.setStatus(ClientCouponStatus.UnUse);
 				coupon.setFromOrder(order);
+				coupon.setInvitee(invitee);
 				clientCouponRepository.save(coupon);
 				setting.setSentNums(setting.getSentNums() + 1);
 				if (setting.getSentNums() == setting.getTotalNums()) {
@@ -202,19 +203,16 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 	}
 
-	public void setInviteBonus(Long userId) {
-		Optional<Client> userOp = clientRepository.findById(userId);
-		AssertUtil.assertTrue(userOp.isPresent(), "推荐用户不存在");
-		Client user = userOp.get();
+	public void setInviteBonus(Client invitee, Client parent) {
 		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				user.getMerchant(), CouponEventType.Invite, CouponSettingStatus.PutAway, true);
+				parent.getMerchant(), CouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
-				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(user.getSubList())) {
-					int times = user.getSubList().size() / setting.getInviteSetting().getMemberNums();
-					int nums = clientCouponRepository.findAllByClientAndSetting(user, setting).size();
+				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(parent.getSubList())) {
+					int times = parent.getSubList().size() / setting.getInviteSetting().getMemberNums();
+					int nums = clientCouponRepository.findAllByClientAndSetting(parent, setting).size();
 					while (nums < times) {
-						createCoupon(null, user, setting, true);
+						createCoupon(null, invitee, parent, setting, true);
 						nums++;
 					}
 				}
@@ -229,7 +227,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				user.get().getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
-				createCoupon(null, user.get(), setting, false);
+				createCoupon(null, null, user.get(), setting, false);
 			}
 		}
 	}
