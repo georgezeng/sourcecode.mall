@@ -26,6 +26,12 @@ public class IndexController {
 				params += "&eruda=true";
 			}
 			url = url.replace("#", params + "#");
+		} else {
+			String params = "?";
+			if (env.acceptsProfiles(Profiles.of(EnvConstant.UAT))) {
+				params += "eruda=true";
+			}
+			url = url.replace("#", params + "#");
 		}
 		return String.format("<script>window.location.href='%s'</script>", url);
 	}
