@@ -3,7 +3,6 @@ package com.sourcecode.malls.web.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -16,13 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
-import com.sourcecode.malls.constants.MerchantSettingConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
-import com.sourcecode.malls.domain.merchant.Merchant;
-import com.sourcecode.malls.domain.merchant.MerchantSetting;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientAddressDTO;
@@ -31,8 +26,6 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.AfterSaleType;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleReasonSettingRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantSettingRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.AfterSaleService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -52,9 +45,6 @@ public class AfterSaleController {
 
 //	@Autowired
 //	private GoodsItemService itemService;
-
-	@Autowired
-	private ObjectMapper mapper;
 
 	@Autowired
 	private FileOnlineSystemService fileService;

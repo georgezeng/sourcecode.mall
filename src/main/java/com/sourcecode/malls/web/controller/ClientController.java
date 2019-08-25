@@ -1,6 +1,7 @@
 package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -81,10 +82,10 @@ public class ClientController {
 
 	@Autowired
 	private FileOnlineSystemService fileService;
-	
+
 	@Autowired
 	private CacheEvictService cacheEvictService;
-	
+
 	@Value("${user.type.name}")
 	private String userDir;
 
@@ -268,9 +269,14 @@ public class ClientController {
 	public ResultBean<ClientCouponDTO> coupons(@RequestBody QueryInfo<ClientCouponStatus> queryInfo) {
 		return new ResultBean<>(clientService.getCoupons(ClientContext.get(), queryInfo));
 	}
-	
+
 	@RequestMapping(path = "/coupon/count")
 	public ResultBean<Long> countCoupon(@RequestBody QueryInfo<ClientCouponStatus> queryInfo) {
 		return new ResultBean<>(clientService.countCoupons(ClientContext.get(), queryInfo));
+	}
+
+	@RequestMapping(path = "/registrationBonus")
+	public ResultBean<BigDecimal> getRegistrationBonus() {
+		return new ResultBean<>(clientService.getRegistrationBonus(ClientContext.get()));
 	}
 }

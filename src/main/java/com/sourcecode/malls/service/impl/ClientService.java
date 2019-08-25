@@ -58,7 +58,7 @@ import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
-import com.sourcecode.malls.enums.CashCouponEventType;
+import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.Sex;
@@ -120,7 +120,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	@Autowired
 	private EntityManager em;
-	
+
 	@Autowired
 	private CacheEvictService cacheEvictService;
 
@@ -129,7 +129,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			return;
 		}
 		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				order.getMerchant(), CashCouponEventType.Consume, CouponSettingStatus.PutAway, true);
+				order.getMerchant(), CouponEventType.Consume, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
 				if (setting.getConsumeSetting() != null) {
@@ -207,7 +207,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		AssertUtil.assertTrue(userOp.isPresent(), "推荐用户不存在");
 		Client user = userOp.get();
 		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				user.getMerchant(), CashCouponEventType.Invite, CouponSettingStatus.PutAway, true);
+				user.getMerchant(), CouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
 				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(user.getSubList())) {
@@ -226,7 +226,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
 		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				user.get().getMerchant(), CashCouponEventType.Registration, CouponSettingStatus.PutAway, true);
+				user.get().getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 		if (!CollectionUtils.isEmpty(list)) {
 			for (CouponSetting setting : list) {
 				createCoupon(null, user.get(), setting, false);
@@ -417,6 +417,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		return clientCouponRepository.count(spec);
 	}
 
+	@Transactional(readOnly = true)
 	public List<ClientCouponDTO> getCouponList(Stream<ClientCoupon> stream) {
 		return stream.map(coupon -> {
 			ClientCouponDTO data = new ClientCouponDTO();
@@ -432,6 +433,17 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			}
 			return data;
 		}).collect(Collectors.toList());
+	}
+
+	public BigDecimal getRegistrationBonus(Client client) {
+		Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(
+				client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
+		if (setting.isPresent() && !client.isLoggedIn()) {
+			client.setLoggedIn(true);
+			clientRepository.save(client);
+			return setting.get().getAmount();
+		}
+		return BigDecimal.ZERO;
 	}
 
 }
