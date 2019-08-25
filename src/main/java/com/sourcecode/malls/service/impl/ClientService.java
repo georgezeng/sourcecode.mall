@@ -141,8 +141,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 							match = true;
 							break;
 						case Category: {
-							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getCategories())) {
-								for (GoodsCategory category : setting.getConsumeSetting().getCategories()) {
+							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getRealCategories())) {
+								for (GoodsCategory category : setting.getConsumeSetting().getRealCategories()) {
 									if (sub.getItem().getCategory().getId().equals(category.getId())) {
 										match = true;
 										break;
