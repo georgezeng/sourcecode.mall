@@ -325,6 +325,7 @@ public class WechatController {
 			if (pid != null && pid > 0) {
 				Optional<Client> parentOp = clientRepository.findById(pid);
 				if (parentOp.isPresent()) {
+					logger.info("create invite bonus.......");
 					user.setParent(parentOp.get());
 					clientService.setInviteBonus(pid);
 				}
