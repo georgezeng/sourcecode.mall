@@ -160,7 +160,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		switch (coupon.getSetting().getHxType()) {
 		case Category: {
 			fromCondition.append(
-					"left join coupon_setting_real_category cc on item.category_id = cc.category_id and ci.setting_id=?")
+					"left join coupon_setting_real_category cc on item.category_id = cc.category_id and cc.setting_id=?")
 					.append("\n");
 			args.add(coupon.getSetting().getId());
 		}
@@ -234,7 +234,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			query.setParameter(pos++, arg);
 		}
 		query.addEntity(GoodsItem.class);
-		return ((Stream<GoodsItem>) query.getResultStream()).map(it -> it.asDTO(false, false, false))
+		return query.getResultStream().map(it -> it.asDTO(false, false, false))
 				.collect(Collectors.toList());
 	}
 
