@@ -212,7 +212,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			for (CouponSetting setting : list) {
 				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(user.getSubList())) {
 					int times = user.getSubList().size() / setting.getInviteSetting().getMemberNums();
+					logger.info("times: " + times);
 					int nums = clientCouponRepository.findAllByClientAndSetting(user, setting).size();
+					logger.info("nums: " + nums);
 					while (nums < times) {
 						createCoupon(null, user, setting, true);
 						nums++;
