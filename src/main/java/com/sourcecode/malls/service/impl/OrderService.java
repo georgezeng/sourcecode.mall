@@ -682,8 +682,9 @@ public class OrderService implements BaseService {
 	}
 
 	private boolean putInSelectedCoupons(List<ClientCoupon> selectedCoupons, ClientCoupon coupon) {
-		if (selectedCoupons.stream().filter(it -> it.getSetting().getId().equals(coupon.getSetting().getId()))
-				.count() < coupon.getSetting().getLimitedNums()) {
+		if (coupon.getSetting().getLimitedNums() == 0
+				|| selectedCoupons.stream().filter(it -> it.getSetting().getId().equals(coupon.getSetting().getId()))
+						.count() < coupon.getSetting().getLimitedNums()) {
 			selectedCoupons.add(coupon);
 			return true;
 		}
