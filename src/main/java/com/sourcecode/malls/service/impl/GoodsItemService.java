@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 import javax.persistence.EntityManager;
@@ -160,13 +159,13 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		switch (coupon.getSetting().getHxType()) {
 		case Category: {
 			fromCondition.append(
-					"left join coupon_setting_real_category cc on item.category_id = cc.category_id and cc.setting_id=?")
+					"inner join coupon_setting_real_category cc on item.category_id = cc.category_id and cc.setting_id=?")
 					.append("\n");
 			args.add(coupon.getSetting().getId());
 		}
 			break;
 		case Item: {
-			fromCondition.append("left join coupon_setting_goods_item ci on item.id = ci.item_id and ci.setting_id=?")
+			fromCondition.append("inner join coupon_setting_goods_item ci on item.id = ci.item_id and ci.setting_id=?")
 					.append("\n");
 			args.add(coupon.getSetting().getId());
 		}
@@ -176,14 +175,6 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		fromCondition.append("inner join goods_item_rank r on item.id = r.item_id").append("\n");
 		fromCondition.append("where item.enabled=true").append("\n");
 		fromCondition.append("and item.merchant_id=?").append("\n");
-		switch (coupon.getSetting().getHxType()) {
-		case Category:
-			fromCondition.append("and cc.id <> null").append("\n");
-			break;
-		case Item:
-			fromCondition.append("and ci.id <> null").append("\n");
-			break;
-		}
 		args.add(merchantId);
 		if (!StringUtils.isEmpty(queryInfo.getData())) {
 			String like = "%" + queryInfo.getData() + "%";
