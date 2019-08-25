@@ -98,11 +98,11 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			// the cookie to be cancelled.
 			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
 
-//			if (!equals(expectedTokenSignature, cookieTokens[2])) {
-//				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
-//				logger.warn(msg);
-//				throw new InvalidCookieException(msg);
-//			}
+			if (!equals(expectedTokenSignature, cookieTokens[2])) {
+				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
+				logger.warn(msg);
+				throw new InvalidCookieException(msg);
+			}
 
 			return userDetails;
 		} finally {
