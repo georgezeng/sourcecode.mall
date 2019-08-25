@@ -642,7 +642,6 @@ public class OrderService implements BaseService {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
-				predicate.add(criteriaBuilder.equal(root.join("setting").get("status"), CouponSettingStatus.PutAway));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
