@@ -27,7 +27,7 @@ public class IndexController {
 			}
 			url = url.replace("#", params + "#");
 		} else {
-			String params = "?";
+			String params = url.indexOf("?") > -1 ? "&" : "?";
 			if (env.acceptsProfiles(Profiles.of(EnvConstant.UAT))) {
 				params += "eruda=true";
 			}
