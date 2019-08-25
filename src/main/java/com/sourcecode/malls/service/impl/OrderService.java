@@ -520,8 +520,10 @@ public class OrderService implements BaseService {
 		}
 		List<ClientCoupon> coupons = order.getGeneratedCoupons();
 		if (!CollectionUtils.isEmpty(coupons)) {
+			Date outTime = new Date();
 			for (ClientCoupon coupon : coupons) {
 				coupon.setStatus(ClientCouponStatus.Out);
+				coupon.setOutTime(outTime);
 			}
 			clientCouponRepository.saveAll(coupons);
 			cacheEvictService.clearClientCoupons(order.getClient().getId());
