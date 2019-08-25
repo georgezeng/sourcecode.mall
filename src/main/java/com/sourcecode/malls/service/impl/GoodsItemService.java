@@ -217,7 +217,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		}
 		}
 		sql.append("limit ?, ?").append("\n");
-		args.add(pageInfo.getNum());
+		args.add((pageInfo.getNum() - 1) * pageInfo.getSize());
 		args.add(pageInfo.getSize());
 		NativeQuery<GoodsItem> query = (NativeQuery<GoodsItem>) em.createNativeQuery(sql.toString());
 		int pos = 1;
