@@ -321,15 +321,6 @@ public class WechatController {
 			user.setEnabled(true);
 			user.setMerchant(merchant);
 			user.setNickname(userInfo.getNickname());
-			Long pid = mobileInfo.getPid();
-			if (pid != null && pid > 0) {
-				Optional<Client> parentOp = clientRepository.findById(pid);
-				if (parentOp.isPresent()) {
-					logger.info("create invite bonus.......");
-					user.setParent(parentOp.get());
-					clientService.setInviteBonus(pid);
-				}
-			}
 			switch (userInfo.getSex()) {
 			case 1:
 				user.setSex(Sex.Male);
@@ -339,6 +330,18 @@ public class WechatController {
 				break;
 			default:
 				user.setSex(Sex.Secret);
+			}
+			Long pid = mobileInfo.getPid();
+			boolean invite = pid != null && pid > 0;
+			if (invite) {
+				Optional<Client> parentOp = clientRepository.findById(pid);
+				if (parentOp.isPresent()) {
+					user.setParent(parentOp.get());
+				}
+			}
+			clientRepository.save(user);
+			if(invite) {
+				clientService.setInviteBonus(pid);
 			}
 		} else {
 			user = userOp.get();
@@ -361,8 +364,8 @@ public class WechatController {
 					user.setSex(Sex.Secret);
 				}
 			}
+			clientRepository.save(user);
 		}
-		clientRepository.save(user);
 		if (!userOp.isPresent()) {
 			clientService.setRegistrationBonus(user.getId());
 		}
