@@ -393,12 +393,17 @@ public class OrderService implements BaseService {
 			OrderDTO dto = order.asDTO(true, false);
 			if (!CollectionUtils.isEmpty(order.getSubList())) {
 				int count = 0;
+				int commentCount = 0;
 				for (SubOrder sub : order.getSubList()) {
+					if (sub.isComment()) {
+						commentCount++;
+					}
 					Optional<AfterSaleApplication> app = aftersaleApplicationRepository.findBySubOrder(sub);
 					if (app.isPresent() && !AfterSaleStatus.NotYet.equals(app.get().getStatus())) {
 						count++;
 					}
 				}
+				dto.setComment(commentCount == order.getSubList().size());
 				dto.setApplied(count == order.getSubList().size());
 			}
 			return dto;
@@ -574,6 +579,7 @@ public class OrderService implements BaseService {
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.Finished);
 		orderRepository.save(order);
+		cacheEvictService.clearClientOrders(order.getClient().getId());
 		if (!CollectionUtils.isEmpty(order.getSubList())) {
 			for (SubOrder sub : order.getSubList()) {
 				if (sub.getItem() != null && sub.getItem().getId() != null) {
@@ -608,6 +614,7 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		order.setStatus(OrderStatus.RefundApplied);
 		orderRepository.save(order);
+		cacheEvictService.clearClientOrders(order.getClient().getId());
 	}
 
 	public void delete(Client client, Long id) {
