@@ -419,8 +419,16 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	public List<ClientCouponDTO> getCouponList(Stream<ClientCoupon> stream) {
 		return stream.map(coupon -> {
 			ClientCouponDTO data = new ClientCouponDTO();
-			BeanUtils.copyProperties(coupon.getSetting(), data, "id", "categories", "item");
+			BeanUtils.copyProperties(coupon.getSetting(), data, "id", "categories", "item", "invitee");
 			data.setId(coupon.getId());
+			data.setCouponId(coupon.getCouponId());
+			if (coupon.getFromOrder() != null) {
+				data.setFromOrderId(coupon.getFromOrder().getOrderId());
+			}
+			if (coupon.getInvitee() != null) {
+				data.setInvitee(coupon.getInvitee().getUsername().substring(0, 4) + "****"
+						+ coupon.getInvitee().getUsername().substring(7));
+			}
 			if (coupon.getSetting().getItems() != null) {
 				data.setItems(coupon.getSetting().getItems().stream().map(item -> item.asDTO(false, false, false))
 						.collect(Collectors.toList()));

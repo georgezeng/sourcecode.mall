@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.enums.CouponType;
+import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.CouponRelationType;
 
 public class ClientCouponDTO {
@@ -16,6 +17,7 @@ public class ClientCouponDTO {
 	private String title;
 	private BigDecimal amount;
 	private CouponRelationType hxType;
+	private CouponEventType eventType;
 	@JsonFormat(pattern = "yyyy.MM.dd", timezone = "GMT+8")
 	private Date startDate;
 	@JsonFormat(pattern = "yyyy.MM.dd", timezone = "GMT+8")
@@ -25,6 +27,41 @@ public class ClientCouponDTO {
 	private List<GoodsItemDTO> items;
 	private int limitedNums;
 	private String imgPath;
+	private String couponId;
+	private String fromOrderId;
+	private String invitee;
+
+	public CouponEventType getEventType() {
+		return eventType;
+	}
+
+	public void setEventType(CouponEventType eventType) {
+		this.eventType = eventType;
+	}
+
+	public String getInvitee() {
+		return invitee;
+	}
+
+	public void setInvitee(String invitee) {
+		this.invitee = invitee;
+	}
+
+	public String getCouponId() {
+		return couponId;
+	}
+
+	public void setCouponId(String couponId) {
+		this.couponId = couponId;
+	}
+
+	public String getFromOrderId() {
+		return fromOrderId;
+	}
+
+	public void setFromOrderId(String fromOrderId) {
+		this.fromOrderId = fromOrderId;
+	}
 
 	public String getImgPath() {
 		return imgPath;
