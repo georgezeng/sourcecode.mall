@@ -162,7 +162,7 @@ public class ClientController {
 
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
-		ClientDTO client = ClientContext.get().asDTO();
+		ClientDTO client = ClientContext.get().asDTO(false);
 		Optional<MerchantShopApplication> shop = merchantApplicationRepository
 				.findByMerchantId(ClientContext.getMerchantId());
 		AssertUtil.assertTrue(shop.isPresent(), "无商铺信息");

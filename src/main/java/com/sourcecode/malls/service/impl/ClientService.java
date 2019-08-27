@@ -360,7 +360,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	public List<ClientDTO> getSubList(Client parent, PageInfo page) {
 		List<Client> result = clientRepository.findAllByParent(parent, page.pageable());
 		return result.stream().map(it -> {
-			ClientDTO dto = it.asDTO();
+			ClientDTO dto = it.asDTO(false);
 			if (StringUtils.isEmpty(it.getNickname())) {
 				dto.setNickname("未设置昵称");
 			}
