@@ -11,15 +11,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
-import javax.persistence.EntityManager;
-import javax.persistence.LockModeType;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -32,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -40,7 +38,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.druid.util.StringUtils;
@@ -48,14 +45,11 @@ import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.coupon.CouponSetting;
-import com.sourcecode.malls.domain.goods.GoodsCategory;
-import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
-import com.sourcecode.malls.domain.order.Order;
-import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
+import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.ClientCouponStatus;
@@ -65,6 +59,7 @@ import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.properties.SuperAdminProperties;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsJournalRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -101,6 +96,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	private ClientCouponRepository clientCouponRepository;
 
 	@Autowired
+	private ClientPointsJournalRepository clientPointsJournalRepository;
+
+	@Autowired
 	private RestTemplate httpClient;
 
 	@Autowired
@@ -118,118 +116,11 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private PasswordEncoder pwdEncoder;
 
-	@Autowired
-	private EntityManager em;
-
-	@Autowired
-	private CacheEvictService cacheEvictService;
-
-	public void setConsumeBonus(Order order) {
-		if (CollectionUtils.isEmpty(order.getSubList())) {
-			return;
-		}
-		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				order.getMerchant(), CouponEventType.Consume, CouponSettingStatus.PutAway, true);
-		if (!CollectionUtils.isEmpty(list)) {
-			for (CouponSetting setting : list) {
-				if (setting.getConsumeSetting() != null) {
-					BigDecimal upToAmount = BigDecimal.ZERO;
-					for (SubOrder sub : order.getSubList()) {
-						boolean match = false;
-						switch (setting.getConsumeSetting().getType()) {
-						case All:
-							match = true;
-							break;
-						case Category: {
-							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getRealCategories())) {
-								for (GoodsCategory category : setting.getConsumeSetting().getRealCategories()) {
-									if (sub.getItem().getCategory().getId().equals(category.getId())) {
-										match = true;
-										break;
-									}
-								}
-							}
-						}
-							break;
-						case Item: {
-							if (!CollectionUtils.isEmpty(setting.getConsumeSetting().getItems())) {
-								for (GoodsItem item : setting.getConsumeSetting().getItems()) {
-									if (sub.getItem().getId().equals(item.getId())) {
-										match = true;
-										break;
-									}
-								}
-							}
-						}
-							break;
-						}
-						if (match) {
-							upToAmount = upToAmount.add(sub.getDealPrice());
-						}
-					}
-					if (upToAmount.compareTo(setting.getConsumeSetting().getUpToAmount()) >= 0) {
-						createCoupon(order, null, order.getClient(), setting, true);
-					}
-				}
-			}
-		}
-	}
-
-	private void createCoupon(Order order, Client invitee, Client client, CouponSetting setting, boolean require) {
-		if (!require) {
-			List<ClientCoupon> list = clientCouponRepository.findAllByClientAndSetting(client, setting);
-			require = CollectionUtils.isEmpty(list);
-		}
-		if (require) {
-			em.lock(setting, LockModeType.PESSIMISTIC_WRITE);
-			if (setting.getTotalNums() == 0 || setting.getSentNums() < setting.getTotalNums()) {
-				ClientCoupon coupon = new ClientCoupon();
-				coupon.setClient(client);
-				coupon.setMerchant(client.getMerchant());
-				coupon.setSetting(setting);
-				coupon.setCouponId(generateId());
-				coupon.setReceivedTime(new Date());
-				coupon.setStatus(ClientCouponStatus.UnUse);
-				coupon.setFromOrder(order);
-				coupon.setInvitee(invitee);
-				clientCouponRepository.save(coupon);
-				setting.setSentNums(setting.getSentNums() + 1);
-				if (setting.getSentNums() == setting.getTotalNums()) {
-					setting.setStatus(CouponSettingStatus.SentOut);
-				}
-				couponSettingRepository.save(setting);
-				cacheEvictService.clearClientCoupons(client.getId());
-			}
-		}
-	}
-
-	public void setInviteBonus(Client invitee, Client parent) {
-		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				parent.getMerchant(), CouponEventType.Invite, CouponSettingStatus.PutAway, true);
-		if (!CollectionUtils.isEmpty(list)) {
-			for (CouponSetting setting : list) {
-				if (setting.getInviteSetting() != null && !CollectionUtils.isEmpty(parent.getSubList())) {
-					int times = parent.getSubList().size() / setting.getInviteSetting().getMemberNums();
-					int nums = clientCouponRepository.findAllByClientAndSetting(parent, setting).size();
-					while (nums < times) {
-						createCoupon(null, invitee, parent, setting, true);
-						nums++;
-					}
-				}
-			}
-		}
-	}
-
-	public void setRegistrationBonus(Long userId) {
+	@Cacheable(cacheNames = "client_current_points", key = "#userId")
+	public BigDecimal getCurrentPoints(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
-		List<CouponSetting> list = couponSettingRepository.findAllByMerchantAndEventTypeAndStatusAndEnabled(
-				user.get().getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
-		if (!CollectionUtils.isEmpty(list)) {
-			for (CouponSetting setting : list) {
-				createCoupon(null, null, user.get(), setting, false);
-			}
-		}
+		return user.get().getPoints() != null ? user.get().getPoints().getCurrentAmount() : BigDecimal.ZERO;
 	}
 
 	@Cacheable(cacheNames = "client_unuse_coupon_nums", key = "#userId")
@@ -305,6 +196,18 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
 		client.get().getMerchant();
 		return client;
+	}
+
+	@Transactional(readOnly = true)
+	public List<ClientPointsJournalDTO> findPointsJournalList(Long id, QueryInfo<Void> queryInfo) {
+		Optional<Client> client = clientRepository.findById(id);
+		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
+		PageInfo pageInfo = queryInfo.getPage();
+		pageInfo.setProperty("createTime");
+		pageInfo.setOrder(Direction.DESC.name());
+		clientPointsJournalRepository.findAll(pageInfo.pageable());
+		return clientPointsJournalRepository.findAllByClient(client.get(), pageInfo.pageable()).stream()
+				.map(it -> it.asDTO()).collect(Collectors.toList());
 	}
 
 	@Override

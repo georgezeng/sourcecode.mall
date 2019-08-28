@@ -56,7 +56,7 @@ import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.repository.redis.impl.WechatStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
-import com.sourcecode.malls.service.impl.ClientService;
+import com.sourcecode.malls.service.impl.ClientBonusService;
 import com.sourcecode.malls.service.impl.MerchantSettingService;
 import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
@@ -144,7 +144,7 @@ public class WechatController {
 	private WechatStoreRepository wechatStoreRepository;
 
 	@Autowired
-	private ClientService clientService;
+	private ClientBonusService bonusService;
 
 	@RequestMapping(path = "/jsconfig")
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
@@ -342,7 +342,7 @@ public class WechatController {
 			}
 			clientRepository.save(user);
 			if (parent != null) {
-				clientService.setInviteBonus(user, parent);
+				bonusService.addInviteBonus(user, parent);
 			}
 		} else {
 			user = userOp.get();
@@ -368,7 +368,7 @@ public class WechatController {
 			clientRepository.save(user);
 		}
 		if (!userOp.isPresent()) {
-			clientService.setRegistrationBonus(user.getId());
+			bonusService.addRegistrationBonus(user.getId());
 		}
 		return new ResultBean<>();
 	}

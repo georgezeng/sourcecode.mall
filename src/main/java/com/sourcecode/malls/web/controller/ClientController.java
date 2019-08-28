@@ -25,6 +25,7 @@ import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientIdentity;
+import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
@@ -33,6 +34,8 @@ import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
+import com.sourcecode.malls.dto.client.ClientPointsDTO;
+import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.ClientCouponStatus;
@@ -278,5 +281,23 @@ public class ClientController {
 	@RequestMapping(path = "/registrationBonus")
 	public ResultBean<BigDecimal> getRegistrationBonus() {
 		return new ResultBean<>(clientService.getRegistrationBonus(ClientContext.get()));
+	}
+
+	@RequestMapping(path = "/points/current")
+	public ResultBean<BigDecimal> getCurrentPoints() {
+		return new ResultBean<>(clientService.getCurrentPoints(ClientContext.get().getId()));
+	}
+
+	@RequestMapping(path = "/points")
+	public ResultBean<ClientPointsDTO> points() {
+		Optional<Client> client = clientService.findById(ClientContext.get().getId());
+		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
+		ClientPoints points = client.get().getPoints();
+		return new ResultBean<>(points.asDTO());
+	}
+
+	@RequestMapping(path = "/points/journals")
+	public ResultBean<ClientPointsJournalDTO> pointsJournals(@RequestBody QueryInfo<Void> queryInfo) {
+		return new ResultBean<>(clientService.findPointsJournalList(ClientContext.get().getId(), queryInfo));
 	}
 }

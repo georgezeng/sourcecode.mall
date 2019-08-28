@@ -150,6 +150,9 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private Environment env;
+	
+	@Autowired
+	private ClientBonusService bonusService;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -356,7 +359,7 @@ public class OrderService implements BaseService {
 			order.setPayTime(new Date());
 			order.setTransactionId(transactionId);
 			orderRepository.save(order);
-			clientService.setConsumeBonus(order);
+			bonusService.addConsumeBonus(order);
 			cacheEvictService.clearClientOrders(order.getClient().getId());
 		}
 	}
@@ -540,16 +543,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		List<ClientCoupon> coupons = order.getGeneratedCoupons();
-		if (!CollectionUtils.isEmpty(coupons)) {
-			Date outTime = new Date();
-			for (ClientCoupon coupon : coupons) {
-				coupon.setStatus(ClientCouponStatus.Out);
-				coupon.setOutTime(outTime);
-			}
-			clientCouponRepository.saveAll(coupons);
-			cacheEvictService.clearClientCoupons(order.getClient().getId());
-		}
+		bonusService.removeConsumeBonus(order);
 	}
 
 //	public void afterCancel(String orderId) {
