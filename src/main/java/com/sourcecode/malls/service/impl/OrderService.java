@@ -443,11 +443,29 @@ public class OrderService implements BaseService {
 
 	@Transactional(readOnly = true)
 	public OrderDTO getOrder(Client client, Long id) {
-		Optional<Order> order = orderRepository.findById(id);
+		Optional<Order> orderOp = orderRepository.findById(id);
 		AssertUtil.assertTrue(
-				order.isPresent() && !order.get().isDeleted() && order.get().getClient().getId().equals(client.getId()),
+				orderOp.isPresent() && !orderOp.get().isDeleted()
+						&& orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
-		return order.get().asDTO(true, true);
+		Order order = orderOp.get();
+		OrderDTO dto = order.asDTO(true, true);
+		if (!CollectionUtils.isEmpty(order.getSubList())) {
+			int count = 0;
+			int commentCount = 0;
+			for (SubOrder sub : order.getSubList()) {
+				if (sub.isComment()) {
+					commentCount++;
+				}
+				Optional<AfterSaleApplication> app = aftersaleApplicationRepository.findBySubOrder(sub);
+				if (app.isPresent() && !AfterSaleStatus.NotYet.equals(app.get().getStatus())) {
+					count++;
+				}
+			}
+			dto.setComment(commentCount == order.getSubList().size());
+			dto.setApplied(count == order.getSubList().size());
+		}
+		return dto;
 	}
 
 	@Transactional(readOnly = true)
