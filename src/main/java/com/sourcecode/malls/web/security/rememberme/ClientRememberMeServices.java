@@ -1,7 +1,5 @@
 package com.sourcecode.malls.web.security.rememberme;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
@@ -14,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.crypto.codec.Utf8;
 import org.springframework.security.web.authentication.rememberme.InvalidCookieException;
 import org.springframework.security.web.authentication.rememberme.RememberMeAuthenticationException;
@@ -27,7 +24,6 @@ import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.impl.ClientService;
-import com.sourcecode.malls.util.AssertUtil;
 
 @Component
 public class ClientRememberMeServices extends TokenBasedRememberMeServices {
@@ -44,25 +40,24 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	}
 
 	private void setMerchantId(HttpServletRequest request) {
-		AssertUtil.assertNotEmpty(request.getHeader("Origin"), "商户不存在");
-		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-		if (StringUtils.isEmpty(domain)) {
-			throw new RememberMeAuthenticationException("商户不存在");
+		if (request.getHeader("Origin") != null) {
+			String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+			if (StringUtils.isEmpty(domain)) {
+				throw new RememberMeAuthenticationException("商户不存在");
+			}
+			Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+			if (!apOp.isPresent()) {
+				throw new RememberMeAuthenticationException("商户不存在");
+			}
+			Merchant merchant = apOp.get().getMerchant();
+			ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
 		}
-		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-		if (!apOp.isPresent()) {
-			throw new RememberMeAuthenticationException("商户不存在");
-		}
-		Merchant merchant = apOp.get().getMerchant();
-		ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
 	}
 
 	@Override
-	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request,
-			HttpServletResponse response) {
+	protected UserDetails processAutoLoginCookie(String[] cookieTokens, HttpServletRequest request, HttpServletResponse response) {
 		if (cookieTokens.length != 3) {
-			throw new InvalidCookieException(
-					"Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
+			throw new InvalidCookieException("Cookie token did not contain 3" + " tokens, but contained '" + Arrays.asList(cookieTokens) + "'");
 		}
 
 		long tokenExpiryTime;
@@ -70,13 +65,12 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		try {
 			tokenExpiryTime = new Long(cookieTokens[1]).longValue();
 		} catch (NumberFormatException nfe) {
-			throw new InvalidCookieException(
-					"Cookie token[1] did not contain a valid number (contained '" + cookieTokens[1] + "')");
+			throw new InvalidCookieException("Cookie token[1] did not contain a valid number (contained '" + cookieTokens[1] + "')");
 		}
 
 		if (isTokenExpired(tokenExpiryTime)) {
-			throw new InvalidCookieException("Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime)
-					+ "'; current time is '" + new Date() + "')");
+			throw new InvalidCookieException(
+					"Cookie token[1] has expired (expired on '" + new Date(tokenExpiryTime) + "'; current time is '" + new Date() + "')");
 		}
 
 		// Check the user exists.
@@ -102,12 +96,10 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			// the token is valid,
 			// it will cause SecurityContextHolder population, whilst if invalid, will cause
 			// the cookie to be cancelled.
-			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, request.getHeader("Origin"),
-					userDetails.getUsername(), password);
+			String expectedTokenSignature = makeTokenSignature(tokenExpiryTime, userDetails.getUsername(), password);
 
 			if (!equals(expectedTokenSignature, cookieTokens[2])) {
-				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '"
-						+ expectedTokenSignature + "'";
+				String msg = "Cookie token[2] contained signature '" + cookieTokens[2] + "' but expected '" + expectedTokenSignature + "'";
 				logger.warn(msg);
 				throw new InvalidCookieException(msg);
 			}
@@ -117,18 +109,6 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 			ClientContext.clear();
 		}
 
-	}
-
-	protected String makeTokenSignature(long tokenExpiryTime, String origin, String username, String password) {
-		String data = origin + ":" + username + ":" + tokenExpiryTime + ":" + password + ":" + getKey();
-		MessageDigest digest;
-		try {
-			digest = MessageDigest.getInstance("MD5");
-		} catch (NoSuchAlgorithmException e) {
-			throw new IllegalStateException("No MD5 algorithm available!");
-		}
-
-		return new String(Hex.encode(digest.digest(data.getBytes())));
 	}
 
 	private static boolean equals(String expected, String actual) {
@@ -153,8 +133,7 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	}
 
 	@Override
-	public void onLoginSuccess(HttpServletRequest request, HttpServletResponse response,
-			Authentication successfulAuthentication) {
+	public void onLoginSuccess(HttpServletRequest request, HttpServletResponse response, Authentication successfulAuthentication) {
 		String username = retrieveUserName(successfulAuthentication);
 		String password = retrievePassword(successfulAuthentication);
 
@@ -184,14 +163,12 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 		// SEC-949
 		expiryTime += 1000L * (tokenLifetime < 0 ? TWO_WEEKS_S : tokenLifetime);
 
-		String signatureValue = makeTokenSignature(expiryTime, request.getHeader("Origin"), username, password);
+		String signatureValue = makeTokenSignature(expiryTime, username, password);
 
-		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request,
-				response);
+		setCookie(new String[] { username, Long.toString(expiryTime), signatureValue }, tokenLifetime, request, response);
 
 		if (logger.isDebugEnabled()) {
-			logger.debug(
-					"Added remember-me cookie for user '" + username + "', expiry: '" + new Date(expiryTime) + "'");
+			logger.debug("Added remember-me cookie for user '" + username + "', expiry: '" + new Date(expiryTime) + "'");
 		}
 
 	}
