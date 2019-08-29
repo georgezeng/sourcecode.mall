@@ -359,7 +359,7 @@ public class OrderService implements BaseService {
 			order.setPayTime(new Date());
 			order.setTransactionId(transactionId);
 			orderRepository.save(order);
-			bonusService.addConsumeBonus(order);
+//			bonusService.addConsumeBonus(order);
 			cacheEvictService.clearClientOrders(order.getClient().getId());
 		}
 	}
@@ -572,6 +572,7 @@ public class OrderService implements BaseService {
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.Finished);
 		orderRepository.save(order);
+		bonusService.addConsumeBonus(order);
 		cacheEvictService.clearClientOrders(order.getClient().getId());
 		if (!CollectionUtils.isEmpty(order.getSubList())) {
 			for (SubOrder sub : order.getSubList()) {
