@@ -379,19 +379,15 @@ public class OrderService implements BaseService {
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
 				if (queryInfo.getData() != null) {
-					if (!OrderStatus.Finished.equals(queryInfo.getData())
-							&& !OrderStatus.Canceled.equals(queryInfo.getData())) {
+					if (!OrderStatus.Canceled.equals(queryInfo.getData())) {
 						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
 					} else if (OrderStatus.Finished.equals(queryInfo.getData())) {
 						predicate
-								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
-					} else if (OrderStatus.Canceled.equals(queryInfo.getData())) {
-						predicate
-								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
+						.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
 					}
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
@@ -435,13 +431,15 @@ public class OrderService implements BaseService {
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
 				if (queryInfo.getData() != null) {
-					if (!OrderStatus.Finished.equals(queryInfo.getData())) {
+					if (!OrderStatus.Canceled.equals(queryInfo.getData())) {
 						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
-					} else {
+					} else if (OrderStatus.Finished.equals(queryInfo.getData())) {
 						predicate
-								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Finished),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed)));
+						.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
 					}
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
