@@ -102,6 +102,7 @@ public class AfterSaleService implements BaseService {
 		}
 		order.setStatus(OrderStatus.Closed);
 		orderRepository.save(order);
+		cacheEvictService.clearClientOrders(order.getClient().getId());
 	}
 
 	public void apply(Long clientId, AfterSaleApplicationDTO dto) {
