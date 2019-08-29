@@ -543,7 +543,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		bonusService.removeConsumeBonus(order);
+//		bonusService.removeConsumeBonus(order);
 	}
 
 //	public void afterCancel(String orderId) {
