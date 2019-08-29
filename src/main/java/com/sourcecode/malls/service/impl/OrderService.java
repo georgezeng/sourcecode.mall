@@ -433,7 +433,7 @@ public class OrderService implements BaseService {
 				if (queryInfo.getData() != null) {
 					if (!OrderStatus.Canceled.equals(queryInfo.getData())) {
 						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
-					} else if (OrderStatus.Finished.equals(queryInfo.getData())) {
+					} else {
 						predicate
 						.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
 								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
