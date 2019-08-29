@@ -366,34 +366,8 @@ public class OrderService implements BaseService {
 
 	@Transactional(readOnly = true)
 	public PageResult<OrderDTO> getOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
-		Specification<Order> spec = new Specification<Order>() {
-
-			/**
-			 * 
-			 */
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public Predicate toPredicate(Root<Order> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-				List<Predicate> predicate = new ArrayList<>();
-				predicate.add(criteriaBuilder.equal(root.get("client"), client));
-				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
-				if (queryInfo.getData() != null) {
-					if (!OrderStatus.Canceled.equals(queryInfo.getData())) {
-						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
-					} else if (OrderStatus.Finished.equals(queryInfo.getData())) {
-						predicate
-						.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
-					}
-				}
-				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
-			}
-		};
-		Page<Order> orders = orderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		Page<Order> orders = orderRepository.findAll(getSpec(client, queryInfo),
+				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(orders.get().map(order -> {
 			OrderDTO dto = order.asDTO(true, false);
 			if (!CollectionUtils.isEmpty(order.getSubList())) {
@@ -415,10 +389,8 @@ public class OrderService implements BaseService {
 		}).collect(Collectors.toList()), orders.getTotalElements());
 	}
 
-	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "client_order_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
-	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
-		Specification<Order> spec = new Specification<Order>() {
+	private Specification<Order> getSpec(Client client, QueryInfo<OrderStatus> queryInfo) {
+		return new Specification<Order>() {
 
 			/**
 			 * 
@@ -435,17 +407,22 @@ public class OrderService implements BaseService {
 						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
 					} else {
 						predicate
-						.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
-								criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
+								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
+										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
 					}
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		return orderRepository.count(spec);
+	}
+
+	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "client_order_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
+	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
+		return orderRepository.count(getSpec(client, queryInfo));
 	}
 
 	@Transactional(readOnly = true)
