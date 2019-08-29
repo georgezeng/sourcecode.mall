@@ -27,6 +27,7 @@ import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.impl.ClientService;
+import com.sourcecode.malls.util.AssertUtil;
 
 @Component
 public class ClientRememberMeServices extends TokenBasedRememberMeServices {
@@ -43,18 +44,17 @@ public class ClientRememberMeServices extends TokenBasedRememberMeServices {
 	}
 
 	private void setMerchantId(HttpServletRequest request) {
-		if (request.getHeader("Origin") != null) {
-			String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
-			if (StringUtils.isEmpty(domain)) {
-				throw new RememberMeAuthenticationException("商户不存在");
-			}
-			Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-			if (!apOp.isPresent()) {
-				throw new RememberMeAuthenticationException("商户不存在");
-			}
-			Merchant merchant = apOp.get().getMerchant();
-			ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
+		AssertUtil.assertNotEmpty(request.getHeader("Origin"), "商户不存在");
+		String domain = request.getHeader("Origin").replaceAll("http(s?)://", "").replaceAll("/.*", "");
+		if (StringUtils.isEmpty(domain)) {
+			throw new RememberMeAuthenticationException("商户不存在");
 		}
+		Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
+		if (!apOp.isPresent()) {
+			throw new RememberMeAuthenticationException("商户不存在");
+		}
+		Merchant merchant = apOp.get().getMerchant();
+		ClientContext.setMerchantId(Long.valueOf(merchant.getId()));
 	}
 
 	@Override
