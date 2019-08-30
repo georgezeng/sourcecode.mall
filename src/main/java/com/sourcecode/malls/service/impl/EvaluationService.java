@@ -182,6 +182,7 @@ public class EvaluationService {
 		data.setOpen(false);
 		repository.save(data);
 		cacheEvictService.clearClientUnCommentNums(client.getId());
+		cacheEvictService.clearGoodsItemLoadOne(data.getItem().getId());
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {

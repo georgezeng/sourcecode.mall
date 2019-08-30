@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
@@ -26,9 +28,11 @@ import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
 import com.sourcecode.malls.service.impl.DtoTransferFacade;
 import com.sourcecode.malls.service.impl.GoodsItemService;
+import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
 @RequestMapping(path = "/goods/item")
@@ -40,6 +44,9 @@ public class GoodsItemController {
 
 	@Autowired
 	private DtoTransferFacade transferFacade;
+
+	@Autowired
+	private GoodsItemRepository itemRepository;
 
 	@Autowired
 	private GoodsItemEvaluationRepository evaluationRepository;
@@ -61,8 +68,14 @@ public class GoodsItemController {
 		return new ResultBean<>(new ArrayList<>());
 	}
 
-	@RequestMapping(path = "/definitions/load")
-	public ResultBean<GoodsAttributeDTO> loadDefinitions(@RequestBody KeyDTO<Long> dto) {
+	@RequestMapping(path = "/definitions/load/params/{itemId}")
+	@Cacheable(value = "goods_item_load_definitions", key = "#itemId")
+	public ResultBean<GoodsAttributeDTO> loadDefinitions(@PathVariable("itemId") Long itemId,
+			@RequestBody KeyDTO<Long> dto) {
+		Optional<GoodsItem> dataOp = itemRepository.findById(itemId);
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().isEnabled(), ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(dataOp.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
 		List<GoodsAttributeDTO> list = dto.getIds().stream()
 				.map(id -> transferFacade.entityToDTO(Void -> definitionRepository.findById(id),
 						op -> op.isPresent() && op.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
@@ -72,6 +85,7 @@ public class GoodsItemController {
 	}
 
 	@RequestMapping(path = "/load/params/{id}")
+	@Cacheable(value = "goods_item_load_one", key = "#id")
 	public ResultBean<GoodsItemDTO> load(@PathVariable("id") Long id) {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		GoodsItemEvaluationDTO evaDto = transferFacade.entityToDTO(Void -> {
