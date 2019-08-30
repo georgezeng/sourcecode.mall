@@ -40,15 +40,21 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
+import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.goods.GoodsItem;
+import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.dto.base.KeyDTO;
+import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
+import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
@@ -85,7 +91,13 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	private ClientCouponRepository clientCouponRepository;
 
 	@Autowired
+	private GoodsSpecificationDefinitionRepository definitionRepository;
+
+	@Autowired
 	private EntityManager em;
+
+	@Autowired
+	private DtoTransferFacade transferFacade;
 
 	@Transactional(readOnly = true)
 	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
@@ -226,8 +238,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			query.setParameter(pos++, arg);
 		}
 		query.addEntity(GoodsItem.class);
-		return query.getResultStream().map(it -> it.asDTO(false, false, false))
-				.collect(Collectors.toList());
+		return query.getResultStream().map(it -> it.asDTO(false, false, false)).collect(Collectors.toList());
 	}
 
 	@Override
@@ -320,5 +331,20 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		ImageIO.write(ImageUtil.setClip(result, 40), "png", out);
 		return out.toByteArray();
+	}
+
+	@Transactional(readOnly = true)
+	@Cacheable(value = "goods_item_load_definitions", key = "#itemId")
+	public List<GoodsAttributeDTO> loadDefinitions(Long itemId, KeyDTO<Long> dto) {
+		Optional<GoodsItem> dataOp = itemRepository.findById(itemId);
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().isEnabled(), ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(dataOp.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		return dto.getIds().stream()
+				.map(id -> transferFacade.entityToDTO(Void -> definitionRepository.findById(id),
+						op -> op.isPresent() && op.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
+						definition -> definition.asDTO()))
+				.filter(it -> it != null).collect(Collectors.toList());
+
 	}
 }
