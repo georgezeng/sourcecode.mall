@@ -251,7 +251,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_SHARE_POSTER, key = "#itemId + '-' + index + '-' + #userId")
+	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_SHARE_POSTER, key = "#itemId + '-' + #index + '-' + #userId")
 	public byte[] loadSharePoster(Long itemId, Integer index, Long userId) throws Exception {
 		Optional<Client> client = clientRepository.findById(userId);
 		Optional<GoodsItem> itemOp = itemRepository.findById(itemId);
