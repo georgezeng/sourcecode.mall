@@ -518,11 +518,15 @@ public class OrderService implements BaseService {
 		List<SubOrder> list = order.getSubList();
 		if (!CollectionUtils.isEmpty(list)) {
 			for (SubOrder sub : list) {
-				GoodsItemProperty property = sub.getProperty();
-				if (property != null) {
-					em.lock(property, LockModeType.PESSIMISTIC_WRITE);
-					property.setInventory(property.getInventory() + sub.getNums());
-					goodsItemPropertyRepository.save(property);
+				try {
+					GoodsItemProperty property = sub.getProperty();
+					if (property != null) {
+						em.lock(property, LockModeType.PESSIMISTIC_WRITE);
+						property.setInventory(property.getInventory() + sub.getNums());
+						goodsItemPropertyRepository.save(property);
+					}
+				} catch (Exception e) {
+					logger.warn(e.getMessage(), e);
 				}
 			}
 		}

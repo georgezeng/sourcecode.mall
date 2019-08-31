@@ -98,6 +98,12 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Autowired
 	private DtoTransferFacade transferFacade;
 
+	@Cacheable(value = CacheNameConstant.GOODS_ITEM_LOAD_ONE, key = "#id")
+	@Override
+	public GoodsItemDTO load(Long merchantId, Long id) {
+		return super.load(merchantId, id);
+	}
+
 	@Transactional(readOnly = true)
 	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
 			QueryInfo<String> queryInfo) {
