@@ -39,17 +39,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.goods.GoodsItem;
-import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
-import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -252,7 +251,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "goods_item_share_poster", key = "#itemId.toString().concat('-').concat(#index.toString()).concat('-').concat(#userId.toString())")
+	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_SHARE_POSTER, key = "#itemId + '-' + index + '-' + #userId")
 	public byte[] loadSharePoster(Long itemId, Integer index, Long userId) throws Exception {
 		Optional<Client> client = clientRepository.findById(userId);
 		Optional<GoodsItem> itemOp = itemRepository.findById(itemId);
@@ -334,7 +333,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(value = "goods_item_load_definitions", key = "#itemId")
+	@Cacheable(value = CacheNameConstant.GOODS_ITEM_LOAD_DEFINITIONS, key = "#itemId")
 	public List<GoodsAttributeDTO> loadDefinitions(Long itemId, KeyDTO<Long> dto) {
 		Optional<GoodsItem> dataOp = itemRepository.findById(itemId);
 		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().isEnabled(), ExceptionMessageConstant.NO_SUCH_RECORD);

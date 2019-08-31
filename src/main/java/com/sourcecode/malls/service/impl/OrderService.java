@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
@@ -248,7 +249,8 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		realPrice = totalPrice;
+		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
+		realPrice = totalPrice.multiply(discount).multiply(new BigDecimal("0.01"));
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
 			BigDecimal couponAmount = BigDecimal.ZERO;
 			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), realPrice);
@@ -420,7 +422,7 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "client_order_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_NUMS, key = "#client.id.toString() + '-' + #queryInfo.data.name()")
 	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
 		return orderRepository.count(getSpec(client, queryInfo));
 	}
@@ -453,7 +455,7 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "client_uncomment_nums", key = "#client.id")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_UNCOMMENT_NUMS, key = "#client.id")
 	public Long countUncommentOrders(Client client) {
 		Specification<SubOrder> spec = new Specification<SubOrder>() {
 
@@ -571,7 +573,6 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "不能确认收货，订单状态有误");
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.Finished);
-		orderRepository.save(order);
 		bonusService.addConsumeBonus(order);
 		cacheEvictService.clearClientOrders(order.getClient().getId());
 		if (!CollectionUtils.isEmpty(order.getSubList())) {

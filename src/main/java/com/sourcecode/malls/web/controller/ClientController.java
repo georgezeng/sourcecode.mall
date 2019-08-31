@@ -34,6 +34,7 @@ import com.sourcecode.malls.dto.PasswordDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
+import com.sourcecode.malls.dto.client.ClientLevelSettingDTO;
 import com.sourcecode.malls.dto.client.ClientPointsDTO;
 import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
@@ -299,5 +300,10 @@ public class ClientController {
 	@RequestMapping(path = "/points/journals")
 	public ResultBean<ClientPointsJournalDTO> pointsJournals(@RequestBody QueryInfo<Void> queryInfo) {
 		return new ResultBean<>(clientService.findPointsJournalList(ClientContext.get().getId(), queryInfo));
+	}
+
+	@RequestMapping(path = "/currentLevel")
+	public ResultBean<ClientLevelSettingDTO> currentLevel() {
+		return new ResultBean<>(clientService.getCurrentLevel(ClientContext.get()));
 	}
 }

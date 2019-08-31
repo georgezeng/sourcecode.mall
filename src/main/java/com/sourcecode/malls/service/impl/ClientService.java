@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.druid.util.StringUtils;
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
@@ -49,6 +50,7 @@ import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
+import com.sourcecode.malls.dto.client.ClientLevelSettingDTO;
 import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
@@ -104,6 +106,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private ImageService imageService;
 
+	@Autowired
+	private ClientBonusService bonusService;
+
 	@Value("${invite.image.background.path}")
 	private String shareBgPath;
 
@@ -116,14 +121,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private PasswordEncoder pwdEncoder;
 
-	@Cacheable(cacheNames = "client_current_points", key = "#userId")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_CURRENT_POINTS, key = "#userId")
 	public BigDecimal getCurrentPoints(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
 		return user.get().getPoints() != null ? user.get().getPoints().getCurrentAmount() : BigDecimal.ZERO;
 	}
 
-	@Cacheable(cacheNames = "client_unuse_coupon_nums", key = "#userId")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_UNUSE_COUPON_NUMS, key = "#userId")
 	public long countUnUseCouponNums(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
@@ -215,7 +220,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		return clientRepository;
 	}
 
-	@Cacheable(cacheNames = "client_invite_poster", key = "#userId")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_INTIVE_POSTER, key = "#userId")
 	public byte[] loadInvitePoster(Long userId) throws Exception {
 		Optional<Client> clientOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(clientOp.isPresent(), "用户不存在");
@@ -296,7 +301,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = "client_coupon_nums", key = "#client.id.toString() + '-' + #queryInfo.data.name()")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_NUMS, key = "#client.id.toString() + '-' + #queryInfo.data.name()")
 	public long countCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
 		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
@@ -344,6 +349,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}).collect(Collectors.toList());
 	}
 
+	@Cacheable(value = CacheNameConstant.CLIENT_REGISTERATION_BONUS, key = "#client.id")
 	public BigDecimal getRegistrationBonus(Client client) {
 		Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(
 				client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
@@ -353,6 +359,15 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			return setting.get().getAmount();
 		}
 		return BigDecimal.ZERO;
+	}
+
+	public ClientLevelSettingDTO getCurrentLevel(Client client) {
+		bonusService.setCurrentLevel(client);
+		ClientLevelSettingDTO dto = client.getLevel().asDTO();
+		if (bonusService.isActivityEventTime(client.getMerchant().getId())) {
+			dto.setDiscount(dto.getDiscountInActivity());
+		}
+		return dto;
 	}
 
 }

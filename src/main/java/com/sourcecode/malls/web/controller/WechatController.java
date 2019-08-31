@@ -36,6 +36,7 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.ClientLevelSetting;
 import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
@@ -51,6 +52,7 @@ import com.sourcecode.malls.dto.wechat.WechatAccessInfo;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
+import com.sourcecode.malls.repository.jpa.impl.client.ClientLevelSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -144,12 +146,15 @@ public class WechatController {
 
 	@Autowired
 	private WechatStoreRepository wechatStoreRepository;
-	
+
 	@Autowired
 	private ClientPointsRepository clientPointsRepository;
 
 	@Autowired
 	private ClientBonusService bonusService;
+
+	@Autowired
+	private ClientLevelSettingRepository levelRepository;
 
 	@RequestMapping(path = "/jsconfig")
 	public ResultBean<WechatJsApiConfig> getJsConfig(@RequestParam String url) throws Exception {
@@ -345,6 +350,9 @@ public class WechatController {
 					user.setParent(parent);
 				}
 			}
+			Optional<ClientLevelSetting> setting = levelRepository.findByMerchantAndLevel(merchant, 0);
+			AssertUtil.assertTrue(setting.isPresent(), "商家尚未配置会员等级");
+			user.setLevel(setting.get());
 			clientRepository.save(user);
 			ClientPoints points = new ClientPoints();
 			points.setClient(user);

@@ -22,10 +22,12 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.constants.RequestParams;
 import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.ClientLevelSetting;
 import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
+import com.sourcecode.malls.repository.jpa.impl.client.ClientLevelSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -41,7 +43,7 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 
 	@Autowired
 	private ClientRepository clientRepository;
-	
+
 	@Autowired
 	private ClientPointsRepository clientPointsRepository;
 
@@ -50,6 +52,9 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 
 	@Autowired
 	private MerchantShopApplicationRepository applicationRepository;
+
+	@Autowired
+	private ClientLevelSettingRepository levelRepository;
 
 	public ClientVerifyCodeAuthenticationFilter() {
 		super(new AntPathRequestMatcher("/login", "POST"));
@@ -97,6 +102,9 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 					user.setParent(parent);
 				}
 			}
+			Optional<ClientLevelSetting> setting = levelRepository.findByMerchantAndLevel(merchant, 0);
+			AssertUtil.assertTrue(setting.isPresent(), "商家尚未配置会员等级");
+			user.setLevel(setting.get());
 			clientRepository.save(user);
 			ClientPoints points = new ClientPoints();
 			points.setClient(user);

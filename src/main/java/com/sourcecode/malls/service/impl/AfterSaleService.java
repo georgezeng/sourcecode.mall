@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleAddress;
@@ -256,7 +257,7 @@ public class AfterSaleService implements BaseService {
 		return result.get().map(it -> it.asDTO()).collect(Collectors.toList());
 	}
 
-	@Cacheable(cacheNames = "client_aftersale_unfinished_nums", key = "#client.id")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_AFTERSALE_UNFINISHED_NUMS, key = "#client.id")
 	public long countUnFinished(Client client) {
 		Specification<AfterSaleApplication> spec = new Specification<AfterSaleApplication>() {
 
