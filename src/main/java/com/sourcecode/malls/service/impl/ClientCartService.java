@@ -16,10 +16,9 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemProperty;
-import com.sourcecode.malls.domain.goods.GoodsItemValue;
 import com.sourcecode.malls.dto.client.ClientCartItemDTO;
+import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemValueRepository;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -32,9 +31,6 @@ public class ClientCartService implements JpaService<ClientCartItem, Long> {
 
 	@Autowired
 	private ClientCartRepository cartRepository;
-
-	@Autowired
-	protected GoodsItemValueRepository valueRepository;
 
 	public void saveCart(Client client, ClientCartItemDTO dto) {
 		Optional<GoodsItem> item = itemService.findById(dto.getItemId());
@@ -70,10 +66,9 @@ public class ClientCartService implements JpaService<ClientCartItem, Long> {
 				continue;
 			}
 			ClientCartItemDTO dto = cartItem.asDTO();
-			List<GoodsItemValue> values = valueRepository.findAllByUid(dto.getProperty().getUid());
 			List<String> attrs = new ArrayList<>();
-			for (GoodsItemValue value : values) {
-				attrs.add(value.getValue().getName());
+			for (GoodsAttributeDTO value : dto.getProperty().getValues()) {
+				attrs.add(value.getName());
 			}
 			dto.setAttrs(attrs);
 			list.add(dto);

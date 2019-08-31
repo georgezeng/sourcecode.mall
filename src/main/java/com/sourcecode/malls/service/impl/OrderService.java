@@ -42,7 +42,7 @@ import com.sourcecode.malls.domain.coupon.cash.CashCouponOrderLimitedSetting;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemProperty;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
-import com.sourcecode.malls.domain.goods.GoodsItemValue;
+import com.sourcecode.malls.domain.goods.GoodsSpecificationValue;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.order.Invoice;
 import com.sourcecode.malls.domain.order.Order;
@@ -67,7 +67,6 @@ import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemValueRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.InvoiceRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
@@ -89,9 +88,6 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	protected GoodsItemPropertyRepository propertyRepository;
-
-	@Autowired
-	protected GoodsItemValueRepository valueRepository;
 
 	@Autowired
 	protected OrderRepository orderRepository;
@@ -184,10 +180,9 @@ public class OrderService implements BaseService {
 						orderItem.setItem(goodsItem.get().asDTO(false, false, false));
 						orderItem.setProperty(property.get().asDTO());
 						orderItem.setNums(itemDTO.getNums());
-						List<GoodsItemValue> values = valueRepository.findAllByUid(property.get().getUid());
 						List<String> attrs = new ArrayList<>();
-						for (GoodsItemValue value : values) {
-							attrs.add(value.getValue().getName());
+						for (GoodsSpecificationValue value : property.get().getValues()) {
+							attrs.add(value.getName());
 						}
 						orderItem.setAttrs(attrs);
 						orderItems.add(orderItem);
@@ -318,12 +313,11 @@ public class OrderService implements BaseService {
 		sub.setUnitPrice(property.getPrice());
 		sub.setSellingPoints(item.getSellingPoints());
 		sub.setItemNumber(item.getNumber());
-		List<GoodsItemValue> values = valueRepository.findAllByUid(property.getUid());
 		StringBuilder spec = new StringBuilder();
 		int index = 0;
-		for (GoodsItemValue value : values) {
-			spec.append(value.getValue().getName());
-			if (index < values.size() - 1) {
+		for (GoodsSpecificationValue value : property.getValues()) {
+			spec.append(value.getName());
+			if (index < property.getValues().size() - 1) {
 				spec.append(", ");
 			}
 			index++;
