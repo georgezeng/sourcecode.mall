@@ -22,6 +22,7 @@ import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.order.OrderDTO;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.enums.Payment;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -101,7 +102,7 @@ public class OrderController {
 		orderService.pickup(ClientContext.get(), id);
 		return new ResultBean<>();
 	}
-	
+
 	@RequestMapping(path = "/refundApply/params/{id}")
 	public ResultBean<Void> refundApply(@PathVariable Long id) {
 		orderService.refundApply(ClientContext.get(), id);
@@ -129,5 +130,10 @@ public class OrderController {
 		}
 		AssertUtil.assertNotNull(dto, "结算信息失效，请重新下单");
 		return new ResultBean<>(orderService.getAvailableCouponListForSettleAccount(ClientContext.get(), dto));
+	}
+
+	@RequestMapping(path = "/changePayment/params/{id}/{payment}")
+	public void changePayment(@PathVariable("id") Long id, @PathVariable("payment") Payment payment) {
+		orderService.changePayment(id, ClientContext.get().getId(), payment);
 	}
 }

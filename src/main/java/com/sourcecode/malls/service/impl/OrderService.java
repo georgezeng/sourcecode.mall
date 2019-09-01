@@ -59,6 +59,7 @@ import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.AfterSaleStatus;
 import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.OrderStatus;
+import com.sourcecode.malls.enums.Payment;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.CashCouponOrderLimitedSettingRepository;
@@ -690,5 +691,16 @@ public class OrderService implements BaseService {
 			return true;
 		}
 		return false;
+	}
+
+	public void changePayment(Long orderId, Long clientId, Payment payment) {
+		Optional<Order> orderOp = orderRepository.findById(orderId);
+		AssertUtil.assertTrue(orderOp.isPresent(), ExceptionMessageConstant.NO_SUCH_RECORD);
+		Order order = orderOp.get();
+		AssertUtil.assertTrue(!order.isDeleted() && order.getClient().getId().equals(clientId),
+				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "不能修改支付方式");
+		order.setPayment(payment);
+		orderRepository.save(order);
 	}
 }
