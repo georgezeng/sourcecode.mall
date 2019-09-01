@@ -572,7 +572,6 @@ public class OrderService implements BaseService {
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.Finished);
 		bonusService.addConsumeBonus(order);
-		cacheEvictService.clearClientOrders(order.getClient().getId());
 		if (!CollectionUtils.isEmpty(order.getSubList())) {
 			for (SubOrder sub : order.getSubList()) {
 				if (sub.getItem() != null && sub.getItem().getId() != null) {
@@ -594,6 +593,8 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
+		cacheEvictService.clearClientOrders(order.getClient().getId());
+		cacheEvictService.clearAllGoodsItemList();
 	}
 
 	public void refundApply(Client client, Long id) {

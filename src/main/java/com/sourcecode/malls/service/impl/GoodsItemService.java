@@ -105,6 +105,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'category-' + #merchantId + '-' + #categoryId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
 			QueryInfo<String> queryInfo) {
 		PageInfo pageInfo = queryInfo.getPage();
@@ -158,6 +159,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 
 	@SuppressWarnings({ "unchecked", "incomplete-switch" })
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'coupon-' + #merchantId + '-' + #couponId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public List<GoodsItemDTO> findByCoupon(Long merchantId, Long couponId, String type, QueryInfo<String> queryInfo) {
 		Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponId);
 		if (!couponOp.isPresent()) {

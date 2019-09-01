@@ -187,7 +187,6 @@ public class AfterSaleService implements BaseService {
 		data.setStatus(AfterSaleStatus.WaitForReceive);
 		data.setReturnTime(new Date());
 		applicationRepository.save(data);
-		cacheEvictService.clearClientAfterSaleUnFinishedtNums(data.getClient().getId());
 	}
 	
 	public void pickup(Long id) {
