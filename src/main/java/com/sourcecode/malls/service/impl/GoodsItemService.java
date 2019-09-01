@@ -44,7 +44,9 @@ import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
+import com.sourcecode.malls.domain.goods.GoodsCategory;
 import com.sourcecode.malls.domain.goods.GoodsItem;
+import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
@@ -53,7 +55,9 @@ import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsCategoryRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
@@ -97,6 +101,28 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 
 	@Autowired
 	private DtoTransferFacade transferFacade;
+
+	@Autowired
+	private GoodsCategoryRepository categoryRepository;
+
+	@Autowired
+	private MerchantRepository merchantRepository;
+
+	@Cacheable(value = CacheNameConstant.GOODS_CATEGORY_LIST_LEVEL1, key = "#merchantId")
+	public List<GoodsAttributeDTO> listCategoryLevel1(Long merchantId) {
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		List<GoodsCategory> list = categoryRepository.findByMerchantAndParentIsNull(merchant.get());
+		return list.stream().map(it -> it.asDTO()).collect(Collectors.toList());
+	}
+
+	@Cacheable(value = CacheNameConstant.GOODS_CATEGORY_LIST_LEVEL2, key = "#id")
+	public List<GoodsAttributeDTO> listCategoryLevel2(Long id) {
+		Optional<GoodsCategory> parent = categoryRepository.findById(id);
+		AssertUtil.assertTrue(parent.isPresent(), "找不到商品分类");
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		List<GoodsCategory> list = categoryRepository.findByMerchantAndParent(merchant.get(), parent.get());
+		return list.stream().map(it -> it.asDTO(false, true)).collect(Collectors.toList());
+	}
 
 	@Cacheable(value = CacheNameConstant.GOODS_ITEM_LOAD_ONE, key = "#id")
 	@Override

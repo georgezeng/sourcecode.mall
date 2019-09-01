@@ -1,9 +1,5 @@
 package com.sourcecode.malls.web.controller;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +8,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
-import com.sourcecode.malls.domain.goods.GoodsCategory;
-import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsCategoryRepository;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
-import com.sourcecode.malls.util.AssertUtil;
+import com.sourcecode.malls.service.impl.GoodsItemService;
 
 @RestController
 @RequestMapping(path = "/goods/category")
@@ -26,25 +18,16 @@ public class GoodsCategoryController {
 	Logger logger = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private MerchantRepository merchantRepository;
-
-	@Autowired
-	private GoodsCategoryRepository repository;
+	private GoodsItemService service;
 
 	@RequestMapping(path = "/list/level1")
 	public ResultBean<GoodsAttributeDTO> listLevel1() {
-		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
-		List<GoodsCategory> list = repository.findByMerchantAndParentIsNull(merchant.get());
-		return new ResultBean<>(list.stream().map(it -> it.asDTO()).collect(Collectors.toList()));
+		return new ResultBean<>(service.listCategoryLevel1(ClientContext.getMerchantId()));
 	}
 
 	@RequestMapping(path = "/list/level2/params/{id}")
 	public ResultBean<GoodsAttributeDTO> listLevel2(@PathVariable Long id) {
-		Optional<GoodsCategory> parent = repository.findById(id);
-		AssertUtil.assertTrue(parent.isPresent(), "找不到商品分类");
-		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
-		List<GoodsCategory> list = repository.findByMerchantAndParent(merchant.get(), parent.get());
-		return new ResultBean<>(list.stream().map(it -> it.asDTO(false, true)).collect(Collectors.toList()));
+		return new ResultBean<>(service.listCategoryLevel2(id));
 	}
 
 }
