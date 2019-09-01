@@ -594,7 +594,7 @@ public class OrderService implements BaseService {
 			}
 		}
 		cacheEvictService.clearClientOrders(order.getClient().getId());
-		cacheEvictService.clearAllGoodsItemList();
+//		cacheEvictService.clearAllGoodsItemList();
 	}
 
 	public void refundApply(Client client, Long id) {
