@@ -1,24 +1,19 @@
 package com.sourcecode.malls.service.impl;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
-import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
-import com.sourcecode.malls.util.AssertUtil;
+import com.sourcecode.malls.constants.CacheNameConstant;
+import com.sourcecode.malls.dto.merchant.SiteInfo;
 
 @Service
 public class MerchantService {
 	@Autowired
-	private MerchantShopApplicationRepository applicationRepository;
+	private MerchantSettingService settingService;
 
-	@Cacheable(cacheNames = "merchant_shop_name", key = "#merchantId")
-	public String getShopName(Long merchantId) {
-		Optional<MerchantShopApplication> shop = applicationRepository.findByMerchantId(merchantId);
-		AssertUtil.assertTrue(shop.isPresent(), "找不到商户信息");
-		return shop.get().getName();
+	@Cacheable(cacheNames = CacheNameConstant.MERCHANT_SITE_INFO, key = "#merchantId")
+	public SiteInfo getSiteInfo(Long merchantId) throws Exception {
+		return settingService.loadSiteInfo(merchantId);
 	}
 }
