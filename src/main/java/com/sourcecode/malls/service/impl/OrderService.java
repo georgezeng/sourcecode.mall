@@ -356,6 +356,16 @@ public class OrderService implements BaseService {
 			order.setPayTime(new Date());
 			order.setTransactionId(transactionId);
 			orderRepository.save(order);
+			if (!CollectionUtils.isEmpty(order.getSubList())) {
+				for (SubOrder sub : order.getSubList()) {
+					if (sub.getItem() != null && sub.getItem().getId() != null) {
+						GoodsItemRank rank = sub.getItem().getRank();
+						em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
+						rank.setOrderNums(rank.getOrderNums() + 1);
+						rankRepository.save(rank);
+					}
+				}
+			}
 //			bonusService.addConsumeBonus(order);
 			cacheEvictService.clearClientOrders(order.getClient().getId());
 		}
@@ -575,12 +585,6 @@ public class OrderService implements BaseService {
 		bonusService.addConsumeBonus(order);
 		if (!CollectionUtils.isEmpty(order.getSubList())) {
 			for (SubOrder sub : order.getSubList()) {
-				if (sub.getItem() != null && sub.getItem().getId() != null) {
-					GoodsItemRank rank = sub.getItem().getRank();
-					em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
-					rank.setOrderNums(rank.getOrderNums() + 1);
-					rankRepository.save(rank);
-				}
 				Optional<AfterSaleApplication> applicationOp = aftersaleApplicationRepository.findBySubOrder(sub);
 				if (!applicationOp.isPresent()) {
 					AfterSaleApplication application = new AfterSaleApplication();
