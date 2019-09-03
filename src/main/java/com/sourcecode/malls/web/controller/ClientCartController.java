@@ -1,13 +1,12 @@
 package com.sourcecode.malls.web.controller;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,12 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.ClientCartItem;
-import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientCartItemDTO;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
+import com.sourcecode.malls.service.impl.CacheEvictService;
 import com.sourcecode.malls.service.impl.ClientCartService;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -37,36 +35,22 @@ public class ClientCartController {
 	private ClientCartRepository cartRepository;
 
 	@Autowired
-	private GoodsItemRepository itemRepository;
+	private CacheEvictService evictService;
 
 	@RequestMapping(path = "/item/params/{id}")
-	public ResultBean<Map<String, Integer>> itemInfo(@PathVariable Long id) {
-		int total = cartRepository.findByClient(ClientContext.get()).size();
-		Map<String, Integer> map = new HashMap<>();
-		map.put("total", total);
-		if (id > 0) {
-			Optional<GoodsItem> item = itemRepository.findById(id);
-			AssertUtil.assertTrue(
-					item.isPresent() && item.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
-					ExceptionMessageConstant.NO_SUCH_RECORD);
-			List<ClientCartItem> cart = cartRepository.findByClientAndItem(ClientContext.get(), item.get());
-			total = 0;
-			for (ClientCartItem cartItem : cart) {
-				total += cartItem.getNums();
-			}
-			map.put("itemNums", total);
-		}
-		return new ResultBean<>(map);
+	public ResultBean<Map<String, Long>> itemInfo(@PathVariable Long id) {
+		return new ResultBean<>(clientCartService.calItemInfo(ClientContext.get(), id));
 	}
 
 	@RequestMapping(path = "/list")
-	public ResultBean<ClientCartItemDTO> list(@RequestBody KeyDTO<Long> dto) {
+	public ResultBean<ClientCartItemDTO> list() {
 		return new ResultBean<>(clientCartService.getCart(ClientContext.get()));
 	}
 
 	@RequestMapping(path = "/save")
-	public ResultBean<Map<String, Integer>> save(@RequestBody ClientCartItemDTO dto) {
+	public ResultBean<Map<String, Long>> save(@RequestBody ClientCartItemDTO dto) {
 		clientCartService.saveCart(ClientContext.get(), dto);
+		evictService.clearClientCartItems(ClientContext.get().getId());
 		return itemInfo(dto.getItemId());
 	}
 
@@ -78,17 +62,18 @@ public class ClientCartController {
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		cartItem.get().setNums(nums);
 		cartRepository.save(cartItem.get());
+		evictService.clearClientCartItems(ClientContext.get().getId());
 		return new ResultBean<>();
 	}
 
-	@RequestMapping(path = "/delete/params/{id}")
-	public ResultBean<Void> delete(@PathVariable Long id) {
-		cartRepository.deleteById(id);
+	@RequestMapping(path = "/delete")
+	public ResultBean<Void> delete(@RequestBody KeyDTO<Long> keys) {
+		AssertUtil.assertTrue(!CollectionUtils.isEmpty(keys.getIds()), "至少选中一个商品");
+		for (Long id : keys.getIds()) {
+			cartRepository.deleteById(id);
+		}
+		evictService.clearClientCartItems(ClientContext.get().getId());
 		return new ResultBean<>();
 	}
-	
-	@RequestMapping(path = "/settleAccount")
-	public ResultBean<Void> settleAccount() {
-		return new ResultBean<>();
-	}
+
 }

@@ -301,7 +301,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_NUMS, key = "#client.id.toString() + '-' + #queryInfo.data.name()")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_NUMS, key = "#client.id + '-' + #queryInfo.data.name()")
 	public long countCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
 		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {

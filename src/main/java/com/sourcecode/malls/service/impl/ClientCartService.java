@@ -3,15 +3,21 @@ package com.sourcecode.malls.service.impl;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
+import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientCartItem;
 import com.sourcecode.malls.domain.goods.GoodsItem;
@@ -19,6 +25,7 @@ import com.sourcecode.malls.domain.goods.GoodsItemProperty;
 import com.sourcecode.malls.dto.client.ClientCartItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientCartRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -32,7 +39,36 @@ public class ClientCartService implements JpaService<ClientCartItem, Long> {
 	@Autowired
 	private ClientCartRepository cartRepository;
 
-	public void saveCart(Client client, ClientCartItemDTO dto) {
+	@Autowired
+	private GoodsItemRepository itemRepository;
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_CART_ITEM_NUMS, key = "#client.id + '-' + #id")
+	public Map<String, Long> calItemInfo(Client client, Long id) {
+		long total = cartRepository.countByClient(client);
+		Map<String, Long> map = new HashMap<>();
+		map.put("total", total);
+		if (id > 0) {
+			Optional<GoodsItem> item = itemRepository.findById(id);
+			AssertUtil.assertTrue(
+					item.isPresent() && item.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
+					ExceptionMessageConstant.NO_SUCH_RECORD);
+			List<ClientCartItem> cart = cartRepository.findByClientAndItem(ClientContext.get(), item.get());
+			total = 0;
+			for (ClientCartItem cartItem : cart) {
+				total += cartItem.getNums();
+			}
+			map.put("itemNums", total);
+		}
+		return map;
+	}
+
+	@CachePut(cacheNames = CacheNameConstant.CLIENT_CART_ITEM_NUMS, key = "#client.id + '-' + #item.item.id")
+	public Map<String, Long> updateCartNum(Client client, ClientCartItem item) {
+		return calItemInfo(client, item.getItem().getId());
+	}
+
+	@CachePut(cacheNames = CacheNameConstant.CLIENT_CART_ITEM_NUMS, key = "#client.id + '-' + #dto.itemId")
+	public Map<String, Long> saveCart(Client client, ClientCartItemDTO dto) {
 		Optional<GoodsItem> item = itemService.findById(dto.getItemId());
 		AssertUtil.assertTrue(item.isPresent() && item.get().getMerchant().getId().equals(client.getMerchant().getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
@@ -52,8 +88,10 @@ public class ClientCartService implements JpaService<ClientCartItem, Long> {
 		data.setProperty(property);
 		data.setClient(client);
 		cartRepository.save(data);
+		return calItemInfo(client, dto.getItemId());
 	}
 
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_CART_ITEM_LIST, key = "#client.id")
 	public List<ClientCartItemDTO> getCart(Client client) {
 		List<ClientCartItem> cart = cartRepository.findByClient(client);
 		List<ClientCartItemDTO> list = new ArrayList<>();
