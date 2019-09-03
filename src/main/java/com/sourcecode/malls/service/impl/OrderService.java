@@ -238,6 +238,7 @@ public class OrderService implements BaseService {
 					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice,
 							subs);
 					cartRepository.delete(cartItem);
+					cacheEvictService.clearClientCartItem(client.getId(), itemDTO.getItemId());
 				}
 			}
 			cacheEvictService.clearClientCartItems(client.getId());
