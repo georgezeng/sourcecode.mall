@@ -61,6 +61,9 @@ public class AfterSaleService implements BaseService {
 	
 	@Autowired
 	private CacheEvictService cacheEvictService;
+	
+	@Autowired
+	private CacheClearer clearer;
 
 	public void applyRefund(Long clientId, AfterSaleApplicationDTO dto) {
 		AssertUtil.assertNotEmpty(dto.getDescription(), "描述不能为空");
@@ -103,7 +106,7 @@ public class AfterSaleService implements BaseService {
 		}
 		order.setStatus(OrderStatus.Closed);
 		orderRepository.save(order);
-		cacheEvictService.clearClientOrders(order.getClient().getId());
+		clearer.clearClientOrders(order.getClient());
 	}
 
 	public void apply(Long clientId, AfterSaleApplicationDTO dto) {

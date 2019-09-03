@@ -67,7 +67,7 @@ public class EvaluationService {
 	private CacheEvictService cacheEvictService;
 	
 	@Autowired
-	private GoodsItemService itemService;
+	private CacheClearer clearer;
 
 	@Autowired
 	protected EntityManager em;
@@ -216,8 +216,8 @@ public class EvaluationService {
 			break;
 		case Good: {
 			rank.setGoodEvaluations(rank.getGoodEvaluations() + 1);
-			itemService.clearCategoryRelated(rank.getItem());
-			itemService.clearCouponRelated(rank.getItem());
+			clearer.clearCategoryRelated(rank.getItem());
+			clearer.clearCouponRelated(rank.getItem());
 		}
 			break;
 		default:

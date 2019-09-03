@@ -48,6 +48,7 @@ import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.coupon.CouponSetting;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientLevelSettingDTO;
@@ -65,6 +66,7 @@ import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsJournalReposi
 import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.repository.redis.impl.SearchCacheKeyStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.BaseService;
 import com.sourcecode.malls.service.base.JpaService;
@@ -120,6 +122,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	@Autowired
 	private PasswordEncoder pwdEncoder;
+
+	@Autowired
+	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_CURRENT_POINTS, key = "#userId")
 	public BigDecimal getCurrentPoints(Long userId) {
@@ -203,9 +208,10 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		return client;
 	}
 
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_POINTS_JOURNAL_LIST, key = "#clientId + '-' + #queryInfo.page.num")
 	@Transactional(readOnly = true)
-	public List<ClientPointsJournalDTO> findPointsJournalList(Long id, QueryInfo<Void> queryInfo) {
-		Optional<Client> client = clientRepository.findById(id);
+	public List<ClientPointsJournalDTO> findPointsJournalList(Long clientId, QueryInfo<Void> queryInfo) {
+		Optional<Client> client = clientRepository.findById(clientId);
 		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
 		PageInfo pageInfo = queryInfo.getPage();
 		pageInfo.setProperty("createTime");
@@ -277,8 +283,16 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}).collect(Collectors.toList());
 	}
 
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	@Transactional(readOnly = true)
 	public List<ClientCouponDTO> getCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
+		String key = client.getId() + "-" + queryInfo.getData().name() + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_COUPON);
+		store.setBizKey(client.getId().toString());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		AssertUtil.assertNotNull(queryInfo.getData(), "参数不正确");
 		Specification<ClientCoupon> spec = new Specification<ClientCoupon>() {
 
@@ -297,7 +311,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			}
 		};
 		Page<ClientCoupon> pageResult = clientCouponRepository.findAll(spec, queryInfo.getPage().pageable());
-		return getCouponList(pageResult.get());
+		return getCouponDTOList(pageResult.get());
 	}
 
 	@Transactional(readOnly = true)
@@ -324,7 +338,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
-	public List<ClientCouponDTO> getCouponList(Stream<ClientCoupon> stream) {
+	public List<ClientCouponDTO> getCouponDTOList(Stream<ClientCoupon> stream) {
 		return stream.map(coupon -> {
 			ClientCouponDTO data = new ClientCouponDTO();
 			BeanUtils.copyProperties(coupon.getSetting(), data, "id", "categories", "item", "invitee");

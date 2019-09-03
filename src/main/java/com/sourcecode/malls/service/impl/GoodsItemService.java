@@ -48,8 +48,7 @@ import com.sourcecode.malls.domain.goods.GoodsCategory;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
-import com.sourcecode.malls.domain.redis.SearchGoodsItemByCategoryStore;
-import com.sourcecode.malls.domain.redis.SearchGoodsItemByCouponStore;
+import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
@@ -61,6 +60,7 @@ import com.sourcecode.malls.repository.jpa.impl.goods.GoodsCategoryRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
+import com.sourcecode.malls.repository.redis.impl.SearchCacheKeyStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.JpaService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -110,6 +110,9 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Autowired
 	private MerchantRepository merchantRepository;
 
+	@Autowired
+	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
+
 	@Cacheable(value = CacheNameConstant.GOODS_CATEGORY_LIST_LEVEL1, key = "#merchantId")
 	public List<GoodsAttributeDTO> listCategoryLevel1(Long merchantId) {
 		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
@@ -139,14 +142,15 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		String key = "category-" + merchantId + "-" + categoryId + "-" + type + "-" + queryInfo.getData() + "-"
 				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
 				+ queryInfo.getPage().getOrder();
-		SearchGoodsItemByCategoryStore store = new SearchGoodsItemByCategoryStore();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_GOODS_ITEM_BY_CATEGORY);
 		if (categoryId > 0) {
-			store.setCategoryId(categoryId.toString());
+			store.setBizKey(categoryId.toString());
 		} else {
-			store.setCategoryId("m_" + merchantId);
+			store.setBizKey("m_" + merchantId);
 		}
-		store.setKey(key);
-		searchGoodsItemByCategoryStoreRepository.save(store);
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		PageInfo pageInfo = queryInfo.getPage();
 		Page<GoodsItem> pageResult = null;
 		Specification<GoodsItem> spec = new Specification<GoodsItem>() {
@@ -203,10 +207,11 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		String key = "coupon-" + merchantId + "-" + couponId + "-" + type + "-" + queryInfo.getData() + "-"
 				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
 				+ queryInfo.getPage().getOrder();
-		SearchGoodsItemByCouponStore store = new SearchGoodsItemByCouponStore();
-		store.setCouponId(couponId.toString());
-		store.setKey(key);
-		searchGoodsItemByCouponStoreRepository.save(store);
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_GOODS_ITEM_BY_COUPON);
+		store.setBizKey(couponId.toString());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponId);
 		if (!couponOp.isPresent()) {
 			return new ArrayList<>();

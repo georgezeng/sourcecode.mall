@@ -48,6 +48,7 @@ import com.sourcecode.malls.domain.order.Invoice;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.OrderAddress;
 import com.sourcecode.malls.domain.order.SubOrder;
+import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.OrderItemDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
@@ -72,6 +73,7 @@ import com.sourcecode.malls.repository.jpa.impl.order.InvoiceRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;
+import com.sourcecode.malls.repository.redis.impl.SearchCacheKeyStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.base.BaseService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -144,6 +146,9 @@ public class OrderService implements BaseService {
 	@Autowired
 	private CacheEvictService cacheEvictService;
 
+	@Autowired
+	private CacheClearer clearer;
+
 	private String fileDir = "subOrder";
 
 	@Autowired
@@ -151,6 +156,9 @@ public class OrderService implements BaseService {
 
 	@Autowired
 	private ClientBonusService bonusService;
+
+	@Autowired
+	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
@@ -273,7 +281,7 @@ public class OrderService implements BaseService {
 				}
 					break;
 				}
-				cacheEvictService.clearClientCoupons(order.getClient().getId());
+				cacheEvictService.clearClientCouponNums(order.getClient().getId());
 			}
 			order.setCouponAmount(couponAmount);
 		}
@@ -282,7 +290,7 @@ public class OrderService implements BaseService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
-		cacheEvictService.clearClientOrders(order.getClient().getId());
+		clearer.clearClientOrders(order.getClient());
 		return order.getId();
 	}
 
@@ -363,18 +371,26 @@ public class OrderService implements BaseService {
 						em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
 						rank.setOrderNums(rank.getOrderNums() + 1);
 						rankRepository.save(rank);
-						itemService.clearCategoryRelated(sub.getItem());
-						itemService.clearCouponRelated(sub.getItem());
+						clearer.clearCategoryRelated(sub.getItem());
+						clearer.clearCouponRelated(sub.getItem());
 					}
 				}
 			}
 //			bonusService.addConsumeBonus(order);
-			cacheEvictService.clearClientOrders(order.getClient().getId());
+			clearer.clearClientOrders(order.getClient());
 		}
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public PageResult<OrderDTO> getOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
+		String key = client.getId() + "-" + queryInfo.getData().name() + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_ORDER);
+		store.setBizKey(client.getId().toString());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		Page<Order> orders = orderRepository.findAll(getSpec(client, queryInfo),
 				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(orders.get().map(order -> {
@@ -521,7 +537,7 @@ public class OrderService implements BaseService {
 			order.setStatus(OrderStatus.Canceled);
 		}
 		orderRepository.save(order);
-		cacheEvictService.clearClientOrders(order.getClient().getId());
+		clearer.clearClientOrders(order.getClient());
 		List<SubOrder> list = order.getSubList();
 		if (!CollectionUtils.isEmpty(list)) {
 			for (SubOrder sub : list) {
@@ -600,7 +616,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		cacheEvictService.clearClientOrders(order.getClient().getId());
+		clearer.clearClientOrders(order.getClient());
 //		cacheEvictService.clearAllGoodsItemList();
 	}
 
@@ -615,7 +631,7 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		order.setStatus(OrderStatus.RefundApplied);
 		orderRepository.save(order);
-		cacheEvictService.clearClientOrders(order.getClient().getId());
+		clearer.clearClientOrders(order.getClient());
 	}
 
 	public void delete(Client client, Long id) {
@@ -686,7 +702,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		return clientService.getCouponList(selectedCoupons.stream());
+		return clientService.getCouponDTOList(selectedCoupons.stream());
 	}
 
 	private boolean putInSelectedCoupons(List<ClientCoupon> selectedCoupons, ClientCoupon coupon) {
