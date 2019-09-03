@@ -48,6 +48,8 @@ import com.sourcecode.malls.domain.goods.GoodsCategory;
 import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
+import com.sourcecode.malls.domain.redis.SearchGoodsItemByCategoryStore;
+import com.sourcecode.malls.domain.redis.SearchGoodsItemByCouponStore;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
@@ -134,6 +136,17 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'category-' + #merchantId + '-' + #categoryId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
 			QueryInfo<String> queryInfo) {
+		String key = "category-" + merchantId + "-" + categoryId + "-" + type + "-" + queryInfo.getData() + "-"
+				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
+				+ queryInfo.getPage().getOrder();
+		SearchGoodsItemByCategoryStore store = new SearchGoodsItemByCategoryStore();
+		if (categoryId > 0) {
+			store.setCategoryId(categoryId.toString());
+		} else {
+			store.setCategoryId("m_" + merchantId);
+		}
+		store.setKey(key);
+		searchGoodsItemByCategoryStoreRepository.save(store);
 		PageInfo pageInfo = queryInfo.getPage();
 		Page<GoodsItem> pageResult = null;
 		Specification<GoodsItem> spec = new Specification<GoodsItem>() {
@@ -187,6 +200,13 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Transactional(readOnly = true)
 	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'coupon-' + #merchantId + '-' + #couponId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public List<GoodsItemDTO> findByCoupon(Long merchantId, Long couponId, String type, QueryInfo<String> queryInfo) {
+		String key = "coupon-" + merchantId + "-" + couponId + "-" + type + "-" + queryInfo.getData() + "-"
+				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
+				+ queryInfo.getPage().getOrder();
+		SearchGoodsItemByCouponStore store = new SearchGoodsItemByCouponStore();
+		store.setCouponId(couponId.toString());
+		store.setKey(key);
+		searchGoodsItemByCouponStoreRepository.save(store);
 		Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponId);
 		if (!couponOp.isPresent()) {
 			return new ArrayList<>();
