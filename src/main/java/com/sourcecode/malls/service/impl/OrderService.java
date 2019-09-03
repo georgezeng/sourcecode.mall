@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.data.domain.Page;
@@ -382,10 +383,13 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
+	@Caching(cacheable = {
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, condition = "#queryInfo.data != null", key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, condition = "#queryInfo.data == null", key = "#client.id + '-All-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order") })
 	public PageResult<OrderDTO> getOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
-		String key = client.getId() + "-" + queryInfo.getData().name() + "-" + queryInfo.getPage().getNum() + "-"
-				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
+		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-"
+				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
+				+ queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_ORDER);
 		store.setBizKey(client.getId().toString());
@@ -445,7 +449,9 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_NUMS, key = "#client.id.toString() + '-' + #queryInfo.data.name()")
+	@Caching(cacheable = {
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_NUMS, condition = "#queryInfo.data != null", key = "#client.id + '-' + #queryInfo.data.name()"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_NUMS, condition = "#queryInfo.data == null", key = "#client.id + '-All'") })
 	public long countOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
 		return orderRepository.count(getSpec(client, queryInfo));
 	}

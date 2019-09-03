@@ -28,6 +28,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -283,11 +284,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}).collect(Collectors.toList());
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	@Transactional(readOnly = true)
+	@Caching(cacheable = {
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, condition = "#queryInfo.data != null", key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, condition = "#queryInfo.data == null", key = "#client.id + '-All-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order") })
 	public List<ClientCouponDTO> getCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
-		String key = client.getId() + "-" + queryInfo.getData().name() + "-" + queryInfo.getPage().getNum() + "-"
-				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
+		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-"
+				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
+				+ queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_COUPON);
 		store.setBizKey(client.getId().toString());
