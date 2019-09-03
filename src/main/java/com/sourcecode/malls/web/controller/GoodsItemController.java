@@ -1,7 +1,6 @@
 package com.sourcecode.malls.web.controller;
 
 import java.util.ArrayList;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,16 +14,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
-import com.sourcecode.malls.domain.goods.GoodsItem;
-import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.query.QueryInfo;
-import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
-import com.sourcecode.malls.service.impl.DtoTransferFacade;
+import com.sourcecode.malls.service.impl.EvaluationService;
 import com.sourcecode.malls.service.impl.GoodsItemService;
 
 @RestController
@@ -36,10 +32,7 @@ public class GoodsItemController {
 	private GoodsItemService service;
 
 	@Autowired
-	private DtoTransferFacade transferFacade;
-
-	@Autowired
-	private GoodsItemEvaluationRepository evaluationRepository;
+	private EvaluationService evaService;
 
 	@RequestMapping(path = "/list/params/{queryType}/{id}/{sortType}")
 	public ResultBean<GoodsItemDTO> list(@PathVariable("queryType") String queryType, @PathVariable("id") Long id,
@@ -64,12 +57,7 @@ public class GoodsItemController {
 	@RequestMapping(path = "/load/params/{id}")
 	public ResultBean<GoodsItemDTO> load(@PathVariable("id") Long id) {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
-		GoodsItemEvaluationDTO evaDto = transferFacade.entityToDTO(Void -> {
-			Optional<GoodsItem> item = service.findById(dto.getId());
-			Optional<GoodsItemEvaluation> eva = evaluationRepository
-					.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
-			return eva;
-		}, op -> op.isPresent(), entity -> entity.asDTO(false));
+		GoodsItemEvaluationDTO evaDto = evaService.getTopEvaluation(ClientContext.getMerchantId(), dto.getId());
 		dto.setTopEvaluation(evaDto);
 		return new ResultBean<>(dto);
 	}

@@ -15,6 +15,7 @@ import javax.persistence.criteria.Root;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -22,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluationPhoto;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
@@ -36,6 +39,7 @@ import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationPhotoRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
@@ -48,6 +52,9 @@ public class EvaluationService {
 	private GoodsItemEvaluationRepository repository;
 
 	@Autowired
+	private GoodsItemRepository itemRepository;
+
+	@Autowired
 	private GoodsItemEvaluationPhotoRepository photoRepository;
 
 	@Autowired
@@ -55,9 +62,12 @@ public class EvaluationService {
 
 	@Autowired
 	private GoodsItemRankRepository rankRepository;
-	
+
 	@Autowired
 	private CacheEvictService cacheEvictService;
+	
+	@Autowired
+	private GoodsItemService itemService;
 
 	@Autowired
 	protected EntityManager em;
@@ -169,6 +179,8 @@ public class EvaluationService {
 				"找不到订单数据");
 		Optional<GoodsItemEvaluation> dataOp = repository.findBySubOrder(subOrder.get());
 		AssertUtil.assertTrue(!dataOp.isPresent(), "此订单商品已经做过评价");
+		GoodsItemEvaluationDTO topEva = getTopEvaluation(client.getMerchant().getId(),
+				subOrder.get().getItem().getId());
 		GoodsItemEvaluation data = dto.asEntity();
 		data.setClient(client);
 		data.setMerchant(client.getMerchant());
@@ -202,13 +214,19 @@ public class EvaluationService {
 		case Neutrality:
 			rank.setNeutralityEvaluations(rank.getNeutralityEvaluations() + 1);
 			break;
-		case Good:
+		case Good: {
 			rank.setGoodEvaluations(rank.getGoodEvaluations() + 1);
+			itemService.clearCategoryRelated(rank.getItem());
+			itemService.clearCouponRelated(rank.getItem());
+		}
 			break;
 		default:
 			throw new BusinessException("不支持的评价级别");
 		}
 		rankRepository.save(rank);
+		if (topEva == null) {
+			cacheEvictService.clearGoodsItemTopEvaluation(data.getItem().getId());
+		}
 	}
 
 	public void saveAdditional(Client client, GoodsItemEvaluationDTO dto) {
@@ -243,5 +261,18 @@ public class EvaluationService {
 				photoRepository.save(photo);
 			}
 		}
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_EVALUATION, key = "#item.id")
+	public GoodsItemEvaluationDTO getTopEvaluation(Long merchantId, Long itemId) {
+		Optional<GoodsItem> item = itemRepository.findById(itemId);
+		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().equals(merchantId),
+				"商品不存在");
+		Optional<GoodsItemEvaluation> eva = repository
+				.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
+		if (eva.isPresent()) {
+			return eva.get().asDTO(false);
+		}
+		return null;
 	}
 }

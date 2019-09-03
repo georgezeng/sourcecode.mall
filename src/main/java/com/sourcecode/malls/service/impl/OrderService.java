@@ -363,6 +363,8 @@ public class OrderService implements BaseService {
 						em.lock(rank, LockModeType.PESSIMISTIC_WRITE);
 						rank.setOrderNums(rank.getOrderNums() + 1);
 						rankRepository.save(rank);
+						itemService.clearCategoryRelated(sub.getItem());
+						itemService.clearCouponRelated(sub.getItem());
 					}
 				}
 			}
