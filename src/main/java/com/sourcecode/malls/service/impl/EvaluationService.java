@@ -263,10 +263,10 @@ public class EvaluationService {
 		}
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_EVALUATION, key = "#item.id")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_EVALUATION, key = "#itemId")
 	public GoodsItemEvaluationDTO getTopEvaluation(Long merchantId, Long itemId) {
 		Optional<GoodsItem> item = itemRepository.findById(itemId);
-		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().equals(merchantId),
+		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId),
 				"商品不存在");
 		Optional<GoodsItemEvaluation> eva = repository
 				.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
