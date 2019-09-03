@@ -240,6 +240,7 @@ public class OrderService implements BaseService {
 					cartRepository.delete(cartItem);
 				}
 			}
+			cacheEvictService.clearClientCartItems(client.getId());
 		} else {
 			SettleItemDTO itemDTO = dto.getItems().get(0);
 			Optional<GoodsItem> itemOp = itemService.findById(itemDTO.getItemId());
