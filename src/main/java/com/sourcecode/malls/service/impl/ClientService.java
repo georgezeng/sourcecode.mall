@@ -367,7 +367,6 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}).collect(Collectors.toList());
 	}
 
-	@Cacheable(value = CacheNameConstant.CLIENT_REGISTERATION_BONUS, key = "#client.id")
 	public BigDecimal getRegistrationBonus(Client client) {
 		Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(
 				client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
