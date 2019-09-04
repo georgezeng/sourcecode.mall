@@ -103,7 +103,7 @@ public class ClientController {
 	@RequestMapping(value = "/avatar/upload")
 	public ResultBean<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.nanoTime() + extend;
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.currentTimeMillis() + extend;
 		fileService.upload(true, filePath, file.getInputStream());
 		Client client = ClientContext.get();
 		client.setAvatar(filePath);
