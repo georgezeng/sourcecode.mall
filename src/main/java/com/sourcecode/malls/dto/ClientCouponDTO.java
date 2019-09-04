@@ -1,5 +1,6 @@
 package com.sourcecode.malls.dto;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
@@ -11,7 +12,11 @@ import com.sourcecode.malls.enums.CouponType;
 import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.CouponRelationType;
 
-public class ClientCouponDTO {
+public class ClientCouponDTO implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private Long id;
 	private CouponType type;
 	private String title;
