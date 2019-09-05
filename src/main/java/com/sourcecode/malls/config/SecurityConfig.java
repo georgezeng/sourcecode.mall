@@ -62,6 +62,7 @@ public class SecurityConfig extends BaseSecurityConfig {
 		http.authorizeRequests().antMatchers("/client/**/poster/**").permitAll();
 		http.authorizeRequests().antMatchers("/evaluation/goodsItem/**").permitAll();
 		http.authorizeRequests().antMatchers("/advertisement/**").permitAll();
+		http.authorizeRequests().antMatchers("/article/**").permitAll();
 		http.authorizeRequests().antMatchers("/merchant/siteInfo").permitAll();
 		http.authorizeRequests().antMatchers("/index").permitAll();
 		http.authorizeRequests().antMatchers("/role/**").hasAuthority(adminProperties.getAuthority());
