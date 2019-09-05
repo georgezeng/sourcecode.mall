@@ -293,7 +293,7 @@ public class OrderService implements BaseService {
 		order.setSubList(subs);
 		subOrderRepository.saveAll(subs);
 		orderRepository.save(order);
-		clearer.clearClientOrders(order.getClient());
+		clearer.clearClientOrders(order);
 		return order.getId();
 	}
 
@@ -380,7 +380,7 @@ public class OrderService implements BaseService {
 				}
 			}
 //			bonusService.addConsumeBonus(order);
-			clearer.clearClientOrders(order.getClient());
+			clearer.clearClientOrders(order);
 		}
 	}
 
@@ -459,6 +459,7 @@ public class OrderService implements BaseService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LOAD_ONE, key = "#id")
 	public OrderDTO getOrder(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
 		AssertUtil.assertTrue(
@@ -545,7 +546,6 @@ public class OrderService implements BaseService {
 			order.setStatus(OrderStatus.Canceled);
 		}
 		orderRepository.save(order);
-		clearer.clearClientOrders(order.getClient());
 		List<SubOrder> list = order.getSubList();
 		if (!CollectionUtils.isEmpty(list)) {
 			for (SubOrder sub : list) {
@@ -561,6 +561,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
+		clearer.clearClientOrders(order);
 //		bonusService.removeConsumeBonus(order);
 	}
 
@@ -624,7 +625,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		clearer.clearClientOrders(order.getClient());
+		clearer.clearClientOrders(order);
 //		cacheEvictService.clearAllGoodsItemList();
 	}
 
@@ -639,19 +640,21 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.CanceledForRefund.equals(order.getStatus()), "状态有误，不能申请退款");
 		order.setStatus(OrderStatus.RefundApplied);
 		orderRepository.save(order);
-		clearer.clearClientOrders(order.getClient());
+		clearer.clearClientOrders(order);
 	}
 
 	public void delete(Client client, Long id) {
-		Optional<Order> order = orderRepository.findById(id);
+		Optional<Order> orderOp = orderRepository.findById(id);
 		AssertUtil.assertTrue(
-				order.isPresent() && !order.get().isDeleted() && order.get().getClient().getId().equals(client.getId()),
+				orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
-		OrderStatus status = order.get().getStatus();
+		Order order = orderOp.get();
+		OrderStatus status = order.getStatus();
 		AssertUtil.assertTrue(OrderStatus.Refunded.equals(status) || OrderStatus.Canceled.equals(status)
 				|| OrderStatus.Closed.equals(status) || OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
-		order.get().setDeleted(true);
-		orderRepository.save(order.get());
+		order.setDeleted(true);
+		orderRepository.save(order);
+		clearer.clearClientOrders(order);
 	}
 
 	@Transactional(readOnly = true)
@@ -732,5 +735,6 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "不能修改支付方式");
 		order.setPayment(payment);
 		orderRepository.save(order);
+		clearer.clearClientOrders(order);
 	}
 }

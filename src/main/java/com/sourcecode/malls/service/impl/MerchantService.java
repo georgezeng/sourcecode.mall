@@ -5,6 +5,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.sourcecode.malls.constants.CacheNameConstant;
+import com.sourcecode.malls.dto.client.ClientPointsBonus;
 import com.sourcecode.malls.dto.merchant.SiteInfo;
 
 @Service
@@ -15,5 +16,10 @@ public class MerchantService {
 	@Cacheable(cacheNames = CacheNameConstant.MERCHANT_SITE_INFO, key = "#merchantId")
 	public SiteInfo getSiteInfo(Long merchantId) throws Exception {
 		return settingService.loadSiteInfo(merchantId);
+	}
+	
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_POINTS_BONUS, key = "#merchantId")
+	public ClientPointsBonus getClientPointsBonus(Long merchantId) throws Exception {
+		return settingService.loadClientPointsBonus(merchantId);
 	}
 }

@@ -360,6 +360,7 @@ public class WechatController {
 			if (parent != null) {
 				bonusService.addInviteBonus(user, parent);
 			}
+			bonusService.addRegistrationBonus(user.getId());
 		} else {
 			user = userOp.get();
 			user.setUnionId(userInfo.getUnionId());
@@ -382,9 +383,6 @@ public class WechatController {
 				}
 			}
 			clientRepository.save(user);
-		}
-		if (!userOp.isPresent()) {
-			bonusService.addRegistrationBonus(user.getId());
 		}
 		return new ResultBean<>();
 	}

@@ -109,10 +109,14 @@ public class ClientVerifyCodeAuthenticationFilter extends AbstractAuthentication
 			ClientPoints points = new ClientPoints();
 			points.setClient(user);
 			clientPointsRepository.save(points);
-			if (parent != null) {
-				bonusService.addInviteBonus(user, parent);
+			try {
+				if (parent != null) {
+					bonusService.addInviteBonus(user, parent);
+				}
+				bonusService.addRegistrationBonus(user.getId());
+			} catch (Exception e) {
+				throw new AuthenticationServiceException(e.getMessage(), e);
 			}
-			bonusService.addRegistrationBonus(user.getId());
 		} else {
 			user = userOp.get();
 			if (!user.isEnabled()) {

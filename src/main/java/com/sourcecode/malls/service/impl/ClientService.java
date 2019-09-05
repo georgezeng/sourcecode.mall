@@ -368,12 +368,15 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	public BigDecimal getRegistrationBonus(Client client) {
-		Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(
-				client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
-		if (setting.isPresent() && !client.isLoggedIn()) {
-			client.setLoggedIn(true);
-			clientRepository.save(client);
-			return setting.get().getAmount();
+		if (!client.isLoggedIn()) {
+			Optional<CouponSetting> setting = couponSettingRepository
+					.findFirstByMerchantAndEventTypeAndStatusAndEnabled(client.getMerchant(),
+							CouponEventType.Registration, CouponSettingStatus.PutAway, true);
+			if (setting.isPresent()) {
+				client.setLoggedIn(true);
+				clientRepository.save(client);
+				return setting.get().getAmount();
+			}
 		}
 		return BigDecimal.ZERO;
 	}

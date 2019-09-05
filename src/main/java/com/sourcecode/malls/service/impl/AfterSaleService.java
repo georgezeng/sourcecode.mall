@@ -106,7 +106,7 @@ public class AfterSaleService implements BaseService {
 		}
 		order.setStatus(OrderStatus.Closed);
 		orderRepository.save(order);
-		clearer.clearClientOrders(order.getClient());
+		clearer.clearClientOrders(order);
 	}
 
 	public void apply(Long clientId, AfterSaleApplicationDTO dto) {
