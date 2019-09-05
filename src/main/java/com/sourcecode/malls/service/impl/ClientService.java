@@ -45,6 +45,7 @@ import com.alibaba.druid.util.StringUtils;
 import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.ClientPointsJournal;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.coupon.CouponSetting;
 import com.sourcecode.malls.domain.merchant.Merchant;
@@ -57,6 +58,7 @@ import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.ClientCouponStatus;
+import com.sourcecode.malls.enums.ClientPointsType;
 import com.sourcecode.malls.enums.CouponEventType;
 import com.sourcecode.malls.enums.CouponSettingStatus;
 import com.sourcecode.malls.enums.Sex;
@@ -272,6 +274,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_SUB_LIST, key = "#parent.id + '-' + #page.num")
 	public List<ClientDTO> getSubList(Client parent, PageInfo page) {
 		List<Client> result = clientRepository.findAllByParent(parent, page.pageable());
 		return result.stream().map(it -> {
@@ -279,7 +282,12 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			if (StringUtils.isEmpty(it.getNickname())) {
 				dto.setNickname("未设置昵称");
 			}
-			dto.setUsername("****" + dto.getUsername().substring(7));
+			dto.setUsername("********" + dto.getUsername().substring(7));
+			Optional<ClientPointsJournal> journal = clientPointsJournalRepository
+					.findByTypeAndClientAndOrderId(ClientPointsType.Invite, parent, it.getId().toString());
+			if (journal.isPresent()) {
+				dto.setInvitePoints(journal.get().getBonusAmount());
+			}
 			return dto;
 		}).collect(Collectors.toList());
 	}

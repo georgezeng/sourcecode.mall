@@ -42,9 +42,11 @@ import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
+import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsJournalRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
+import com.sourcecode.malls.service.impl.CacheClearer;
 import com.sourcecode.malls.service.impl.CacheEvictService;
 import com.sourcecode.malls.service.impl.ClientService;
 import com.sourcecode.malls.service.impl.VerifyCodeService;
@@ -76,6 +78,9 @@ public class ClientController {
 	@Autowired
 	private ClientIdentityRepository identityRepository;
 
+	@Autowired
+	private ClientPointsJournalRepository clientPointsJournalRepository;
+
 //	@Autowired
 //	private MerchantShopApplicationRepository merchantApplicationRepository;
 
@@ -87,6 +92,9 @@ public class ClientController {
 
 	@Autowired
 	private CacheEvictService cacheEvictService;
+
+	@Autowired
+	private CacheClearer clearer;
 
 	@Value("${user.type.name}")
 	private String userDir;
@@ -103,7 +111,8 @@ public class ClientController {
 	@RequestMapping(value = "/avatar/upload")
 	public ResultBean<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.currentTimeMillis() + extend;
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.currentTimeMillis()
+				+ extend;
 		fileService.upload(true, filePath, file.getInputStream());
 		Client client = ClientContext.get();
 		client.setAvatar(filePath);
@@ -125,6 +134,7 @@ public class ClientController {
 		Client client = ClientContext.get();
 		boolean hasChanged = dto.getNickname() != null && !dto.getNickname().equals(client.getNickname())
 				|| dto.getAvatar() != null && !dto.getAvatar().equals(client.getAvatar());
+		boolean needClearSubList = client.getParent() != null && !client.getNickname().equals(dto.getNickname());
 		if (hasChanged) {
 			cacheEvictService.clearClientInvitePoster(client.getId());
 		}
@@ -133,6 +143,9 @@ public class ClientController {
 		client.setNickname(dto.getNickname());
 		client.setAvatar(dto.getAvatar());
 		clientService.save(client);
+		if (needClearSubList) {
+			clearer.clearClientSubList(client.getParent());
+		}
 		return new ResultBean<>();
 	}
 
@@ -285,6 +298,11 @@ public class ClientController {
 	@RequestMapping(path = "/points/current")
 	public ResultBean<BigDecimal> getCurrentPoints() {
 		return new ResultBean<>(clientService.getCurrentPoints(ClientContext.get().getId()));
+	}
+
+	@RequestMapping(path = "/points/totalInvite")
+	public ResultBean<BigDecimal> getTotalInvitePoints() {
+		return new ResultBean<>(clientPointsJournalRepository.sumInvitePointsForClient(ClientContext.get().getId()));
 	}
 
 	@RequestMapping(path = "/points")
