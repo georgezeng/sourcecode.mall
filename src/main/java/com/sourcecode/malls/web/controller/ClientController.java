@@ -27,6 +27,7 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientIdentity;
 import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.PasswordDTO;
@@ -44,6 +45,7 @@ import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsJournalRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.CacheClearer;
@@ -81,8 +83,8 @@ public class ClientController {
 	@Autowired
 	private ClientPointsJournalRepository clientPointsJournalRepository;
 
-//	@Autowired
-//	private MerchantShopApplicationRepository merchantApplicationRepository;
+	@Autowired
+	private MerchantShopApplicationRepository merchantApplicationRepository;
 
 	@Autowired
 	private PasswordEncoder encoder;
@@ -103,16 +105,14 @@ public class ClientController {
 	public Resource loadImg(@RequestParam(name = "filePath") String filePath) {
 		Client client = ClientContext.get();
 		String rootPath = userDir + "/" + client.getId() + "/";
-		AssertUtil.assertTrue(filePath.startsWith(rootPath),
-				ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
+		AssertUtil.assertTrue(filePath.startsWith(rootPath), ExceptionMessageConstant.FILE_PATH_IS_INVALID + ": " + filePath);
 		return new ByteArrayResource(fileService.load(false, filePath));
 	}
 
 	@RequestMapping(value = "/avatar/upload")
 	public ResultBean<String> uploadAvatar(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.currentTimeMillis()
-				+ extend;
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/avatar_" + System.currentTimeMillis() + extend;
 		fileService.upload(true, filePath, file.getInputStream());
 		Client client = ClientContext.get();
 		client.setAvatar(filePath);
@@ -123,8 +123,7 @@ public class ClientController {
 	@RequestMapping(value = "/identity/upload")
 	public ResultBean<String> uploadIdentity(@RequestParam("file") MultipartFile file) throws IOException {
 		String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-		String filePath = userDir + "/" + ClientContext.get().getId() + "/identity/" + System.currentTimeMillis()
-				+ extend;
+		String filePath = userDir + "/" + ClientContext.get().getId() + "/identity/" + System.currentTimeMillis() + extend;
 		fileService.upload(false, filePath, file.getInputStream());
 		return new ResultBean<>(filePath);
 	}
@@ -178,10 +177,9 @@ public class ClientController {
 	@RequestMapping(path = "/current")
 	public ResultBean<ClientDTO> current() {
 		ClientDTO client = ClientContext.get().asDTO(false);
-//		Optional<MerchantShopApplication> shop = merchantApplicationRepository
-//				.findByMerchantId(ClientContext.getMerchantId());
-//		AssertUtil.assertTrue(shop.isPresent(), "无商铺信息");
-//		client.setShopName(shop.get().getName());
+		Optional<MerchantShopApplication> shop = merchantApplicationRepository.findByMerchantId(ClientContext.getMerchantId());
+		AssertUtil.assertTrue(shop.isPresent(), "无商铺信息");
+		client.setShopName(shop.get().getName());
 		return new ResultBean<>(client);
 	}
 
@@ -196,12 +194,9 @@ public class ClientController {
 		Optional<CodeStore> codeStoreOp = codeStoreRepository.findByCategoryAndKey(FORGET_PASSWORD_CATEGORY,
 				ClientContext.get().getUsername() + "_" + ClientContext.getMerchantId());
 		AssertUtil.assertTrue(codeStoreOp.isPresent(), ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(dto.getOldPassword()),
-				ExceptionMessageConstant.VERIFY_CODE_INVALID);
-		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()),
-				ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
-		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()),
-				ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		AssertUtil.assertTrue(codeStoreOp.get().getValue().equals(dto.getOldPassword()), ExceptionMessageConstant.VERIFY_CODE_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
 		Client user = ClientContext.get();
 		user.setPassword(encoder.encode(dto.getPassword()));
 		clientService.save(user);
@@ -213,12 +208,9 @@ public class ClientController {
 	public ResultBean<Void> updatePassword(@RequestBody PasswordDTO dto) {
 		Client user = ClientContext.get();
 		AssertUtil.assertNotEmpty(user.getPassword(), "还没有设置过密码，请使用重置密码功能");
-		AssertUtil.assertTrue(encoder.matches(dto.getOldPassword(), user.getPassword()),
-				ExceptionMessageConstant.OLD_PASSWORD_IS_INVALID);
-		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()),
-				ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
-		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()),
-				ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
+		AssertUtil.assertTrue(encoder.matches(dto.getOldPassword(), user.getPassword()), ExceptionMessageConstant.OLD_PASSWORD_IS_INVALID);
+		AssertUtil.assertTrue(RegexpUtil.matchPassword(dto.getPassword()), ExceptionMessageConstant.PASSWORD_SHOULD_BE_THE_RULE);
+		AssertUtil.assertTrue(dto.getPassword().equals(dto.getConfirmPassword()), ExceptionMessageConstant.TWO_TIMES_PASSWORD_NOT_EQUALS);
 		user.setPassword(encoder.encode(dto.getPassword()));
 		clientService.save(user);
 		return new ResultBean<>();
@@ -230,11 +222,9 @@ public class ClientController {
 		AssertUtil.assertTrue(merchant.isPresent(), "找不到商户信息");
 		Optional<Client> client = clientRepository.findByMerchantAndUsername(merchant.get(), mobile);
 		if (client.isPresent()) {
-			verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-					ClientContext.getMerchantId() + "");
+			verifyCodeService.sendLoginCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		} else {
-			verifyCodeService.sendRegisterCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY,
-					ClientContext.getMerchantId() + "");
+			verifyCodeService.sendRegisterCode(mobile, SystemConstant.LOGIN_VERIFY_CODE_CATEGORY, ClientContext.getMerchantId() + "");
 		}
 		return new ResultBean<>();
 	}
