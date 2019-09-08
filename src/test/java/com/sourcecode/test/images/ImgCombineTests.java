@@ -31,8 +31,8 @@ import com.sourcecode.malls.util.ImageUtil;
 public class ImgCombineTests {
 	@Test
 	public void test() throws Exception {
-//		generateInvitePoster("https://www.baidu.com");
-		generateGoodsPoster("https://www.baidu.com");
+		generateInvitePoster("https://www.baidu.com");
+//		generateGoodsPoster("https://www.baidu.com");
 
 	}
 
@@ -60,14 +60,14 @@ public class ImgCombineTests {
 		int avatarSize = 160;
 		BufferedImage result = ImageIO.read(getClass().getResourceAsStream("/invite-share-bg.png"));
 		Graphics2D g = (Graphics2D) result.getGraphics();
-		g.drawImage(qrCode, 240, 770, null);
+		g.drawImage(qrCode, 250, 720, null);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		Font font = Font.createFont(Font.TRUETYPE_FONT, new File("./src/test/resources/msjh.ttf"));
 		g.setColor(Color.DARK_GRAY);
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 40));
 		String name1 = "测试一下";
 //	    g.drawString(name1, (result.getWidth() - 42 * name1.length()) / 2, 275);
-		ImageUtil.drawCenteredString(g, name1, 0, 175, result.getWidth(), 45,
+		ImageUtil.drawCenteredString(g, name1, 0, 400, result.getWidth(), 45,
 				font.deriveFont(30f).deriveFont(Font.BOLD));
 //	    g.setFont(new Font(font.getName(), Font.BOLD, 50));
 //	    g.setColor(Color.RED);
@@ -75,8 +75,10 @@ public class ImgCombineTests {
 ////	    g.drawString(name2, (result.getWidth() - 50 * name2.length()) / 2, 350);
 //	    drawCenteredString(g, name2, 0, 320, result.getWidth(), 50, font.deriveFont(50f).deriveFont(Font.BOLD));
 		avatar = ImageUtil.resizeImage(avatar, avatarSize, avatarSize);
-		g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-		g.drawImage(ImageUtil.rotateImage(avatar, 90), 300, 10, avatarSize, avatarSize, null);
+		int y = 220;
+		int x = 300;
+		g.setClip(new Ellipse2D.Float(x, y, avatarSize, avatarSize));
+		g.drawImage(ImageUtil.rotateImage(avatar, 90), x, y, avatarSize, avatarSize, null);
 		ImageIO.write(result, "png", new File("./src/test/resources/result.png"));
 
 	}

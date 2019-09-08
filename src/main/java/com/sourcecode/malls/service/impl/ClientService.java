@@ -270,12 +270,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 		BufferedImage result = ImageIO.read(new ByteArrayInputStream(fileService.load(true, shareBgPath)));
 		Graphics2D g = (Graphics2D) result.getGraphics();
-		g.drawImage(qrCode, 250, 770, null);
+		g.drawImage(qrCode, 250, 720, null);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(Color.DARK_GRAY);
-		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD));
-		g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
-		g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
+		ImageUtil.drawCenteredString(g, nickname, 0, 400, result.getWidth(), 45, imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD));
+		int x = 300;
+		int y = 220;
+		g.setClip(new Ellipse2D.Float(x, y, avatarSize, avatarSize));
+		g.drawImage(avatarImage, x, y, avatarSize, avatarSize, null);
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		ImageIO.write(result, "png", out);
 		byte[] arr = out.toByteArray();
