@@ -234,8 +234,9 @@ public class OrderService implements BaseService {
 				Optional<ClientCartItem> cartItemOp = cartRepository.findById(itemDTO.getCartItemId());
 				if (cartItemOp.isPresent() && cartItemOp.get().getClient().getId().equals(client.getId())) {
 					ClientCartItem cartItem = cartItemOp.get();
-					BigDecimal dealPrice = cartItem.getProperty().getPrice().multiply(new BigDecimal(cartItem.getNums())).multiply(discount);
+					BigDecimal dealPrice = cartItem.getProperty().getPrice().multiply(new BigDecimal(cartItem.getNums()));
 					totalPrice = totalPrice.add(dealPrice);
+					dealPrice = dealPrice.multiply(discount);
 					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice, subs);
 					cartRepository.delete(cartItem);
 					cacheEvictService.clearClientCartItem(client.getId(), itemDTO.getItemId());
@@ -252,6 +253,7 @@ public class OrderService implements BaseService {
 					GoodsItemProperty property = propertyOp.get();
 					BigDecimal dealPrice = property.getPrice().multiply(new BigDecimal(itemDTO.getNums()));
 					totalPrice = totalPrice.add(dealPrice);
+					dealPrice = dealPrice.multiply(discount);
 					settleItem(client, item, property, order, itemDTO.getNums(), dealPrice, subs);
 				}
 			}
