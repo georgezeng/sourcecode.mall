@@ -227,6 +227,7 @@ public class OrderService implements BaseService {
 		addressRepository.save(address);
 		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
 		order.setDiscount(discount);
+		discount = discount.multiply(new BigDecimal("0.01"));
 		List<SubOrder> subs = new ArrayList<>();
 		if (dto.isFromCart()) {
 			for (SettleItemDTO itemDTO : dto.getItems()) {
@@ -255,7 +256,7 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		realPrice = totalPrice.multiply(discount).multiply(new BigDecimal("0.01"));
+		realPrice = totalPrice.multiply(discount);
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
 			BigDecimal couponAmount = BigDecimal.ZERO;
 			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), realPrice);
