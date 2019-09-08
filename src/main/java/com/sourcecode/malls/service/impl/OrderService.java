@@ -257,6 +257,7 @@ public class OrderService implements BaseService {
 			}
 		}
 		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
+		order.setDiscount(discount);
 		realPrice = totalPrice.multiply(discount).multiply(new BigDecimal("0.01"));
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
 			BigDecimal couponAmount = BigDecimal.ZERO;
