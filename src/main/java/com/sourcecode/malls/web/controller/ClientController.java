@@ -276,7 +276,7 @@ public class ClientController {
 	}
 
 	@RequestMapping(path = "/registrationBonus")
-	public ResultBean<BigDecimal> getRegistrationBonus() {
+	public ResultBean<Map<String, BigDecimal>> getRegistrationBonus() throws Exception {
 		return new ResultBean<>(clientService.getRegistrationBonus(ClientContext.get()));
 	}
 

@@ -117,6 +117,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private ClientBonusService bonusService;
 
+	@Autowired
+	private MerchantService merchantService;
+
 	@Value("${invite.image.background.path}")
 	private String shareBgPath;
 
@@ -390,17 +393,20 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}).collect(Collectors.toList());
 	}
 
-	public BigDecimal getRegistrationBonus(Client client) {
+	public Map<String, BigDecimal> getRegistrationBonus(Client client) throws Exception {
+		Map<String, BigDecimal> data = new HashMap<>();
 		if (!client.isLoggedIn()) {
 			Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(client.getMerchant(),
 					CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 			if (setting.isPresent()) {
 				client.setLoggedIn(true);
 				clientRepository.save(client);
-				return setting.get().getAmount();
+				data.put("coupon", setting.get().getAmount());
 			}
+			data.put("points", merchantService.getClientPointsBonus(client.getMerchant().getId()).getRookie());
+			return data;
 		}
-		return BigDecimal.ZERO;
+		return null;
 	}
 
 	public ClientLevelSettingDTO getCurrentLevel(Client client) {
