@@ -65,7 +65,7 @@ public class EvaluationService {
 
 	@Autowired
 	private CacheEvictService cacheEvictService;
-	
+
 	@Autowired
 	private CacheClearer clearer;
 
@@ -93,10 +93,8 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<SubOrder> result = subOrderRepository.findAll(spec,
-				queryInfo.getPage().pageable(Direction.ASC, "createTime"));
-		return new PageResult<>(result.get().map(it -> it.asDTO()).collect(Collectors.toList()),
-				result.getTotalElements());
+		Page<SubOrder> result = subOrderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.ASC, "createTime"));
+		return new PageResult<>(result.get().map(it -> it.asDTO()).collect(Collectors.toList()), result.getTotalElements());
 	}
 
 	@Transactional(readOnly = true)
@@ -109,8 +107,7 @@ public class EvaluationService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client.getId()));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
@@ -120,8 +117,7 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<GoodsItemEvaluation> result = repository.findAll(spec,
-				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		Page<GoodsItemEvaluation> result = repository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(result.get().map(it -> {
 			GoodsItemEvaluationDTO dto = it.asDTO(true);
 			dto.setItemName(it.getSubOrder().getItemName());
@@ -133,11 +129,8 @@ public class EvaluationService {
 	}
 
 	@Transactional(readOnly = true)
-	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId,
-			QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		AssertUtil.assertTrue(
-				queryInfo.getData() != null && queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0,
-				"查找不到商品信息");
+	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
+		AssertUtil.assertTrue(queryInfo.getData() != null && queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0, "查找不到商品信息");
 		Specification<GoodsItemEvaluation> spec = new Specification<GoodsItemEvaluation>() {
 
 			/**
@@ -146,8 +139,7 @@ public class EvaluationService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<GoodsItemEvaluation> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("merchant"), merchantId));
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
@@ -160,8 +152,7 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<GoodsItemEvaluation> result = repository.findAll(spec,
-				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		Page<GoodsItemEvaluation> result = repository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(result.get().map(it -> {
 			GoodsItemEvaluationDTO dto = it.asDTO(false);
 			dto.setItemName(it.getSubOrder().getItemName());
@@ -175,12 +166,10 @@ public class EvaluationService {
 	public void save(Client client, GoodsItemEvaluationDTO dto) {
 		AssertUtil.assertNotNull(dto.getId(), "找不到订单序号");
 		Optional<SubOrder> subOrder = subOrderRepository.findById(dto.getId());
-		AssertUtil.assertTrue(subOrder.isPresent() && subOrder.get().getClient().getId().equals(client.getId()),
-				"找不到订单数据");
+		AssertUtil.assertTrue(subOrder.isPresent() && subOrder.get().getClient().getId().equals(client.getId()), "找不到订单数据");
 		Optional<GoodsItemEvaluation> dataOp = repository.findBySubOrder(subOrder.get());
 		AssertUtil.assertTrue(!dataOp.isPresent(), "此订单商品已经做过评价");
-		GoodsItemEvaluationDTO topEva = getTopEvaluation(client.getMerchant().getId(),
-				subOrder.get().getItem().getId());
+		GoodsItemEvaluationDTO topEva = getTopEvaluation(client.getMerchant().getId(), subOrder.get().getItem().getId());
 		GoodsItemEvaluation data = dto.asEntity();
 		data.setClient(client);
 		data.setMerchant(client.getMerchant());
@@ -232,12 +221,10 @@ public class EvaluationService {
 	public void saveAdditional(Client client, GoodsItemEvaluationDTO dto) {
 		AssertUtil.assertNotNull(dto.getId(), "找不到评价序号");
 		Optional<GoodsItemEvaluation> evaluationOp = repository.findById(dto.getId());
-		AssertUtil.assertTrue(evaluationOp.isPresent() && evaluationOp.get().getClient().getId().equals(client.getId())
-				&& !evaluationOp.get().isAdditional(), "找不到评价数据");
-		GoodsItemEvaluation evaluation = evaluationOp.get();
 		AssertUtil.assertTrue(
-				evaluation.getAdditionalEvaluation() == null || evaluation.getAdditionalEvaluation().getId() == null,
-				"此订单商品已经追加了评价");
+				evaluationOp.isPresent() && evaluationOp.get().getClient().getId().equals(client.getId()) && !evaluationOp.get().isAdditional(), "找不到评价数据");
+		GoodsItemEvaluation evaluation = evaluationOp.get();
+		AssertUtil.assertTrue(evaluation.getAdditionalEvaluation() == null || evaluation.getAdditionalEvaluation().getId() == null, "此订单商品已经追加了评价");
 		AssertUtil.assertTrue(evaluation.isPassed(), "不能追加评价");
 		GoodsItemEvaluation data = dto.asEntity();
 		data.setClient(client);
@@ -266,13 +253,18 @@ public class EvaluationService {
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_EVALUATION, key = "#itemId")
 	public GoodsItemEvaluationDTO getTopEvaluation(Long merchantId, Long itemId) {
 		Optional<GoodsItem> item = itemRepository.findById(itemId);
-		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId),
-				"商品不存在");
-		Optional<GoodsItemEvaluation> eva = repository
-				.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
+		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId), "商品不存在");
+		Optional<GoodsItemEvaluation> eva = repository.findFirstByItemAndPassedAndAdditionalOrderByCreateTimeDesc(item.get(), true, false);
 		if (eva.isPresent()) {
 			return eva.get().asDTO(false);
 		}
 		return null;
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOTAL_EVALUATIONS, key = "#itemId")
+	public long getTotalEvaluation(Long merchantId, Long itemId) {
+		Optional<GoodsItem> item = itemRepository.findById(itemId);
+		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId), "商品不存在");
+		return repository.countByItemAndPassedAndAdditional(item.get(), true, false);
 	}
 }

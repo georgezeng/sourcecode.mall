@@ -49,8 +49,7 @@ public class GoodsItemController {
 	}
 
 	@RequestMapping(path = "/definitions/load/params/{itemId}")
-	public ResultBean<GoodsAttributeDTO> loadDefinitions(@PathVariable("itemId") Long itemId,
-			@RequestBody KeyDTO<Long> dto) {
+	public ResultBean<GoodsAttributeDTO> loadDefinitions(@PathVariable("itemId") Long itemId, @RequestBody KeyDTO<Long> dto) {
 		return new ResultBean<>(service.loadDefinitions(itemId, dto));
 	}
 
@@ -59,12 +58,13 @@ public class GoodsItemController {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		GoodsItemEvaluationDTO evaDto = evaService.getTopEvaluation(ClientContext.getMerchantId(), dto.getId());
 		dto.setTopEvaluation(evaDto);
+		dto.setTotalEvaluations(evaService.getTotalEvaluation(ClientContext.getMerchantId(), dto.getId()));
 		return new ResultBean<>(dto);
 	}
 
 	@RequestMapping(path = "/{itemId}/{index}/{userId}/poster/share.png", produces = { MediaType.IMAGE_PNG_VALUE })
-	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("index") int index,
-			@PathVariable("userId") Long userId) throws Exception {
+	public Resource loadInvitePoster(@PathVariable("itemId") Long itemId, @PathVariable("index") int index, @PathVariable("userId") Long userId)
+			throws Exception {
 		return new ByteArrayResource(service.loadSharePoster(itemId, index, userId));
 	}
 }
