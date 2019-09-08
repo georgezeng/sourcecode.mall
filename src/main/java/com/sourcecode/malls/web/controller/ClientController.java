@@ -2,6 +2,7 @@ package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -43,7 +44,6 @@ import com.sourcecode.malls.enums.ClientCouponStatus;
 import com.sourcecode.malls.enums.VerificationStatus;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientIdentityRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsJournalRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -79,9 +79,6 @@ public class ClientController {
 
 	@Autowired
 	private ClientIdentityRepository identityRepository;
-
-	@Autowired
-	private ClientPointsJournalRepository clientPointsJournalRepository;
 
 	@Autowired
 	private MerchantShopApplicationRepository merchantApplicationRepository;
@@ -291,8 +288,8 @@ public class ClientController {
 	}
 
 	@RequestMapping(path = "/points/totalInvite")
-	public ResultBean<BigDecimal> getTotalInvitePoints() {
-		return new ResultBean<>(clientPointsJournalRepository.sumInvitePointsForClient(ClientContext.get().getId()));
+	public ResultBean<Map<String, Number>> getTotalInviteInfo() {
+		return new ResultBean<>(clientService.getTotalInviteInfo(ClientContext.get()));
 	}
 
 	@RequestMapping(path = "/points")

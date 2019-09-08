@@ -11,7 +11,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,6 +131,16 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	@Autowired
 	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOTAL_INVITE_INFO, key = "#client.id")
+	public Map<String, Number> getTotalInviteInfo(Client client) {
+		client = clientRepository.getOne(client.getId());
+		Map<String, Number> data = new HashMap<>();
+		data.put("totalPoints", clientPointsJournalRepository.sumInvitePointsForClient(client.getId()));
+		data.put("totalPeople", clientRepository.countByParent(client));
+		data.put("totalCoupons", clientCouponRepository.countTotalCoupons(client.getId(), CouponEventType.Invite));
+		return data;
+	}
+
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_CURRENT_POINTS, key = "#userId")
 	public BigDecimal getCurrentPoints(Long userId) {
 		Optional<Client> user = clientRepository.findById(userId);
@@ -148,8 +160,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), user.get()));
 				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
@@ -220,8 +231,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		pageInfo.setProperty("createTime");
 		pageInfo.setOrder(Direction.DESC.name());
 		clientPointsJournalRepository.findAll(pageInfo.pageable());
-		return clientPointsJournalRepository.findAllByClient(client.get(), pageInfo.pageable()).stream()
-				.map(it -> it.asDTO()).collect(Collectors.toList());
+		return clientPointsJournalRepository.findAllByClient(client.get(), pageInfo.pageable()).stream().map(it -> it.asDTO())
+				.collect(Collectors.toList());
 	}
 
 	@Override
@@ -241,8 +252,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(app.isPresent(), "商铺信息不存在");
 		String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-		BufferedImage qrCode = ImageUtil.resizeImage(imageService.generateQRCodeImage(shareQrCodeUrl, 1000, 1000, 1),
-				250, 250);
+		BufferedImage qrCode = ImageUtil.resizeImage(imageService.generateQRCodeImage(shareQrCodeUrl, 1000, 1000, 1), 250, 250);
 		String avatar = client.getAvatar();
 		InputStream in = null;
 		if (StringUtils.isEmpty(avatar)) {
@@ -263,8 +273,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		g.drawImage(qrCode, 250, 770, null);
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setColor(Color.DARK_GRAY);
-		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45,
-				imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD));
+		ImageUtil.drawCenteredString(g, nickname, 0, 170, result.getWidth(), 45, imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD));
 		g.setClip(new Ellipse2D.Float(300, 10, avatarSize, avatarSize));
 		g.drawImage(avatarImage, 300, 10, avatarSize, avatarSize, null);
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -283,8 +292,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				dto.setNickname("未设置昵称");
 			}
 			dto.setUsername("********" + dto.getUsername().substring(7));
-			Optional<ClientPointsJournal> journal = clientPointsJournalRepository
-					.findByTypeAndClientAndOrderId(ClientPointsType.Invite, parent, it.getId().toString());
+			Optional<ClientPointsJournal> journal = clientPointsJournalRepository.findByTypeAndClientAndOrderId(ClientPointsType.Invite, parent,
+					it.getId().toString());
 			if (journal.isPresent()) {
 				dto.setInvitePoints(journal.get().getBonusAmount());
 			}
@@ -297,9 +306,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, condition = "#queryInfo.data != null", key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order"),
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_COUPON_LIST, condition = "#queryInfo.data == null", key = "#client.id + '-All-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order") })
 	public List<ClientCouponDTO> getCoupons(Client client, QueryInfo<ClientCouponStatus> queryInfo) {
-		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-"
-				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
-				+ queryInfo.getPage().getOrder();
+		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_COUPON);
 		store.setBizKey(client.getId().toString());
@@ -314,8 +322,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
@@ -338,8 +345,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
@@ -360,16 +366,13 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				data.setFromOrderId(coupon.getFromOrder().getOrderId());
 			}
 			if (coupon.getInvitee() != null) {
-				data.setInvitee(coupon.getInvitee().getUsername().substring(0, 4) + "****"
-						+ coupon.getInvitee().getUsername().substring(7));
+				data.setInvitee(coupon.getInvitee().getUsername().substring(0, 4) + "****" + coupon.getInvitee().getUsername().substring(7));
 			}
 			if (coupon.getSetting().getItems() != null) {
-				data.setItems(coupon.getSetting().getItems().stream().map(item -> item.asDTO(false, false, false))
-						.collect(Collectors.toList()));
+				data.setItems(coupon.getSetting().getItems().stream().map(item -> item.asDTO(false, false, false)).collect(Collectors.toList()));
 			}
 			if (coupon.getSetting().getCategories() != null) {
-				data.setCategories(coupon.getSetting().getCategories().stream().map(category -> category.asDTO())
-						.collect(Collectors.toList()));
+				data.setCategories(coupon.getSetting().getCategories().stream().map(category -> category.asDTO()).collect(Collectors.toList()));
 			}
 			return data;
 		}).collect(Collectors.toList());
@@ -377,9 +380,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 
 	public BigDecimal getRegistrationBonus(Client client) {
 		if (!client.isLoggedIn()) {
-			Optional<CouponSetting> setting = couponSettingRepository
-					.findFirstByMerchantAndEventTypeAndStatusAndEnabled(client.getMerchant(),
-							CouponEventType.Registration, CouponSettingStatus.PutAway, true);
+			Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(client.getMerchant(),
+					CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 			if (setting.isPresent()) {
 				client.setLoggedIn(true);
 				clientRepository.save(client);
