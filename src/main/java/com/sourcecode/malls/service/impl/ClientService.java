@@ -247,7 +247,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Client client = clientOp.get();
 		String nickname = client.getNickname();
 		if (StringUtils.isEmpty(nickname)) {
-			nickname = "****" + client.getUsername().substring(7);
+			nickname = "********" + client.getUsername().substring(7);
 		}
 		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(app.isPresent(), "商铺信息不存在");
@@ -366,7 +366,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				data.setFromOrderId(coupon.getFromOrder().getOrderId());
 			}
 			if (coupon.getInvitee() != null) {
-				data.setInvitee(coupon.getInvitee().getUsername().substring(0, 4) + "****" + coupon.getInvitee().getUsername().substring(7));
+//				data.setInvitee(coupon.getInvitee().getUsername().substring(0, 4) + "****" + coupon.getInvitee().getUsername().substring(7));
+				data.setInvitee("********" + coupon.getInvitee().getUsername().substring(7));
 			}
 			if (coupon.getSetting().getItems() != null) {
 				data.setItems(coupon.getSetting().getItems().stream().map(item -> item.asDTO(false, false, false)).collect(Collectors.toList()));
