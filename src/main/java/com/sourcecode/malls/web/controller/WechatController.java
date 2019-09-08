@@ -37,7 +37,6 @@ import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientLevelSetting;
-import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.order.Order;
@@ -54,7 +53,6 @@ import com.sourcecode.malls.enums.Sex;
 import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientLevelSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
-import com.sourcecode.malls.repository.jpa.impl.coupon.ClientPointsRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
@@ -146,9 +144,6 @@ public class WechatController {
 
 	@Autowired
 	private WechatStoreRepository wechatStoreRepository;
-
-	@Autowired
-	private ClientPointsRepository clientPointsRepository;
 
 	@Autowired
 	private ClientBonusService bonusService;
@@ -354,9 +349,6 @@ public class WechatController {
 			AssertUtil.assertTrue(setting.isPresent(), "商家尚未配置会员等级");
 			user.setLevel(setting.get());
 			clientRepository.save(user);
-			ClientPoints points = new ClientPoints();
-			points.setClient(user);
-			clientPointsRepository.save(points);
 			if (parent != null) {
 				bonusService.addInviteBonus(user, parent);
 			}
