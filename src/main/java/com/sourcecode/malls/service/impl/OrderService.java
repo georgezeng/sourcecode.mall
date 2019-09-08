@@ -180,8 +180,7 @@ public class OrderService implements BaseService {
 			}
 			if (goodsItem.isPresent() && goodsItem.get().getMerchant().getId().equals(ClientContext.getMerchantId())) {
 				if (goodsItem.get().isEnabled()) {
-					Optional<GoodsItemProperty> property = goodsItemPropertyRepository
-							.findById(itemDTO.getPropertyId());
+					Optional<GoodsItemProperty> property = goodsItemPropertyRepository.findById(itemDTO.getPropertyId());
 					if (property.isPresent() && property.get().getItem().getId().equals(goodsItem.get().getId())) {
 						OrderItemDTO orderItem = new OrderItemDTO();
 						if (previewDTO.isFromCart()) {
@@ -226,17 +225,17 @@ public class OrderService implements BaseService {
 		OrderAddress address = dto.getAddress().asOrderAddressEntity();
 		address.setOrder(order);
 		addressRepository.save(address);
+		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
+		order.setDiscount(discount);
 		List<SubOrder> subs = new ArrayList<>();
 		if (dto.isFromCart()) {
 			for (SettleItemDTO itemDTO : dto.getItems()) {
 				Optional<ClientCartItem> cartItemOp = cartRepository.findById(itemDTO.getCartItemId());
 				if (cartItemOp.isPresent() && cartItemOp.get().getClient().getId().equals(client.getId())) {
 					ClientCartItem cartItem = cartItemOp.get();
-					BigDecimal dealPrice = cartItem.getProperty().getPrice()
-							.multiply(new BigDecimal(cartItem.getNums()));
+					BigDecimal dealPrice = cartItem.getProperty().getPrice().multiply(new BigDecimal(cartItem.getNums())).multiply(discount);
 					totalPrice = totalPrice.add(dealPrice);
-					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice,
-							subs);
+					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice, subs);
 					cartRepository.delete(cartItem);
 					cacheEvictService.clearClientCartItem(client.getId(), itemDTO.getItemId());
 				}
@@ -256,8 +255,6 @@ public class OrderService implements BaseService {
 				}
 			}
 		}
-		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
-		order.setDiscount(discount);
 		realPrice = totalPrice.multiply(discount).multiply(new BigDecimal("0.01"));
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
 			BigDecimal couponAmount = BigDecimal.ZERO;
@@ -269,8 +266,7 @@ public class OrderService implements BaseService {
 					Optional<ClientCoupon> couponOp = clientCouponRepository.findById(couponDTO.getId());
 					if (couponOp.isPresent()) {
 						limitedAmount = limitedAmount.subtract(couponDTO.getAmount());
-						AssertUtil.assertTrue(limitedAmount.signum() >= 0,
-								"超过优惠券限额，最多只能优惠" + originalLimitedAmount + "元");
+						AssertUtil.assertTrue(limitedAmount.signum() >= 0, "超过优惠券限额，最多只能优惠" + originalLimitedAmount + "元");
 						ClientCoupon coupon = couponOp.get();
 						realPrice = realPrice.subtract(couponDTO.getAmount());
 						couponAmount = couponAmount.add(couponDTO.getAmount());
@@ -308,8 +304,8 @@ public class OrderService implements BaseService {
 		return limitedAmount;
 	}
 
-	private void settleItem(Client client, GoodsItem item, GoodsItemProperty property, Order parent, int nums,
-			BigDecimal dealPrice, List<SubOrder> subs) {
+	private void settleItem(Client client, GoodsItem item, GoodsItemProperty property, Order parent, int nums, BigDecimal dealPrice,
+			List<SubOrder> subs) {
 		AssertUtil.assertTrue(item.isEnabled(), item.getName() + "已下架");
 		SubOrder sub = new SubOrder();
 		sub.setBrand(item.getBrand().getName());
@@ -390,16 +386,14 @@ public class OrderService implements BaseService {
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, condition = "#queryInfo.data != null", key = "#client.id + '-' + #queryInfo.data.name() + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order"),
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LIST, condition = "#queryInfo.data == null", key = "#client.id + '-All-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order") })
 	public PageResult<OrderDTO> getOrders(Client client, QueryInfo<OrderStatus> queryInfo) {
-		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-"
-				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
-				+ queryInfo.getPage().getOrder();
+		String key = client.getId() + "-" + (queryInfo.getData() != null ? queryInfo.getData().name() : "All") + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_CLIENT_ORDER);
 		store.setBizKey(client.getId().toString());
 		store.setSearchKey(key);
 		searchCacheKeyStoreRepository.save(store);
-		Page<Order> orders = orderRepository.findAll(getSpec(client, queryInfo),
-				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		Page<Order> orders = orderRepository.findAll(getSpec(client, queryInfo), queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(orders.get().map(order -> {
 			OrderDTO dto = order.asDTO(true, false);
 			if (!CollectionUtils.isEmpty(order.getSubList())) {
@@ -438,12 +432,10 @@ public class OrderService implements BaseService {
 					if (!OrderStatus.Canceled.equals(queryInfo.getData())) {
 						predicate.add(criteriaBuilder.equal(root.get("status"), queryInfo.getData()));
 					} else {
-						predicate
-								.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
-										criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
+						predicate.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), OrderStatus.Canceled),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.CanceledForRefund),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.RefundApplied), criteriaBuilder.equal(root.get("status"), OrderStatus.Closed),
+								criteriaBuilder.equal(root.get("status"), OrderStatus.Refunded)));
 					}
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
@@ -463,9 +455,7 @@ public class OrderService implements BaseService {
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ORDER_LOAD_ONE, key = "#id")
 	public OrderDTO getOrder(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && !orderOp.get().isDeleted()
-						&& orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		OrderDTO dto = order.asDTO(true, true);
@@ -513,9 +503,7 @@ public class OrderService implements BaseService {
 
 	public void cancel(Client client, Long id) throws Exception {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && !orderOp.get().isDeleted()
-						&& orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
@@ -602,9 +590,7 @@ public class OrderService implements BaseService {
 
 	public void pickup(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && !orderOp.get().isDeleted()
-						&& orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "不能确认收货，订单状态有误");
@@ -632,9 +618,7 @@ public class OrderService implements BaseService {
 
 	public void refundApply(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && !orderOp.get().isDeleted()
-						&& orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
@@ -646,13 +630,12 @@ public class OrderService implements BaseService {
 
 	public void delete(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
-		AssertUtil.assertTrue(
-				orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
+		AssertUtil.assertTrue(orderOp.isPresent() && !orderOp.get().isDeleted() && orderOp.get().getClient().getId().equals(client.getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		OrderStatus status = order.getStatus();
-		AssertUtil.assertTrue(OrderStatus.Refunded.equals(status) || OrderStatus.Canceled.equals(status)
-				|| OrderStatus.Closed.equals(status) || OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
+		AssertUtil.assertTrue(OrderStatus.Refunded.equals(status) || OrderStatus.Canceled.equals(status) || OrderStatus.Closed.equals(status)
+				|| OrderStatus.Finished.equals(status), "不能清除订单，订单状态有误");
 		order.setDeleted(true);
 		orderRepository.save(order);
 		clearer.clearClientOrders(order);
@@ -674,8 +657,7 @@ public class OrderService implements BaseService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<ClientCoupon> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.equal(root.get("status"), ClientCouponStatus.UnUse));
@@ -693,15 +675,13 @@ public class OrderService implements BaseService {
 							hasPut = putInSelectedCoupons(selectedCoupons, coupon);
 							break;
 						case Category: {
-							if (coupon.getSetting().getRealCategories().stream()
-									.anyMatch(it -> it.getId().equals(item.getItem().getCategoryId()))) {
+							if (coupon.getSetting().getRealCategories().stream().anyMatch(it -> it.getId().equals(item.getItem().getCategoryId()))) {
 								hasPut = putInSelectedCoupons(selectedCoupons, coupon);
 							}
 						}
 							break;
 						case Item: {
-							if (coupon.getSetting().getItems().stream()
-									.anyMatch(it -> it.getId().equals(item.getItem().getId()))) {
+							if (coupon.getSetting().getItems().stream().anyMatch(it -> it.getId().equals(item.getItem().getId()))) {
 								hasPut = putInSelectedCoupons(selectedCoupons, coupon);
 							}
 						}
@@ -718,9 +698,8 @@ public class OrderService implements BaseService {
 	}
 
 	private boolean putInSelectedCoupons(List<ClientCoupon> selectedCoupons, ClientCoupon coupon) {
-		if (coupon.getSetting().getLimitedNums() == 0
-				|| selectedCoupons.stream().filter(it -> it.getSetting().getId().equals(coupon.getSetting().getId()))
-						.count() < coupon.getSetting().getLimitedNums()) {
+		if (coupon.getSetting().getLimitedNums() == 0 || selectedCoupons.stream()
+				.filter(it -> it.getSetting().getId().equals(coupon.getSetting().getId())).count() < coupon.getSetting().getLimitedNums()) {
 			selectedCoupons.add(coupon);
 			return true;
 		}
@@ -731,8 +710,7 @@ public class OrderService implements BaseService {
 		Optional<Order> orderOp = orderRepository.findById(orderId);
 		AssertUtil.assertTrue(orderOp.isPresent(), ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
-		AssertUtil.assertTrue(!order.isDeleted() && order.getClient().getId().equals(clientId),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(!order.isDeleted() && order.getClient().getId().equals(clientId), ExceptionMessageConstant.NO_SUCH_RECORD);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(order.getStatus()), "不能修改支付方式");
 		order.setPayment(payment);
 		orderRepository.save(order);
