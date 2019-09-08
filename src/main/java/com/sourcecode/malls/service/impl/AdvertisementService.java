@@ -1,7 +1,6 @@
 package com.sourcecode.malls.service.impl;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,13 +44,13 @@ public class AdvertisementService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<AdvertisementSetting> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
-				Date now = new Date();
+			public Predicate toPredicate(Root<AdvertisementSetting> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+//				Date now = new Date();
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("merchant"), merchantId));
-				predicate.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), now));
-				predicate.add(criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), now));
+				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
+//				predicate.add(criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), now));
+//				predicate.add(criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), now));
 				if (queryInfo.getData() != null) {
 					predicate.add(criteriaBuilder.equal(root.get("type"), queryInfo.getData()));
 				}

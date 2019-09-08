@@ -47,6 +47,7 @@ import com.alibaba.druid.util.StringUtils;
 import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.client.ClientPointsJournal;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.coupon.CouponSetting;
@@ -146,6 +147,14 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Optional<Client> user = clientRepository.findById(userId);
 		AssertUtil.assertTrue(user.isPresent(), "用户不存在");
 		return user.get().getPoints() != null ? user.get().getPoints().getCurrentAmount() : BigDecimal.ZERO;
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_POINTS_ACC_IN_AMOUNT, key = "#userId")
+	public BigDecimal getPointsAccInAmount(Long userId) {
+		Optional<Client> client = clientRepository.findById(userId);
+		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
+		ClientPoints points = client.get().getPoints();
+		return points != null ? points.getAccInAmount() : BigDecimal.ZERO;
 	}
 
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_UNUSE_COUPON_NUMS, key = "#userId")

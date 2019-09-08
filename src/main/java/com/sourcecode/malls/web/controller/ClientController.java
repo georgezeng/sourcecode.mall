@@ -26,7 +26,6 @@ import com.sourcecode.malls.constants.SystemConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.client.ClientIdentity;
-import com.sourcecode.malls.domain.client.ClientPoints;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.CodeStore;
@@ -36,7 +35,6 @@ import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientDTO;
 import com.sourcecode.malls.dto.client.ClientIdentityDTO;
 import com.sourcecode.malls.dto.client.ClientLevelSettingDTO;
-import com.sourcecode.malls.dto.client.ClientPointsDTO;
 import com.sourcecode.malls.dto.client.ClientPointsJournalDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
@@ -292,12 +290,9 @@ public class ClientController {
 		return new ResultBean<>(clientService.getTotalInviteInfo(ClientContext.get()));
 	}
 
-	@RequestMapping(path = "/points")
-	public ResultBean<ClientPointsDTO> points() {
-		Optional<Client> client = clientService.findById(ClientContext.get().getId());
-		AssertUtil.assertTrue(client.isPresent(), "用户不存在");
-		ClientPoints points = client.get().getPoints();
-		return new ResultBean<>(points.asDTO());
+	@RequestMapping(path = "/points/accInAmount")
+	public ResultBean<BigDecimal> accInAmount() {
+		return new ResultBean<>(clientService.getPointsAccInAmount(ClientContext.get().getId()));
 	}
 
 	@RequestMapping(path = "/points/journals")
