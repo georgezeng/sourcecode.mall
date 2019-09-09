@@ -139,7 +139,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	public Map<String, Number> getTotalInviteInfo(Client client) {
 		client = clientRepository.getOne(client.getId());
 		Map<String, Number> data = new HashMap<>();
-		data.put("totalPoints", clientPointsJournalRepository.sumInvitePointsForClient(client.getId()));
+		BigDecimal totalPoints = clientPointsJournalRepository.sumInvitePointsForClient(client.getId());
+		data.put("totalPoints", totalPoints != null ? totalPoints : BigDecimal.ZERO);
 		data.put("totalPeople", clientRepository.countByParent(client));
 		data.put("totalCoupons", clientCouponRepository.countTotalCoupons(client.getId(), CouponEventType.Invite));
 		return data;
