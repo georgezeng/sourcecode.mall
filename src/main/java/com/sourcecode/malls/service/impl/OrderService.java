@@ -400,19 +400,19 @@ public class OrderService implements BaseService {
 		return new PageResult<>(orders.get().map(order -> {
 			OrderDTO dto = order.asDTO(true, false);
 			if (!CollectionUtils.isEmpty(order.getSubList())) {
-				int count = 0;
+				int afterSaleCount = 0;
 				int commentCount = 0;
 				for (SubOrder sub : order.getSubList()) {
 					if (sub.isComment()) {
 						commentCount++;
 					}
 					Optional<AfterSaleApplication> app = aftersaleApplicationRepository.findBySubOrder(sub);
-					if (app.isPresent() && !AfterSaleStatus.NotYet.equals(app.get().getStatus())) {
-						count++;
+					if (app.isPresent() && (AfterSaleStatus.Finished.equals(app.get().getStatus()) || AfterSaleStatus.Rejected.equals(app.get().getStatus()))) {
+						afterSaleCount++;
 					}
 				}
 				dto.setComment(commentCount == order.getSubList().size());
-				dto.setApplied(count == order.getSubList().size());
+				dto.setApplied(afterSaleCount == order.getSubList().size());
 			}
 			return dto;
 		}).collect(Collectors.toList()), orders.getTotalElements());

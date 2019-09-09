@@ -27,8 +27,10 @@ import com.sourcecode.malls.domain.aftersale.AfterSaleAddress;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.aftersale.AfterSalePhoto;
 import com.sourcecode.malls.domain.client.Client;
+import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.SubOrder;
+import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.order.ExpressDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
@@ -39,13 +41,17 @@ import com.sourcecode.malls.exception.BusinessException;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
 import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSalePhotoRepository;
+import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleReasonSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
+import com.sourcecode.malls.repository.redis.impl.SearchCacheKeyStoreRepository;
 import com.sourcecode.malls.service.base.BaseService;
 import com.sourcecode.malls.util.AssertUtil;
 
 @Service
 @Transactional
 public class AfterSaleService implements BaseService {
+	@Autowired
+	private AfterSaleReasonSettingRepository settingRepository;
 
 	@Autowired
 	private AfterSalePhotoRepository photoRepository;
@@ -58,12 +64,27 @@ public class AfterSaleService implements BaseService {
 
 	@Autowired
 	private OrderRepository orderRepository;
-	
+
 	@Autowired
 	private CacheEvictService cacheEvictService;
-	
+
 	@Autowired
 	private CacheClearer clearer;
+
+	@Autowired
+	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
+
+	@Cacheable(cacheNames = CacheNameConstant.AFTER_SALE_REASON_LIST, key = "#merchant.id + '-' + #type.name()")
+	public List<String> getAllReasons(Merchant merchant, AfterSaleType type) {
+		return settingRepository.findAllByMerchantAndType(merchant, type).stream().map(it -> it.getContent()).collect(Collectors.toList());
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.AFTER_SALE_LOAD_ONE, key = "#id")
+	public AfterSaleApplicationDTO load(Long clientId, Long id) {
+		Optional<AfterSaleApplication> data = applicationRepository.findById(id);
+		AssertUtil.assertTrue(data.isPresent() && data.get().getClient().getId().equals(clientId), ExceptionMessageConstant.NO_SUCH_RECORD);
+		return data.get().asDTO();
+	}
 
 	public void applyRefund(Long clientId, AfterSaleApplicationDTO dto) {
 		AssertUtil.assertNotEmpty(dto.getDescription(), "描述不能为空");
@@ -73,8 +94,7 @@ public class AfterSaleService implements BaseService {
 		}
 		AssertUtil.assertNotNull(dto.getId(), "订单序号不能为空");
 		Optional<Order> orderOp = orderRepository.findById(dto.getId());
-		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(clientId),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(clientId), ExceptionMessageConstant.NO_SUCH_RECORD);
 		Order order = orderOp.get();
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "订单状态有误，不能申请退款");
 		for (SubOrder sub : order.getSubList()) {
@@ -94,6 +114,7 @@ public class AfterSaleService implements BaseService {
 			application.setDescription(dto.getDescription());
 			application.setReason(dto.getReason());
 			applicationRepository.save(application);
+			clearer.clearAfterSales(application);
 			cacheEvictService.clearClientAfterSaleUnFinishedtNums(clientId);
 			if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 				for (String path : dto.getPhotos()) {
@@ -116,8 +137,7 @@ public class AfterSaleService implements BaseService {
 			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 		}
 		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
-		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().getClient().getId().equals(clientId),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().getClient().getId().equals(clientId), ExceptionMessageConstant.NO_SUCH_RECORD);
 
 		AfterSaleApplication data = dataOp.get();
 		AssertUtil.assertTrue(OrderStatus.Finished.equals(data.getOrder().getStatus()), "订单状态有误，不能申请售后");
@@ -157,7 +177,6 @@ public class AfterSaleService implements BaseService {
 		data.setType(dto.getType());
 		data.setStatus(AfterSaleStatus.Processing);
 		applicationRepository.save(data);
-		cacheEvictService.clearClientAfterSaleUnFinishedtNums(clientId);
 		if (AfterSaleType.Change.equals(dto.getType())) {
 			AfterSaleAddress address = dto.getAddress().asAfterSaleAddressEntity();
 			address.setApplication(data);
@@ -171,31 +190,30 @@ public class AfterSaleService implements BaseService {
 				photoRepository.save(photo);
 			}
 		}
+		cacheEvictService.clearClientAfterSaleUnFinishedtNums(clientId);
+		clearer.clearAfterSales(data);
 	}
-	
+
 	public void fillExpress(ExpressDTO dto) {
 		AssertUtil.assertNotEmpty(dto.getCompany(), "物流公司不能为空");
 		AssertUtil.assertNotEmpty(dto.getNumber(), "物流单号不能为空");
 		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(dto.getId());
-		AssertUtil.assertTrue(
-				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		AfterSaleApplication data = dataOp.get();
-		AssertUtil.assertTrue(
-				AfterSaleType.SalesReturn.equals(data.getType()) || AfterSaleType.Change.equals(data.getType()),
-				"售后类型不是退换货服务，不能提交运单信息");
+		AssertUtil.assertTrue(AfterSaleType.SalesReturn.equals(data.getType()) || AfterSaleType.Change.equals(data.getType()), "售后类型不是退换货服务，不能提交运单信息");
 		AssertUtil.assertTrue(AfterSaleStatus.WaitForReturn.equals(data.getStatus()), "售后状态有误，不允许提交运单信息");
 		data.setClientExpressCompany(dto.getCompany());
 		data.setClientExpressNumber(dto.getNumber());
 		data.setStatus(AfterSaleStatus.WaitForReceive);
 		data.setReturnTime(new Date());
 		applicationRepository.save(data);
+		clearer.clearAfterSales(data);
 	}
-	
+
 	public void pickup(Long id) {
 		Optional<AfterSaleApplication> dataOp = applicationRepository.findById(id);
-		AssertUtil.assertTrue(
-				dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
+		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().getClient().getId().equals(ClientContext.get().getId()),
 				ExceptionMessageConstant.NO_SUCH_RECORD);
 		AfterSaleApplication data = dataOp.get();
 		AssertUtil.assertTrue(AfterSaleStatus.WaitForPickup.equals(data.getStatus()), "售后记录状态有误，不能确认收货");
@@ -203,15 +221,22 @@ public class AfterSaleService implements BaseService {
 		data.setPickupTime(new Date());
 		applicationRepository.save(data);
 		cacheEvictService.clearClientAfterSaleUnFinishedtNums(data.getClient().getId());
+		clearer.clearAfterSales(data);
 	}
 
+	@Cacheable(cacheNames = CacheNameConstant.AFTER_SALE_LIST, key = "#client.id + '-' + #orderId + '-' + #status + '-' + #pageInfo.num")
 	@Transactional(readOnly = true)
 	public List<AfterSaleApplicationDTO> list(Client client, Long orderId, String status, PageInfo pageInfo) {
+		String key = client.getId() + "-" + orderId + "-" + status + "-" + pageInfo.getNum();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_AFTER_SALE);
+		store.setBizKey(client.getId() + "-" + orderId);
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		Order order = null;
 		if (orderId != null && orderId > 0) {
 			Optional<Order> orderOp = orderRepository.findById(orderId);
-			AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()),
-					ExceptionMessageConstant.NO_SUCH_RECORD);
+			AssertUtil.assertTrue(orderOp.isPresent() && orderOp.get().getClient().getId().equals(client.getId()), ExceptionMessageConstant.NO_SUCH_RECORD);
 			order = orderOp.get();
 		}
 		final Order theOrder = order;
@@ -223,8 +248,7 @@ public class AfterSaleService implements BaseService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<AfterSaleApplication> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<AfterSaleApplication> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				if (theOrder != null) {
 					predicate.add(criteriaBuilder.equal(root.get("order"), theOrder));
@@ -269,8 +293,7 @@ public class AfterSaleService implements BaseService {
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<AfterSaleApplication> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<AfterSaleApplication> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				predicate.add(criteriaBuilder.notEqual(root.get("status"), AfterSaleStatus.NotYet));

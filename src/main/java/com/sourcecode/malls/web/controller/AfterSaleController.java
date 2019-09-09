@@ -3,8 +3,6 @@ package com.sourcecode.malls.web.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,36 +13,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.sourcecode.malls.constants.ExceptionMessageConstant;
 import com.sourcecode.malls.context.ClientContext;
-import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.dto.aftersale.AfterSaleApplicationDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientAddressDTO;
 import com.sourcecode.malls.dto.order.ExpressDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.enums.AfterSaleType;
-import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleApplicationRepository;
-import com.sourcecode.malls.repository.jpa.impl.aftersale.AfterSaleReasonSettingRepository;
 import com.sourcecode.malls.service.FileOnlineSystemService;
 import com.sourcecode.malls.service.impl.AfterSaleService;
-import com.sourcecode.malls.util.AssertUtil;
 
 @RestController
 @RequestMapping(path = "/afterSale")
 public class AfterSaleController {
 
 	@Autowired
-	private AfterSaleReasonSettingRepository settingRepository;
-
-	@Autowired
-	private AfterSaleApplicationRepository applicationRepository;
-
-	@Autowired
 	private AfterSaleService service;
-
-//	@Autowired
-//	private GoodsItemService itemService;
 
 	@Autowired
 	private FileOnlineSystemService fileService;
@@ -54,8 +38,7 @@ public class AfterSaleController {
 
 	@RequestMapping(path = "/reason/list/params/{type}")
 	public ResultBean<String> listReasons(@PathVariable AfterSaleType type) {
-		return new ResultBean<>(settingRepository.findAllByMerchantAndType(ClientContext.get().getMerchant(), type)
-				.stream().map(it -> it.getContent()).collect(Collectors.toList()));
+		return new ResultBean<>(service.getAllReasons(ClientContext.get().getMerchant(), type));
 	}
 
 	@RequestMapping(path = "/list/params/{id}/{status}")
@@ -65,13 +48,11 @@ public class AfterSaleController {
 	}
 
 	@RequestMapping(value = "/upload/params/{id}")
-	public ResultBean<String> upload(@PathVariable Long id, @RequestParam("files") List<MultipartFile> files)
-			throws IOException {
+	public ResultBean<String> upload(@PathVariable Long id, @RequestParam("files") List<MultipartFile> files) throws IOException {
 		List<String> filePaths = new ArrayList<>();
 		for (MultipartFile file : files) {
 			String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-			String filePath = userDir + "/" + ClientContext.get().getId() + "/sub_order/" + id + "/aftersale/"
-					+ System.currentTimeMillis() + extend;
+			String filePath = userDir + "/" + ClientContext.get().getId() + "/sub_order/" + id + "/aftersale/" + System.currentTimeMillis() + extend;
 			fileService.upload(true, filePath, file.getInputStream());
 			filePaths.add(filePath);
 		}
@@ -90,24 +71,10 @@ public class AfterSaleController {
 		return new ResultBean<>();
 	}
 
-//	@SuppressWarnings("unchecked")
-//	@RequestMapping(value = "/returnAddress/load")
-//	public ResultBean<Map<String, String>> returnAddress() throws Exception {
-//		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
-//		Optional<MerchantSetting> setting = merchantSettingRepository.findByMerchantAndCode(merchant.get(),
-//				MerchantSettingConstant.RETURN_ADDRESS);
-//		Map<String, String> map = null;
-//		if (setting.isPresent()) {
-//			map = mapper.readValue(setting.get().getValue(), Map.class);
-//		}
-//		return new ResultBean<>(map);
-//	}
-	
 	@RequestMapping(value = "/returnAddress/load/params/{id}")
 	public ResultBean<ClientAddressDTO> returnAddress(@PathVariable Long id) throws Exception {
-		Optional<AfterSaleApplication> data = applicationRepository.findById(id);
-		AssertUtil.assertTrue(data.isPresent() && data.get().getReturnAddress() != null, "尚未设置回寄地址，请联系客服");
-		return new ResultBean<>(data.get().getReturnAddress().asDTO());
+		AfterSaleApplicationDTO data = service.load(ClientContext.get().getId(), id);
+		return new ResultBean<>(data.getReturnAddress());
 	}
 
 	@RequestMapping(value = "/fillExpress")
@@ -121,7 +88,7 @@ public class AfterSaleController {
 		service.pickup(id);
 		return new ResultBean<>();
 	}
-	
+
 	@RequestMapping(value = "/count/unFinished")
 	public ResultBean<Long> countUnFinished() {
 		return new ResultBean<>(service.countUnFinished(ClientContext.get()));
@@ -129,13 +96,7 @@ public class AfterSaleController {
 
 	@RequestMapping(value = "/load/params/{id}")
 	public ResultBean<AfterSaleApplicationDTO> load(@PathVariable Long id) {
-		Optional<AfterSaleApplication> data = applicationRepository.findById(id);
-		AssertUtil.assertTrue(data.isPresent() && data.get().getClient().getId().equals(ClientContext.get().getId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		AfterSaleApplicationDTO dto = data.get().asDTO();
-//		GoodsItemDTO item = itemService.load(data.get().getMerchant().getId(), data.get().getSubOrder().getItemId());
-//		dto.setItem(item);
-		return new ResultBean<>(dto);
+		return new ResultBean<>(service.load(ClientContext.get().getId(), id));
 	}
 
 }

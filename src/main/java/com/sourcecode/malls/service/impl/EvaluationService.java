@@ -216,6 +216,7 @@ public class EvaluationService {
 		if (topEva == null) {
 			cacheEvictService.clearGoodsItemTopEvaluation(data.getItem().getId());
 		}
+		clearer.clearClientOrders(data.getOrder());
 	}
 
 	public void saveAdditional(Client client, GoodsItemEvaluationDTO dto) {
