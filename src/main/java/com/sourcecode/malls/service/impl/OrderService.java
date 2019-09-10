@@ -513,25 +513,6 @@ public class OrderService implements BaseService {
 		OrderStatus status = order.getStatus();
 		boolean paid = OrderStatus.Paid.equals(status);
 		AssertUtil.assertTrue(OrderStatus.UnPay.equals(status) || paid, "不能取消订单");
-//		if (paid) {
-//			// 自动退款
-//			switch (order.getPayment()) {
-//			case WePay: {
-//				WePayConfig config = wechatService.createWePayConfig(client.getMerchant().getId());
-//				wechatService.refund(config, order.getTransactionId(), order.getOrderId(), order.getRealPrice(),
-//						order.getRealPrice(), order.getSubList().size());
-//			}
-//				break;
-//			case AliPay: {
-//				alipayService.refund(client.getMerchant().getId(), order.getTransactionId(), order.getOrderId(),
-//						order.getRealPrice(), order.getRealPrice(), order.getSubList().size());
-//			}
-//				break;
-//			default:
-//				throw new BusinessException("不支持的支付类型");
-//			}
-//		}
-//		afterCancel(order.getOrderId());
 		if (paid) {
 			order.setStatus(OrderStatus.CanceledForRefund);
 		} else {
@@ -554,42 +535,7 @@ public class OrderService implements BaseService {
 			}
 		}
 		clearer.clearClientOrders(order);
-//		bonusService.removeConsumeBonus(order);
 	}
-
-//	public void afterCancel(String orderId) {
-//		Optional<Order> orderOp = orderRepository.findByOrderId(orderId);
-//		if (orderOp.isPresent() && (OrderStatus.UnPay.equals(orderOp.get().getStatus())
-//				|| OrderStatus.Paid.equals(orderOp.get().getStatus()))) {
-//			Order order = orderOp.get();
-//			em.lock(order, LockModeType.PESSIMISTIC_WRITE);
-//			if (OrderStatus.Paid.equals(order.getStatus())) {
-//				order.setRefundTime(new Date());
-//			}
-//			order.setStatus(OrderStatus.Canceled);
-//			orderRepository.save(order);
-//			cacheEvictService.clearClientOrders(order.getClient().getId());
-//			List<SubOrder> list = order.getSubList();
-//			if (!CollectionUtils.isEmpty(list)) {
-//				for (SubOrder sub : list) {
-//					GoodsItemProperty property = sub.getProperty();
-//					if (property != null) {
-//						em.lock(property, LockModeType.PESSIMISTIC_WRITE);
-//						property.setInventory(property.getInventory() + sub.getNums());
-//						goodsItemPropertyRepository.save(property);
-//					}
-//				}
-//			}
-//			List<ClientCoupon> coupons = order.getGeneratedCoupons();
-//			if (!CollectionUtils.isEmpty(coupons)) {
-//				for (ClientCoupon coupon : coupons) {
-//					coupon.setStatus(ClientCouponStatus.Out);
-//				}
-//				clientCouponRepository.saveAll(coupons);
-//				cacheEvictService.clearClientCoupons(order.getClient().getId());
-//			}
-//		}
-//	}
 
 	public void pickup(Client client, Long id) {
 		Optional<Order> orderOp = orderRepository.findById(id);
@@ -599,6 +545,7 @@ public class OrderService implements BaseService {
 		AssertUtil.assertTrue(OrderStatus.Shipped.equals(order.getStatus()), "不能确认收货，订单状态有误");
 		em.lock(order, LockModeType.PESSIMISTIC_WRITE);
 		order.setStatus(OrderStatus.Finished);
+		order.setPickupTime(new Date());
 		bonusService.addConsumeBonus(order);
 		if (!CollectionUtils.isEmpty(order.getSubList())) {
 			for (SubOrder sub : order.getSubList()) {
