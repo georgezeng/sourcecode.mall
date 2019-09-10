@@ -9,6 +9,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
@@ -29,6 +30,7 @@ import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluationPhoto;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
+import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.SubOrder;
 import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
@@ -107,10 +109,11 @@ public class EvaluationService {
 			@Override
 			public Predicate toPredicate(Root<SubOrder> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
+				Join<SubOrder, Order> join = root.join("parent");
 				predicate.add(criteriaBuilder.equal(root.get("client"), client.getId()));
 				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
-				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
-				predicate.add(criteriaBuilder.equal(root.join("parent").get("status"), OrderStatus.Finished));
+				predicate.add(criteriaBuilder.equal(join.get("deleted"), false));
+				predicate.add(criteriaBuilder.equal(join.get("status"), OrderStatus.Finished));
 				if (queryInfo.getData() != null && queryInfo.getData() > 0) {
 					predicate.add(criteriaBuilder.equal(root.get("parent"), queryInfo.getData()));
 				}
