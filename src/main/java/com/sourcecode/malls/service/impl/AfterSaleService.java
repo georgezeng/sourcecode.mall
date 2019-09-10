@@ -1,5 +1,6 @@
 package com.sourcecode.malls.service.impl;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -151,7 +152,8 @@ public class AfterSaleService implements BaseService {
 		case SalesReturn: {
 			AssertUtil.assertTrue(dto.getNums() > 0 && dto.getNums() <= data.getSubOrder().getNums(), "数量不正确");
 			data.setNums(dto.getNums());
-			data.setAmount(data.getSubOrder().getDealPrice());
+			data.setAmount(new BigDecimal(dto.getNums()).multiply(data.getSubOrder().getUnitPrice()).multiply(data.getOrder().getDiscount())
+					.multiply(new BigDecimal("0.01")));
 		}
 			break;
 		default:
