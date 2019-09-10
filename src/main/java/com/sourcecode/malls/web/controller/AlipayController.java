@@ -2,6 +2,7 @@ package com.sourcecode.malls.web.controller;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URLDecoder;
 import java.util.Optional;
 
 import javax.servlet.ServletException;
@@ -75,9 +76,10 @@ public class AlipayController {
 	@Autowired
 	private ClientRepository clientRepository;
 
-	@RequestMapping(path = "/prepare/params/{uid}/{oid}/{from}", produces = "text/html")
-	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId,
-			@PathVariable("oid") Long orderId, @PathVariable("from") String from) throws ServletException, IOException {
+	@RequestMapping(path = "/prepare/params/{uid}/{oid}", produces = "text/html")
+	public String prepare(HttpServletRequest httpRequest, @PathVariable("uid") Long userId, @PathVariable("oid") Long orderId,
+			@RequestParam("url") String returnUrl) throws Exception {
+		returnUrl = URLDecoder.decode(returnUrl, "UTF-8");
 		Optional<Client> userOp = clientRepository.findById(userId);
 		AssertUtil.assertTrue(userOp.isPresent(), "用户不存在");
 		Client client = userOp.get();
@@ -85,15 +87,14 @@ public class AlipayController {
 		AssertUtil.assertTrue(setting.isPresent(), "找不到商家信息");
 		Optional<MerchantShopApplication> shop = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(shop.isPresent(), "找不到商家信息");
-		AlipayClient alipayClient = new DefaultAlipayClient(config.getGateway(), setting.get().getAccount(),
-				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
-				config.getEncryptType()); // 获得初始化的AlipayClient
+		AlipayClient alipayClient = new DefaultAlipayClient(config.getGateway(), setting.get().getAccount(), setting.get().getSecret(),
+				config.getDataType(), config.getCharset(), setting.get().getMch(), config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		String returnUrl = "https://%s/?uid=" + userId;
-		if (!"wechat".equalsIgnoreCase(from)) {
-			returnUrl += "#/Order/List/All";
-		}
-		alipayRequest.setReturnUrl(String.format(returnUrl, shop.get().getDomain()));
+//		String returnUrl = "https://%s/";
+//		if (!"wechat".equalsIgnoreCase(from)) {
+//			returnUrl += "#/Order/List/All";
+//		}
+		alipayRequest.setReturnUrl(returnUrl);
 		alipayRequest.setNotifyUrl(notifyUrl);// 在公共参数中设置回跳和通知地址
 
 		Optional<Order> orderOp = orderRepository.findById(orderId);
