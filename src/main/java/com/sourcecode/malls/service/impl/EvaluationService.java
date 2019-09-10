@@ -74,6 +74,17 @@ public class EvaluationService {
 
 	@Transactional(readOnly = true)
 	public PageResult<SubOrderDTO> getUnCommentList(Client client, QueryInfo<Long> queryInfo) {
+		Page<SubOrder> result = subOrderRepository.findAll(getUnCommentSpec(client, queryInfo),
+				queryInfo.getPage().pageable(Direction.ASC, "createTime"));
+		return new PageResult<>(result.get().map(it -> it.asDTO()).collect(Collectors.toList()), result.getTotalElements());
+	}
+
+	@Transactional(readOnly = true)
+	public long countUnComment(Client client, QueryInfo<Long> queryInfo) {
+		return subOrderRepository.count(getUnCommentSpec(client, queryInfo));
+	}
+
+	private Specification<SubOrder> getUnCommentSpec(Client client, QueryInfo<Long> queryInfo) {
 		Specification<SubOrder> spec = new Specification<SubOrder>() {
 
 			/**
@@ -93,8 +104,7 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<SubOrder> result = subOrderRepository.findAll(spec, queryInfo.getPage().pageable(Direction.ASC, "createTime"));
-		return new PageResult<>(result.get().map(it -> it.asDTO()).collect(Collectors.toList()), result.getTotalElements());
+		return spec;
 	}
 
 	@Transactional(readOnly = true)

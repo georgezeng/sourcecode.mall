@@ -89,7 +89,7 @@ public class AlipayController {
 				setting.get().getSecret(), config.getDataType(), config.getCharset(), setting.get().getMch(),
 				config.getEncryptType()); // 获得初始化的AlipayClient
 		AlipayTradeWapPayRequest alipayRequest = new AlipayTradeWapPayRequest();// 创建API对应的request
-		String returnUrl = "https://%s/";
+		String returnUrl = "https://%s/?uid=" + userId;
 		if (!"wechat".equalsIgnoreCase(from)) {
 			returnUrl += "#/Order/List/All";
 		}
