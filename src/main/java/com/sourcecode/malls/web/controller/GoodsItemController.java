@@ -58,7 +58,7 @@ public class GoodsItemController {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		GoodsItemEvaluationDTO evaDto = evaService.getTopEvaluation(ClientContext.getMerchantId(), dto.getId());
 		dto.setTopEvaluation(evaDto);
-		dto.setTotalEvaluations(evaService.getTotalEvaluation(ClientContext.getMerchantId(), dto.getId()));
+		dto.setTotalEvaluations(evaService.countCommentForGoodsItem(ClientContext.getMerchantId(), dto.getId()));
 		return new ResultBean<>(dto);
 	}
 

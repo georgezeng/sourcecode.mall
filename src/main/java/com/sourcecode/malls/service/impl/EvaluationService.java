@@ -72,7 +72,7 @@ public class EvaluationService {
 
 	@Autowired
 	private CacheClearer clearer;
-	
+
 	@Autowired
 	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
@@ -171,10 +171,9 @@ public class EvaluationService {
 		return spec;
 	}
 
-	@Transactional(readOnly = true)
-	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
+	private Specification<GoodsItemEvaluation> getSpecForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		AssertUtil.assertTrue(queryInfo.getData() != null && queryInfo.getData().getId() != null && queryInfo.getData().getId() > 0, "查找不到商品信息");
-		Specification<GoodsItemEvaluation> spec = new Specification<GoodsItemEvaluation>() {
+		return new Specification<GoodsItemEvaluation>() {
 
 			/**
 			 * 
@@ -195,7 +194,29 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<GoodsItemEvaluation> result = repository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#itemId")
+	public long countCommentForGoodsItem(Long merchantId, Long itemId) {
+		QueryInfo<GoodsItemEvaluationDTO> queryInfo = new QueryInfo<>();
+		GoodsItemEvaluationDTO data = new GoodsItemEvaluationDTO();
+		data.setId(itemId);
+		queryInfo.setData(data);
+		return repository.count(getSpecForGoodsItem(merchantId, queryInfo));
+	}
+
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.page.num")
+	@Transactional(readOnly = true)
+	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
+		String key = queryInfo.getData().getId() + "-" + queryInfo.getPage().getNum();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_ITEM_COMMENT);
+		store.setBizKey(queryInfo.getData().getId().toString());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
+		Page<GoodsItemEvaluation> result = repository.findAll(getSpecForGoodsItem(merchantId, queryInfo),
+				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
 		return new PageResult<>(result.get().map(it -> {
 			GoodsItemEvaluationDTO dto = it.asDTO(false);
 			dto.setItemName(it.getSubOrder().getItemName());
@@ -294,7 +315,7 @@ public class EvaluationService {
 		}
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_EVALUATION, key = "#itemId")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_COMMENT, key = "#itemId")
 	public GoodsItemEvaluationDTO getTopEvaluation(Long merchantId, Long itemId) {
 		Optional<GoodsItem> item = itemRepository.findById(itemId);
 		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId), "商品不存在");
@@ -305,10 +326,4 @@ public class EvaluationService {
 		return null;
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOTAL_EVALUATIONS, key = "#itemId")
-	public long getTotalEvaluation(Long merchantId, Long itemId) {
-		Optional<GoodsItem> item = itemRepository.findById(itemId);
-		AssertUtil.assertTrue(item.isPresent() && item.get().isEnabled() && item.get().getMerchant().getId().equals(merchantId), "商品不存在");
-		return repository.countByItemAndPassedAndAdditional(item.get(), true, false);
-	}
 }
