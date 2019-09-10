@@ -70,7 +70,6 @@ public class EvaluationController {
 
 	@RequestMapping(path = "/uncomment/count")
 	public ResultBean<Long> countUnComment(@RequestBody QueryInfo<Long> queryInfo) {
-		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(service.getUnCommentList(ClientContext.get(), queryInfo).getTotal());
 	}
 
@@ -81,7 +80,6 @@ public class EvaluationController {
 
 	@RequestMapping(path = "/comment/count")
 	public ResultBean<Long> countComment(@RequestBody QueryInfo<Long> queryInfo) {
-		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(service.getCommentList(ClientContext.get(), queryInfo).getTotal());
 	}
 
@@ -93,7 +91,6 @@ public class EvaluationController {
 
 	@RequestMapping(path = "/goodsItem/count")
 	public ResultBean<Long> countCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		queryInfo.getPage().setSize(1);
 		return new ResultBean<>(
 				service.getCommentListForGoodsItem(ClientContext.getMerchantId(), queryInfo).getTotal());
 	}

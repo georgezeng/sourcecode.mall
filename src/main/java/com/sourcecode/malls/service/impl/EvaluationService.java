@@ -30,6 +30,7 @@ import com.sourcecode.malls.domain.goods.GoodsItemEvaluation;
 import com.sourcecode.malls.domain.goods.GoodsItemEvaluationPhoto;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
 import com.sourcecode.malls.domain.order.SubOrder;
+import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.order.SubOrderDTO;
 import com.sourcecode.malls.dto.query.PageResult;
@@ -41,6 +42,7 @@ import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemEvaluationReposit
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.SubOrderRepository;
+import com.sourcecode.malls.repository.redis.impl.SearchCacheKeyStoreRepository;
 import com.sourcecode.malls.util.AssertUtil;
 
 @Service
@@ -68,12 +70,22 @@ public class EvaluationService {
 
 	@Autowired
 	private CacheClearer clearer;
+	
+	@Autowired
+	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
 	@Autowired
 	protected EntityManager em;
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_UNCOMMENT_LIST, key = "#client.id + '-' + #queryInfo.data + '-' + #queryInfo.page.num")
 	public PageResult<SubOrderDTO> getUnCommentList(Client client, QueryInfo<Long> queryInfo) {
+		String key = client.getId() + "-" + queryInfo.getData() + "-" + queryInfo.getPage().getNum();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_UNCOMMENT);
+		store.setBizKey(client.getId().toString() + '-' + queryInfo.getData());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
 		Page<SubOrder> result = subOrderRepository.findAll(getUnCommentSpec(client, queryInfo),
 				queryInfo.getPage().pageable(Direction.ASC, "createTime"));
 		return new PageResult<>(result.get().map(it -> it.asDTO()).collect(Collectors.toList()), result.getTotalElements());
@@ -97,6 +109,7 @@ public class EvaluationService {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("client"), client.getId()));
 				predicate.add(criteriaBuilder.equal(root.get("comment"), false));
+				predicate.add(criteriaBuilder.equal(root.get("deleted"), false));
 				predicate.add(criteriaBuilder.equal(root.join("parent").get("status"), OrderStatus.Finished));
 				if (queryInfo.getData() != null && queryInfo.getData() > 0) {
 					predicate.add(criteriaBuilder.equal(root.get("parent"), queryInfo.getData()));
@@ -108,7 +121,32 @@ public class EvaluationService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_COMMENT_LIST, key = "#client.id + '-' + #queryInfo.data + '-' + #queryInfo.page.num")
 	public PageResult<GoodsItemEvaluationDTO> getCommentList(Client client, QueryInfo<Long> queryInfo) {
+		String key = client.getId() + "-" + queryInfo.getData() + "-" + queryInfo.getPage().getNum();
+		SearchCacheKeyStore store = new SearchCacheKeyStore();
+		store.setType(SearchCacheKeyStore.SEARCH_COMMENT);
+		store.setBizKey(client.getId().toString() + '-' + queryInfo.getData());
+		store.setSearchKey(key);
+		searchCacheKeyStoreRepository.save(store);
+		Page<GoodsItemEvaluation> result = repository.findAll(getCommentSpec(client, queryInfo),
+				queryInfo.getPage().pageable(Direction.DESC, "createTime"));
+		return new PageResult<>(result.get().map(it -> {
+			GoodsItemEvaluationDTO dto = it.asDTO(true);
+			dto.setItemName(it.getSubOrder().getItemName());
+			dto.setItemThumbnail(it.getSubOrder().getThumbnail());
+			dto.setItemNums(it.getSubOrder().getNums());
+			dto.setItemSpecificationValues(it.getSubOrder().getSpecificationValues());
+			return dto;
+		}).collect(Collectors.toList()), result.getTotalElements());
+	}
+
+	@Transactional(readOnly = true)
+	public long countComment(Client client, QueryInfo<Long> queryInfo) {
+		return repository.count(getCommentSpec(client, queryInfo));
+	}
+
+	private Specification<GoodsItemEvaluation> getCommentSpec(Client client, QueryInfo<Long> queryInfo) {
 		Specification<GoodsItemEvaluation> spec = new Specification<GoodsItemEvaluation>() {
 
 			/**
@@ -127,15 +165,7 @@ public class EvaluationService {
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
-		Page<GoodsItemEvaluation> result = repository.findAll(spec, queryInfo.getPage().pageable(Direction.DESC, "createTime"));
-		return new PageResult<>(result.get().map(it -> {
-			GoodsItemEvaluationDTO dto = it.asDTO(true);
-			dto.setItemName(it.getSubOrder().getItemName());
-			dto.setItemThumbnail(it.getSubOrder().getThumbnail());
-			dto.setItemNums(it.getSubOrder().getNums());
-			dto.setItemSpecificationValues(it.getSubOrder().getSpecificationValues());
-			return dto;
-		}).collect(Collectors.toList()), result.getTotalElements());
+		return spec;
 	}
 
 	@Transactional(readOnly = true)
@@ -192,7 +222,6 @@ public class EvaluationService {
 		data.setAdditional(false);
 		data.setOpen(false);
 		repository.save(data);
-		cacheEvictService.clearClientUnCommentNums(client.getId());
 		if (!CollectionUtils.isEmpty(dto.getPhotos())) {
 			AssertUtil.assertTrue(dto.getPhotos().size() <= 5, "最多上传5张图片");
 			for (String path : dto.getPhotos()) {
@@ -223,6 +252,7 @@ public class EvaluationService {
 			throw new BusinessException("不支持的评价级别");
 		}
 		rankRepository.save(rank);
+		clearer.clearEvaluation(data);
 		if (topEva == null) {
 			cacheEvictService.clearGoodsItemTopEvaluation(data.getItem().getId());
 		}
