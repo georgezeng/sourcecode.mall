@@ -120,12 +120,6 @@ public class OrderService implements BaseService {
 	@Autowired
 	protected EntityManager em;
 
-//	@Autowired
-//	private WechatService wechatService;
-//
-//	@Autowired
-//	private AlipayService alipayService;
-
 	@Autowired
 	private ClientService clientService;
 
