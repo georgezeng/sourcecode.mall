@@ -1,6 +1,5 @@
 package com.sourcecode.malls.service.impl;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -146,26 +145,13 @@ public class AfterSaleService implements BaseService {
 		case Change: {
 			AssertUtil.assertNotNull(dto.getAddress(), "地址不能为空");
 			AssertUtil.assertTrue(dto.getNums() > 0 && dto.getNums() <= data.getSubOrder().getNums(), "数量不正确");
-//			AssertUtil.assertNotEmpty(dto.getSpecificationValues(), "规格不能为空");
-//			AssertUtil.assertNotNull(dto.getPropertyId(), "规格选择有误");
-//			Optional<GoodsItemProperty> propertyOp = propertyRepository.findById(dto.getPropertyId());
-//			AssertUtil.assertTrue(
-//					propertyOp.isPresent() && propertyOp.get().getItem().getId().equals(data.getSubOrder().getItemId()),
-//					"找不到此规格");
-//			GoodsItemProperty property = propertyOp.get();
-//			em.lock(property, LockModeType.PESSIMISTIC_WRITE);
-//			int leftInventory = property.getInventory() - dto.getNums();
-//			AssertUtil.assertTrue(leftInventory >= 0, "库存不足");
-//			property.setInventory(leftInventory);
-//			propertyRepository.save(property);
-//			data.setSpecificationValues(dto.getSpecificationValues());
 			data.setNums(dto.getNums());
 		}
 			break;
 		case SalesReturn: {
 			AssertUtil.assertTrue(dto.getNums() > 0 && dto.getNums() <= data.getSubOrder().getNums(), "数量不正确");
 			data.setNums(dto.getNums());
-			data.setAmount(data.getSubOrder().getUnitPrice().multiply(new BigDecimal(dto.getNums())));
+			data.setAmount(data.getSubOrder().getDealPrice());
 		}
 			break;
 		default:
@@ -255,21 +241,6 @@ public class AfterSaleService implements BaseService {
 				} else {
 					predicate.add(criteriaBuilder.equal(root.get("client"), client));
 				}
-//				if ("WaitForProcess".equals(status)) {
-//					predicate.add(
-//							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReturn),
-//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForPickup)));
-//				} else if ("WaitForConfirm".equals(status)) {
-//					predicate.add(
-//							criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForRefund),
-//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.WaitForReceive)));
-//				} else if ("Finished".equals("status")) {
-//					predicate
-//							.add(criteriaBuilder.or(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Finished),
-//									criteriaBuilder.equal(root.get("status"), AfterSaleStatus.Rejected)));
-//				} else {
-//					predicate.add(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.valueOf(status)));
-//				}
 				if (!"all".equalsIgnoreCase(status)) {
 					predicate.add(criteriaBuilder.equal(root.get("status"), AfterSaleStatus.valueOf(status)));
 				} else {
