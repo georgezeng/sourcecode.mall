@@ -55,8 +55,7 @@ public class EvaluationController {
 		List<String> filePaths = new ArrayList<>();
 		for (MultipartFile file : files) {
 			String extend = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf("."));
-			String filePath = userDir + "/" + ClientContext.get().getId() + "/evaluation/" + System.currentTimeMillis()
-					+ extend;
+			String filePath = userDir + "/" + ClientContext.get().getId() + "/evaluation/" + System.currentTimeMillis() + extend;
 			fileService.upload(true, filePath, file.getInputStream());
 			filePaths.add(filePath);
 		}
@@ -84,15 +83,13 @@ public class EvaluationController {
 	}
 
 	@RequestMapping(path = "/goodsItem/list")
-	public ResultBean<GoodsItemEvaluationDTO> listCommentForGoodsItem(
-			@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
+	public ResultBean<GoodsItemEvaluationDTO> listCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		return new ResultBean<>(service.getCommentListForGoodsItem(ClientContext.getMerchantId(), queryInfo).getList());
 	}
 
 	@RequestMapping(path = "/goodsItem/count")
 	public ResultBean<Long> countCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		return new ResultBean<>(
-				service.getCommentListForGoodsItem(ClientContext.getMerchantId(), queryInfo).getTotal());
+		return new ResultBean<>(service.countCommentForGoodsItem(ClientContext.getMerchantId(), queryInfo.getData().getId()));
 	}
 
 	@RequestMapping(path = "/load/subOrder/params/{id}")
