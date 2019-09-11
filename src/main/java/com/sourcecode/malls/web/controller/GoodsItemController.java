@@ -58,7 +58,11 @@ public class GoodsItemController {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
 		GoodsItemEvaluationDTO evaDto = evaService.getTopEvaluation(ClientContext.getMerchantId(), dto.getId());
 		dto.setTopEvaluation(evaDto);
-		dto.setTotalEvaluations(evaService.countCommentForGoodsItem(ClientContext.getMerchantId(), dto.getId()));
+		QueryInfo<GoodsItemEvaluationDTO> queryInfo = new QueryInfo<>();
+		GoodsItemEvaluationDTO data = new GoodsItemEvaluationDTO();
+		data.setId(id);
+		queryInfo.setData(data);
+		dto.setTotalEvaluations(evaService.countCommentForGoodsItem(ClientContext.getMerchantId(), queryInfo));
 		return new ResultBean<>(dto);
 	}
 

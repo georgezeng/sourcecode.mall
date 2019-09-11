@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
@@ -197,7 +198,9 @@ public class EvaluationService {
 
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-' + #queryInfo.data.value")
+	@Caching(cacheable = {
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-' + #queryInfo.data.value.name", condition = "#queryInfo.data.value != null"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-All'", condition = "#queryInfo.data.value == null") })
 	public long countCommentForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		return repository.count(getSpecForGoodsItem(merchantId, queryInfo));
 	}
