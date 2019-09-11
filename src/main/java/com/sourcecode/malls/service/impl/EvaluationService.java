@@ -197,16 +197,12 @@ public class EvaluationService {
 
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#itemId")
-	public long countCommentForGoodsItem(Long merchantId, Long itemId) {
-		QueryInfo<GoodsItemEvaluationDTO> queryInfo = new QueryInfo<>();
-		GoodsItemEvaluationDTO data = new GoodsItemEvaluationDTO();
-		data.setId(itemId);
-		queryInfo.setData(data);
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-' + #queryInfo.data.value")
+	public long countCommentForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		return repository.count(getSpecForGoodsItem(merchantId, queryInfo));
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.page.num")
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.data.value + '-' + #queryInfo.page.num")
 	@Transactional(readOnly = true)
 	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		String key = queryInfo.getData().getId() + "-" + queryInfo.getPage().getNum();

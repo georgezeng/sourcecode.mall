@@ -89,7 +89,7 @@ public class EvaluationController {
 
 	@RequestMapping(path = "/goodsItem/count")
 	public ResultBean<Long> countCommentForGoodsItem(@RequestBody QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		return new ResultBean<>(service.countCommentForGoodsItem(ClientContext.getMerchantId(), queryInfo.getData().getId()));
+		return new ResultBean<>(service.countCommentForGoodsItem(ClientContext.getMerchantId(), queryInfo));
 	}
 
 	@RequestMapping(path = "/load/subOrder/params/{id}")
