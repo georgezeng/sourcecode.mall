@@ -313,6 +313,7 @@ public class EvaluationService {
 				photoRepository.save(photo);
 			}
 		}
+		clearer.clearEvaluation(data);
 	}
 
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOP_COMMENT, key = "#itemId")
