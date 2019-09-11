@@ -557,6 +557,7 @@ public class OrderService implements BaseService {
 			}
 		}
 		clearer.clearClientOrders(order);
+		clearer.clearEvaluation(order);
 //		cacheEvictService.clearAllGoodsItemList();
 	}
 
