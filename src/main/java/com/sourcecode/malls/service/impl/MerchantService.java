@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.domain.coupon.CouponSetting;
 import com.sourcecode.malls.domain.merchant.Merchant;
-import com.sourcecode.malls.dto.ClientInviteBonusInfo;
+import com.sourcecode.malls.dto.ClientBonusInfo;
 import com.sourcecode.malls.dto.client.ClientPointsBonus;
 import com.sourcecode.malls.dto.merchant.SiteInfo;
 import com.sourcecode.malls.enums.CouponEventType;
@@ -30,23 +30,26 @@ public class MerchantService {
 		return settingService.loadSiteInfo(merchantId);
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_POINTS_BONUS, key = "#merchantId")
-	public ClientPointsBonus getClientPointsBonus(Long merchantId) throws Exception {
-		return settingService.loadClientPointsBonus(merchantId);
-	}
-
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_INVITE_BONUS_INFO, key = "#merchant.id")
-	public ClientInviteBonusInfo getInviteBonusInfo(Merchant merchant) throws Exception {
-		ClientInviteBonusInfo info = new ClientInviteBonusInfo();
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_BONUS_INFO, key = "#merchant.id")
+	public ClientBonusInfo getBonusInfo(Merchant merchant) throws Exception {
+		ClientBonusInfo info = new ClientBonusInfo();
 		Optional<CouponSetting> couponSetting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabledOrderByCreateTimeDesc(merchant,
 				CouponEventType.Invite, CouponSettingStatus.PutAway, true);
 		BigDecimal coupon = BigDecimal.ZERO;
 		if (couponSetting.isPresent()) {
 			coupon = couponSetting.get().getAmount();
 		}
-		info.setCoupon(coupon);
+		info.setInviteCoupon(coupon);
+		coupon = BigDecimal.ZERO;
+		couponSetting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabledOrderByCreateTimeDesc(merchant,
+				CouponEventType.Registration, CouponSettingStatus.PutAway, true);
+		if (couponSetting.isPresent()) {
+			coupon = couponSetting.get().getAmount();
+		}
+		info.setRookieCoupon(coupon);
 		ClientPointsBonus pointsBonus = settingService.loadClientPointsBonus(merchant.getId());
-		info.setPoints(pointsBonus.getInvite());
+		info.setInvitePoints(pointsBonus.getInvite());
+		info.setRookiePoints(pointsBonus.getRookie());
 		return info;
 	}
 }

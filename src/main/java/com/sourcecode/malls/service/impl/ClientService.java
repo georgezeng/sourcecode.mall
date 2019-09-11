@@ -404,7 +404,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 				clientRepository.save(client);
 				data.put("coupon", setting.get().getAmount());
 			}
-			data.put("points", merchantService.getClientPointsBonus(client.getMerchant().getId()).getRookie());
+			data.put("points", merchantService.getBonusInfo(client.getMerchant()).getRookiePoints());
 			return data;
 		}
 		return null;
