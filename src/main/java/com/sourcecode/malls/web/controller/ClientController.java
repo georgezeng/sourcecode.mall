@@ -112,6 +112,7 @@ public class ClientController {
 		Client client = ClientContext.get();
 		client.setAvatar(filePath);
 		clientService.save(client);
+		cacheEvictService.clearClientInvitePoster(client.getId());
 		return new ResultBean<>(filePath);
 	}
 
