@@ -397,8 +397,8 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	public Map<String, BigDecimal> getRegistrationBonus(Client client) throws Exception {
 		Map<String, BigDecimal> data = new HashMap<>();
 		if (!client.isLoggedIn()) {
-			Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabled(client.getMerchant(),
-					CouponEventType.Registration, CouponSettingStatus.PutAway, true);
+			Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabledOrderByCreateTimeDesc(
+					client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 			if (setting.isPresent()) {
 				client.setLoggedIn(true);
 				clientRepository.save(client);

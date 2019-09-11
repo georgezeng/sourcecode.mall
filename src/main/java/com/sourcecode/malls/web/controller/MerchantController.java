@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.dto.ClientInviteBonusInfo;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.client.ClientPointsBonus;
 import com.sourcecode.malls.dto.merchant.SiteInfo;
@@ -28,6 +29,11 @@ public class MerchantController {
 	@RequestMapping(path = "/clientPointsBonus")
 	public ResultBean<ClientPointsBonus> getClientPointsBonus() throws Exception {
 		return new ResultBean<>(merchantService.getClientPointsBonus(ClientContext.getMerchantId()));
+	}
+
+	@RequestMapping(path = "/clientInviteBonus")
+	public ResultBean<ClientInviteBonusInfo> getClientInviteBonus() throws Exception {
+		return new ResultBean<>(merchantService.getInviteBonusInfo(ClientContext.get().getMerchant()));
 	}
 
 }
