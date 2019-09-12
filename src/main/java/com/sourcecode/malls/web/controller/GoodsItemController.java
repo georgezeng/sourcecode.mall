@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.dto.base.ResultBean;
-import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemEvaluationDTO;
 import com.sourcecode.malls.dto.query.QueryInfo;

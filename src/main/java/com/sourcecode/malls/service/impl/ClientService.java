@@ -142,7 +142,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		BigDecimal totalPoints = clientPointsJournalRepository.sumInvitePointsForClient(client.getId());
 		data.put("totalPoints", totalPoints != null ? totalPoints : BigDecimal.ZERO);
 		data.put("totalPeople", clientRepository.countByParent(client));
-		data.put("totalCoupons", clientCouponRepository.countTotalCoupons(client.getId(), CouponEventType.Invite));
+		data.put("totalCoupons", clientCouponRepository.countTotalCoupons(client.getId(), CouponEventType.Invite.name()));
 		return data;
 	}
 

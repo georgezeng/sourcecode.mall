@@ -49,7 +49,6 @@ import com.sourcecode.malls.domain.goods.GoodsItem;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
-import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemPropertyDTO;
