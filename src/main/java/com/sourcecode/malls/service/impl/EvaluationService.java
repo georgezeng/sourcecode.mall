@@ -188,7 +188,7 @@ public class EvaluationService {
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
 				predicate.add(criteriaBuilder.equal(root.get("open"), true));
-				predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData().getId()));
+				predicate.add(criteriaBuilder.equal(root.get("order"), queryInfo.getData().getId()));
 				if (queryInfo.getData().getValue() != null) {
 					predicate.add(criteriaBuilder.equal(root.get("value"), queryInfo.getData().getValue()));
 				}
@@ -211,7 +211,7 @@ public class EvaluationService {
 		String key = queryInfo.getData().getId() + "-" + queryInfo.getPage().getNum();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_ITEM_COMMENT);
-		store.setBizKey(queryInfo.getData().getId().toString());
+		store.setBizKey(queryInfo.getData().toString());
 		store.setSearchKey(key);
 		searchCacheKeyStoreRepository.save(store);
 		Page<GoodsItemEvaluation> result = repository.findAll(getSpecForGoodsItem(merchantId, queryInfo),
