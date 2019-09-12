@@ -52,6 +52,7 @@ import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
+import com.sourcecode.malls.dto.goods.GoodsItemPropertyDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
@@ -137,11 +138,9 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 
 	@Transactional(readOnly = true)
 	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'category-' + #merchantId + '-' + #categoryId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
-	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type,
-			QueryInfo<String> queryInfo) {
-		String key = "category-" + merchantId + "-" + categoryId + "-" + type + "-" + queryInfo.getData() + "-"
-				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
-				+ queryInfo.getPage().getOrder();
+	public List<GoodsItemDTO> findByCategory(Long merchantId, Long categoryId, String type, QueryInfo<String> queryInfo) {
+		String key = "category-" + merchantId + "-" + categoryId + "-" + type + "-" + queryInfo.getData() + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_GOODS_ITEM_BY_CATEGORY);
 		if (categoryId > 0) {
@@ -161,8 +160,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public Predicate toPredicate(Root<GoodsItem> root, CriteriaQuery<?> query,
-					CriteriaBuilder criteriaBuilder) {
+			public Predicate toPredicate(Root<GoodsItem> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
 				List<Predicate> predicate = new ArrayList<>();
 				predicate.add(criteriaBuilder.equal(root.get("merchant"), merchantId));
 				if (categoryId > 0) {
@@ -170,10 +168,8 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 				}
 				if (!StringUtils.isEmpty(queryInfo.getData())) {
 					String like = "%" + queryInfo.getData() + "%";
-					predicate.add(criteriaBuilder.or(criteriaBuilder.like(root.get("name"), like),
-							criteriaBuilder.like(root.get("sellingPoints"), like),
-							criteriaBuilder.like(root.join("category").get("name"), like),
-							criteriaBuilder.like(root.join("brand").get("name"), like)));
+					predicate.add(criteriaBuilder.or(criteriaBuilder.like(root.get("name"), like), criteriaBuilder.like(root.get("sellingPoints"), like),
+							criteriaBuilder.like(root.join("category").get("name"), like), criteriaBuilder.like(root.join("brand").get("name"), like)));
 				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
@@ -185,17 +181,14 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			break;
 		case "price": {
 			if (Direction.ASC.name().equals(pageInfo.getOrder())) {
-				pageResult = itemRepository.findAll(spec,
-						pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
+				pageResult = itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "minPrice", "putTime"));
 			} else {
-				pageResult = itemRepository.findAll(spec,
-						pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
+				pageResult = itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "maxPrice", "putTime"));
 			}
 		}
 			break;
 		default:
-			pageResult = itemRepository.findAll(spec,
-					pageInfo.pageable(Direction.DESC, "rank.orderNums", "rank.goodEvaluations", "putTime"));
+			pageResult = itemRepository.findAll(spec, pageInfo.pageable(Direction.DESC, "rank.orderNums", "rank.goodEvaluations", "putTime"));
 		}
 		return pageResult.get().map(it -> it.asDTO(false, false, false)).collect(Collectors.toList());
 	}
@@ -204,9 +197,8 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	@Transactional(readOnly = true)
 	@Cacheable(cacheNames = CacheNameConstant.GOODS_ITEM_LIST, key = "'coupon-' + #merchantId + '-' + #couponId + '-' + #type + '-' + #queryInfo.data + '-' + #queryInfo.page.num + '-' + #queryInfo.page.property + '-' + #queryInfo.page.order")
 	public List<GoodsItemDTO> findByCoupon(Long merchantId, Long couponId, String type, QueryInfo<String> queryInfo) {
-		String key = "coupon-" + merchantId + "-" + couponId + "-" + type + "-" + queryInfo.getData() + "-"
-				+ queryInfo.getPage().getNum() + "-" + queryInfo.getPage().getProperty() + "-"
-				+ queryInfo.getPage().getOrder();
+		String key = "coupon-" + merchantId + "-" + couponId + "-" + type + "-" + queryInfo.getData() + "-" + queryInfo.getPage().getNum() + "-"
+				+ queryInfo.getPage().getProperty() + "-" + queryInfo.getPage().getOrder();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_GOODS_ITEM_BY_COUPON);
 		store.setBizKey(couponId.toString());
@@ -229,15 +221,12 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		fromCondition.append("from goods_item item").append("\n");
 		switch (coupon.getSetting().getHxType()) {
 		case Category: {
-			fromCondition.append(
-					"inner join coupon_setting_real_category cc on item.category_id = cc.category_id and cc.setting_id=?")
-					.append("\n");
+			fromCondition.append("inner join coupon_setting_real_category cc on item.category_id = cc.category_id and cc.setting_id=?").append("\n");
 			args.add(coupon.getSetting().getId());
 		}
 			break;
 		case Item: {
-			fromCondition.append("inner join coupon_setting_goods_item ci on item.id = ci.item_id and ci.setting_id=?")
-					.append("\n");
+			fromCondition.append("inner join coupon_setting_goods_item ci on item.id = ci.item_id and ci.setting_id=?").append("\n");
 			args.add(coupon.getSetting().getId());
 		}
 			break;
@@ -331,14 +320,12 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		g1.drawImage(qrCode, 10, 10, null);
 		g1.setColor(Color.decode("#333333"));
 		g1.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		ImageUtil.drawCenteredString(g1, "长按识别二维码下单", 10, 275, qrCode.getWidth(), 30,
-				imageService.getFont().deriveFont(25f).deriveFont(Font.BOLD));
+		ImageUtil.drawCenteredString(g1, "长按识别二维码下单", 10, 275, qrCode.getWidth(), 30, imageService.getFont().deriveFont(25f).deriveFont(Font.BOLD));
 		String photo = item.getThumbnail();
 		if (!CollectionUtils.isEmpty(item.getPhotos())) {
 			photo = item.getPhotos().get(index).getPath();
 		}
-		BufferedImage goodsItem = ImageUtil.resizeImage(
-				ImageIO.read(new ByteArrayInputStream(fileService.load(true, photo))), result.getWidth(),
+		BufferedImage goodsItem = ImageUtil.resizeImage(ImageIO.read(new ByteArrayInputStream(fileService.load(true, photo))), result.getWidth(),
 				result.getWidth());
 		Graphics2D g2 = (Graphics2D) result.getGraphics();
 		g2.drawImage(goodsItem, 0, 0, null);
@@ -357,8 +344,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		int lineNums = 10;
 		for (; line < size; line++) {
 			if (line < 2) {
-				g2.drawString(itemName.substring(lineNums * line, lineNums * (line + 1)), 20,
-						startY + lineHeight * line);
+				g2.drawString(itemName.substring(lineNums * line, lineNums * (line + 1)), 20, startY + lineHeight * line);
 			} else {
 				outOfBound = true;
 				break;
@@ -381,8 +367,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 			g2.setColor(Color.decode("#919BAD"));
 			FontMetrics metrics = g2.getFontMetrics(font40F);
 			AttributedString as = new AttributedString("￥" + item.getMarketPrice());
-			as.addAttribute(TextAttribute.FONT,
-					imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD).deriveFont(Font.ITALIC));
+			as.addAttribute(TextAttribute.FONT, imageService.getFont().deriveFont(30f).deriveFont(Font.BOLD).deriveFont(Font.ITALIC));
 			as.addAttribute(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
 			g2.drawString(as.getIterator(), metrics.stringWidth(realPrice) + 30, height);
 		}
@@ -396,13 +381,31 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	public List<GoodsAttributeDTO> loadDefinitions(Long itemId, KeyDTO<Long> dto) {
 		Optional<GoodsItem> dataOp = itemRepository.findById(itemId);
 		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().isEnabled(), ExceptionMessageConstant.NO_SUCH_RECORD);
-		AssertUtil.assertTrue(dataOp.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
-				ExceptionMessageConstant.NO_SUCH_RECORD);
-		return dto.getIds().stream()
-				.map(id -> transferFacade.entityToDTO(Void -> definitionRepository.findById(id),
-						op -> op.isPresent() && op.get().getMerchant().getId().equals(ClientContext.getMerchantId()),
-						definition -> definition.asDTO()))
-				.filter(it -> it != null).collect(Collectors.toList());
+		AssertUtil.assertTrue(dataOp.get().getMerchant().getId().equals(ClientContext.getMerchantId()), ExceptionMessageConstant.NO_SUCH_RECORD);
+		List<GoodsItemPropertyDTO> properties = dataOp.get().getProperties().stream().map(it -> it.asDTO()).collect(Collectors.toList());
+		return dto.getIds().stream().map(id -> transferFacade.entityToDTO(Void -> definitionRepository.findById(id),
+				op -> op.isPresent() && op.get().getMerchant().getId().equals(ClientContext.getMerchantId()), definition -> {
+					GoodsAttributeDTO def = definition.asDTO();
+					def.setAttrs(filterValues(properties, def));
+					return def;
+				})).filter(it -> it != null).collect(Collectors.toList());
 
+	}
+
+	private List<GoodsAttributeDTO> filterValues(List<GoodsItemPropertyDTO> properties, GoodsAttributeDTO definition) {
+		List<GoodsAttributeDTO> values = definition.getAttrs();
+		List<GoodsAttributeDTO> selectedValues = new ArrayList<>();
+		for (GoodsAttributeDTO value : values) {
+			Long id = value.getId();
+			out: for (GoodsItemPropertyDTO property : properties) {
+				for (GoodsAttributeDTO propertyValue : property.getValues()) {
+					if (propertyValue.getId().equals(id)) {
+						selectedValues.add(propertyValue);
+						break out;
+					}
+				}
+			}
+		}
+		return selectedValues;
 	}
 }
