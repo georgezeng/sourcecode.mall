@@ -227,6 +227,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		return client.get();
 	}
 
+	@Cacheable(cacheNames = CacheNameConstant.CLIENT_INFO, key = "#id")
 	@Transactional(readOnly = true)
 	public Optional<Client> findById(Long id) {
 		Optional<Client> client = clientRepository.findById(id);

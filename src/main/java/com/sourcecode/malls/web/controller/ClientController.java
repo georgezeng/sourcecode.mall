@@ -113,6 +113,7 @@ public class ClientController {
 		client.setAvatar(filePath);
 		clientService.save(client);
 		cacheEvictService.clearClientInvitePoster(client.getId());
+		cacheEvictService.clearClientInfo(client.getId());
 		return new ResultBean<>(filePath);
 	}
 
@@ -132,6 +133,7 @@ public class ClientController {
 		boolean needClearSubList = client.getParent() != null && !client.getNickname().equals(dto.getNickname());
 		if (hasChanged) {
 			cacheEvictService.clearClientInvitePoster(client.getId());
+			cacheEvictService.clearClientInfo(client.getId());
 		}
 		client.setBirthday(dto.getBirthday());
 		client.setSex(dto.getSex());
