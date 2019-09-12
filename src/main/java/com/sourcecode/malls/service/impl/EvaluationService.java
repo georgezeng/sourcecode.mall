@@ -199,16 +199,19 @@ public class EvaluationService {
 	}
 
 	@Caching(cacheable = {
-			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-' + #queryInfo.data.value.name", condition = "#queryInfo.data.value != null"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-' + #queryInfo.data.value.name()", condition = "#queryInfo.data.value != null"),
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_TOTAL_COMMENT, key = "#queryInfo.data.id + '-All'", condition = "#queryInfo.data.value == null") })
 	public long countCommentForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
 		return repository.count(getSpecForGoodsItem(merchantId, queryInfo));
 	}
 
-	@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.data.value + '-' + #queryInfo.page.num")
+	@Caching(cacheable = {
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.data.value + '-' + #queryInfo.page.num", condition = "#queryInfo.data.value != null"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-All-' + #queryInfo.page.num", condition = "#queryInfo.data.value == null") })
 	@Transactional(readOnly = true)
 	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
-		String key = queryInfo.getData().getId() + "-" + queryInfo.getPage().getNum();
+		String key = queryInfo.getData().getId() + "-" + (queryInfo.getData().getValue() != null ? queryInfo.getData().getValue().name() : "All") + "-"
+				+ queryInfo.getPage().getNum();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_ITEM_COMMENT);
 		store.setBizKey(queryInfo.getData().toString());
