@@ -206,7 +206,7 @@ public class EvaluationService {
 	}
 
 	@Caching(cacheable = {
-			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.data.value + '-' + #queryInfo.page.num", condition = "#queryInfo.data.value != null"),
+			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-' + #queryInfo.data.value.name() + '-' + #queryInfo.page.num", condition = "#queryInfo.data.value != null"),
 			@Cacheable(cacheNames = CacheNameConstant.CLIENT_ITEM_COMMENT_LIST, key = "#queryInfo.data.id + '-All-' + #queryInfo.page.num", condition = "#queryInfo.data.value == null") })
 	@Transactional(readOnly = true)
 	public PageResult<GoodsItemEvaluationDTO> getCommentListForGoodsItem(Long merchantId, QueryInfo<GoodsItemEvaluationDTO> queryInfo) {
