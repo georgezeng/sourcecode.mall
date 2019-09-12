@@ -133,6 +133,9 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 	private PasswordEncoder pwdEncoder;
 
 	@Autowired
+	private CacheEvictService cacheEvictService;
+
+	@Autowired
 	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
 	@Cacheable(cacheNames = CacheNameConstant.CLIENT_TOTAL_INVITE_INFO, key = "#client.id")
@@ -401,11 +404,12 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 			Optional<CouponSetting> setting = couponSettingRepository.findFirstByMerchantAndEventTypeAndStatusAndEnabledOrderByCreateTimeDesc(
 					client.getMerchant(), CouponEventType.Registration, CouponSettingStatus.PutAway, true);
 			if (setting.isPresent()) {
-				client.setLoggedIn(true);
-				clientRepository.save(client);
 				data.put("coupon", setting.get().getAmount());
 			}
 			data.put("points", merchantService.getBonusInfo(client.getMerchant()).getRookiePoints());
+			client.setLoggedIn(true);
+			clientRepository.save(client);
+			cacheEvictService.clearClientInfo(client.getId());
 			return data;
 		}
 		return null;
