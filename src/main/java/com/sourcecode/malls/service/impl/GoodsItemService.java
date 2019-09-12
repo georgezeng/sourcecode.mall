@@ -389,7 +389,6 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 					def.setAttrs(filterValues(properties, def));
 					return def;
 				})).filter(it -> it != null).collect(Collectors.toList());
-
 	}
 
 	private List<GoodsAttributeDTO> filterValues(List<GoodsItemPropertyDTO> properties, GoodsAttributeDTO definition) {
