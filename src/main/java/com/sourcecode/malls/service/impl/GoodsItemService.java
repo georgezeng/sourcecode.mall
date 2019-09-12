@@ -378,13 +378,13 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 
 	@Transactional(readOnly = true)
 	@Cacheable(value = CacheNameConstant.GOODS_ITEM_LOAD_DEFINITIONS, key = "#itemId")
-	public List<GoodsAttributeDTO> loadDefinitions(Long itemId, KeyDTO<Long> dto) {
+	public List<GoodsAttributeDTO> loadDefinitions(Long itemId) {
 		Optional<GoodsItem> dataOp = itemRepository.findById(itemId);
 		AssertUtil.assertTrue(dataOp.isPresent() && dataOp.get().isEnabled(), ExceptionMessageConstant.NO_SUCH_RECORD);
 		AssertUtil.assertTrue(dataOp.get().getMerchant().getId().equals(ClientContext.getMerchantId()), ExceptionMessageConstant.NO_SUCH_RECORD);
 		List<GoodsItemPropertyDTO> properties = dataOp.get().getProperties().stream().map(it -> it.asDTO()).collect(Collectors.toList());
-		return dto.getIds().stream().map(id -> transferFacade.entityToDTO(Void -> definitionRepository.findById(id),
-				op -> op.isPresent() && op.get().getMerchant().getId().equals(ClientContext.getMerchantId()), definition -> {
+		return properties.get(0).getValues().stream().map(
+				value -> transferFacade.entityToDTO(Void -> definitionRepository.findById(value.getParent().getId()), op -> op.isPresent(), definition -> {
 					GoodsAttributeDTO def = definition.asDTO();
 					def.setAttrs(filterValues(properties, def));
 					return def;

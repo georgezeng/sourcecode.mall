@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sourcecode.malls.context.ClientContext;
-import com.sourcecode.malls.dto.base.KeyDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
@@ -48,11 +47,6 @@ public class GoodsItemController {
 		return new ResultBean<>(new ArrayList<>());
 	}
 
-	@RequestMapping(path = "/definitions/load/params/{itemId}")
-	public ResultBean<GoodsAttributeDTO> loadDefinitions(@PathVariable("itemId") Long itemId, @RequestBody KeyDTO<Long> dto) {
-		return new ResultBean<>(service.loadDefinitions(itemId, dto));
-	}
-
 	@RequestMapping(path = "/load/params/{id}")
 	public ResultBean<GoodsItemDTO> load(@PathVariable("id") Long id) {
 		GoodsItemDTO dto = service.load(ClientContext.getMerchantId(), id);
@@ -63,6 +57,7 @@ public class GoodsItemController {
 		data.setId(id);
 		queryInfo.setData(data);
 		dto.setTotalEvaluations(evaService.countCommentForGoodsItem(ClientContext.getMerchantId(), queryInfo));
+		dto.setDefinitions(service.loadDefinitions(id));
 		return new ResultBean<>(dto);
 	}
 
