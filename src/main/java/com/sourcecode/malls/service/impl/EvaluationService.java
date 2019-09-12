@@ -214,7 +214,7 @@ public class EvaluationService {
 				+ queryInfo.getPage().getNum();
 		SearchCacheKeyStore store = new SearchCacheKeyStore();
 		store.setType(SearchCacheKeyStore.SEARCH_ITEM_COMMENT);
-		store.setBizKey(queryInfo.getData().toString());
+		store.setBizKey(queryInfo.getData().getId().toString());
 		store.setSearchKey(key);
 		searchCacheKeyStoreRepository.save(store);
 		Page<GoodsItemEvaluation> result = repository.findAll(getSpecForGoodsItem(merchantId, queryInfo),
