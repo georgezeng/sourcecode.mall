@@ -188,7 +188,7 @@ public class EvaluationService {
 				predicate.add(criteriaBuilder.equal(root.get("passed"), true));
 				predicate.add(criteriaBuilder.equal(root.get("additional"), false));
 				predicate.add(criteriaBuilder.equal(root.get("open"), true));
-				predicate.add(criteriaBuilder.equal(root.get("order"), queryInfo.getData().getId()));
+				predicate.add(criteriaBuilder.equal(root.get("item"), queryInfo.getData().getId()));
 				if (queryInfo.getData().getValue() != null) {
 					predicate.add(criteriaBuilder.equal(root.get("value"), queryInfo.getData().getValue()));
 				}
