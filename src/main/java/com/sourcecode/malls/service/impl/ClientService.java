@@ -281,7 +281,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 		int avatarSize = 160;
 		BufferedImage avatarImage = ImageIO.read(in);
-		if (avatarImage.getHeight() / avatarImage.getWidth() * 1d < 0.75) {
+		if (avatarImage.getHeight() / (avatarImage.getWidth() * 1d) < 0.75) {
 			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
 			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
 		}
