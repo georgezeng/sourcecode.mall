@@ -269,7 +269,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		Optional<MerchantShopApplication> app = merchantShopRepository.findByMerchantId(client.getMerchant().getId());
 		AssertUtil.assertTrue(app.isPresent(), "商铺信息不存在");
 		String shareQrCodeUrl = "https://" + app.get().getDomain() + "/?uid=" + userId + "#/Home";
-		BufferedImage qrCode = ImageUtil.resizeImage(imageService.generateQRCodeImage(shareQrCodeUrl, 1000, 1000, 1), 250, 250);
+		BufferedImage qrCode = ImageUtil.resizeImage(imageService.generateQRCodeImage(shareQrCodeUrl, 1200, 1200, 0), 250, 250);
 		String avatar = client.getAvatar();
 		InputStream in = null;
 		if (StringUtils.isEmpty(avatar)) {
@@ -281,7 +281,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		}
 		int avatarSize = 160;
 		BufferedImage avatarImage = ImageIO.read(in);
-		if (avatarImage.getWidth() > avatarImage.getHeight()) {
+		if (avatarImage.getHeight() / avatarImage.getWidth() * 1d < 0.75) {
 			avatarImage = ImageUtil.rotateImage(avatarImage, 90);
 			avatarImage = ImageUtil.resizeImage(avatarImage, avatarSize, avatarSize);
 		}
