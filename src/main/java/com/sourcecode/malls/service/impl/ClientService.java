@@ -419,7 +419,7 @@ public class ClientService implements BaseService, UserDetailsService, JpaServic
 		client = clientRepository.getOne(client.getId());
 		bonusService.setCurrentLevel(client, false);
 		ClientLevelSettingDTO dto = client.getLevel().asDTO();
-		if (bonusService.isActivityEventTime(client.getMerchant().getId())) {
+		if (bonusService.isActivityEventTime(client.getMerchant())) {
 			dto.setDiscount(dto.getDiscountInActivity());
 		}
 		return dto;
