@@ -72,6 +72,7 @@ public class ClientSessionFilter extends GenericFilterBean {
 				String origin = httpReq.getHeader("Origin");
 				if (origin != null) {
 					String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
+					logger.info("origin: " + origin + ", domain: " + domain);
 					Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
 					if (apOp.isPresent()) {
 						Long merchantId = apOp.get().getMerchant().getId();
