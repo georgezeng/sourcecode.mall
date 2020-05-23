@@ -72,12 +72,9 @@ public class ClientSessionFilter extends GenericFilterBean {
 				String origin = httpReq.getHeader("Origin");
 				if (origin != null) {
 					String domain = origin.replaceAll("http(s?)://", "").replaceAll("/.*", "");
-					logger.info("origin: " + origin + ", domain: " + domain);
 					Optional<MerchantShopApplication> apOp = applicationRepository.findByDomain(domain);
-					logger.info("application existed: " + apOp.isPresent());
 					if (apOp.isPresent()) {
 						Long merchantId = apOp.get().getMerchant().getId();
-						logger.info("merchantId: " + merchantId);
 						Authentication token = SecurityContextHolder.getContext().getAuthentication();
 						if (RememberMeAuthenticationToken.class.isAssignableFrom(token.getClass())) {
 							RememberMeAuthenticationToken rToken = (RememberMeAuthenticationToken) token;
