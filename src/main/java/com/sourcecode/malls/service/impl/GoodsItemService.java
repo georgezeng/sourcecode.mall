@@ -141,7 +141,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		AssertUtil.assertTrue(parent.isPresent(), "找不到商品分类");
 		AssertUtil.assertIsNull(parent.get().getParent(), "必须是一级分类");
 		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
-		List<GoodsRecommendCategory> list = recommendCategoryRepository.findByMerchantAndCategory(merchant.get(), parent.get());
+		List<GoodsRecommendCategory> list = recommendCategoryRepository.findTop3ByMerchantAndCategory(merchant.get(), parent.get());
 		return list.stream().map(it -> it.asDTO()).collect(Collectors.toList());
 	}
 

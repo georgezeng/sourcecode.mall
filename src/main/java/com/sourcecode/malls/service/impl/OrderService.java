@@ -30,6 +30,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.EnvConstant;
@@ -337,7 +338,11 @@ public class OrderService implements BaseService {
 		sub.setProperty(property);
 		subOrderRepository.save(sub);
 		try {
-			byte[] buf = fileService.load(true, item.getThumbnail());
+			String thumb = property.getPath();
+			if (StringUtils.isEmpty(thumb)) {
+				thumb = item.getThumbnail();
+			}
+			byte[] buf = fileService.load(true, thumb);
 			String filePath = userDir + "/" + client.getId() + "/" + fileDir + "/" + sub.getId() + "/thumb";
 			if (env.acceptsProfiles(Profiles.of(EnvConstant.LOCAL))) {
 				filePath += "_" + System.currentTimeMillis();
