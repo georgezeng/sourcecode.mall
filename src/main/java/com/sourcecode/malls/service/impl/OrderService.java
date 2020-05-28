@@ -157,12 +157,15 @@ public class OrderService implements BaseService {
 	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
 	@Transactional(readOnly = true)
-	public OrderPreviewDTO settleAccount(SettleAccountDTO dto) {
+	public OrderPreviewDTO settleAccount(Client client, SettleAccountDTO dto) {
 		AssertUtil.assertTrue(!CollectionUtils.isEmpty(dto.getItems()), "未选中商品");
 		OrderPreviewDTO previewDTO = new OrderPreviewDTO();
 		previewDTO.setFromCart(dto.isFromCart());
 		List<OrderItemDTO> orderItems = new ArrayList<>();
 		previewDTO.setItems(orderItems);
+		BigDecimal clientDiscount = clientService.getCurrentLevel(client).getDiscount();
+		BigDecimal totalPrice = BigDecimal.ZERO;
+		BigDecimal realPrice = BigDecimal.ZERO;
 		for (SettleItemDTO itemDTO : dto.getItems()) {
 			Optional<GoodsItem> goodsItem = Optional.empty();
 			if (previewDTO.isFromCart()) {
@@ -189,11 +192,26 @@ public class OrderService implements BaseService {
 							attrs.add(value.getName());
 						}
 						orderItem.setAttrs(attrs);
+						BigDecimal discount = goodsItem.get().getDiscount();
+						if (discount != null) {
+							if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+								discount = clientDiscount;
+							}
+							discount = discount.multiply(new BigDecimal("0.01"));
+						} else {
+							discount = BigDecimal.ONE;
+						}
+						BigDecimal dealPrice = orderItem.getProperty().getPrice().multiply(new BigDecimal(orderItem.getNums()));
+						totalPrice = totalPrice.add(dealPrice);
+						dealPrice = dealPrice.multiply(discount);
+						realPrice = realPrice.add(dealPrice);
 						orderItems.add(orderItem);
 					}
 				}
 			}
 		}
+		previewDTO.setTotalPrice(totalPrice);
+		previewDTO.setRealPrice(realPrice);
 		return previewDTO;
 	}
 
@@ -220,9 +238,9 @@ public class OrderService implements BaseService {
 		OrderAddress address = dto.getAddress().asOrderAddressEntity();
 		address.setOrder(order);
 		addressRepository.save(address);
-		BigDecimal discount = clientService.getCurrentLevel(client).getDiscount();
-		order.setDiscount(discount);
-		discount = discount.multiply(new BigDecimal("0.01"));
+		BigDecimal clientDiscount = clientService.getCurrentLevel(client).getDiscount();
+		order.setDiscount(clientDiscount);
+		clientDiscount = clientDiscount.multiply(new BigDecimal("0.01"));
 		List<SubOrder> subs = new ArrayList<>();
 		if (dto.isFromCart()) {
 			for (SettleItemDTO itemDTO : dto.getItems()) {
@@ -231,7 +249,17 @@ public class OrderService implements BaseService {
 					ClientCartItem cartItem = cartItemOp.get();
 					BigDecimal dealPrice = cartItem.getProperty().getPrice().multiply(new BigDecimal(cartItem.getNums()));
 					totalPrice = totalPrice.add(dealPrice);
+					BigDecimal discount = cartItem.getItem().getDiscount();
+					if (discount != null) {
+						if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+							discount = clientDiscount;
+						}
+						discount = discount.multiply(new BigDecimal("0.01"));
+					} else {
+						discount = BigDecimal.ONE;
+					}
 					dealPrice = dealPrice.multiply(discount);
+					realPrice = realPrice.add(dealPrice);
 					settleItem(client, cartItem.getItem(), cartItem.getProperty(), order, cartItem.getNums(), dealPrice, subs);
 					cartRepository.delete(cartItem);
 					cacheEvictService.clearClientCartItem(client.getId(), itemDTO.getItemId());
@@ -245,15 +273,24 @@ public class OrderService implements BaseService {
 				GoodsItem item = itemOp.get();
 				Optional<GoodsItemProperty> propertyOp = propertyRepository.findById(itemDTO.getPropertyId());
 				if (propertyOp.isPresent() && propertyOp.get().getItem().getId().equals(item.getId())) {
+					BigDecimal discount = item.getDiscount();
+					if (discount != null) {
+						if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+							discount = clientDiscount;
+						}
+						discount = discount.multiply(new BigDecimal("0.01"));
+					} else {
+						discount = BigDecimal.ONE;
+					}
 					GoodsItemProperty property = propertyOp.get();
 					BigDecimal dealPrice = property.getPrice().multiply(new BigDecimal(itemDTO.getNums()));
 					totalPrice = totalPrice.add(dealPrice);
 					dealPrice = dealPrice.multiply(discount);
+					realPrice = realPrice.add(dealPrice);
 					settleItem(client, item, property, order, itemDTO.getNums(), dealPrice, subs);
 				}
 			}
 		}
-		realPrice = totalPrice.multiply(discount);
 		if (!CollectionUtils.isEmpty(dto.getCoupons())) {
 			BigDecimal couponAmount = BigDecimal.ZERO;
 			BigDecimal limitedAmount = getLimitedAmount(client.getMerchant(), realPrice);

@@ -13,16 +13,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sourcecode.malls.constants.MerchantSettingConstant;
 import com.sourcecode.malls.context.ClientContext;
+import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantSetting;
 import com.sourcecode.malls.domain.redis.CodeStore;
 import com.sourcecode.malls.dto.ClientCouponDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.base.ResultBean;
+import com.sourcecode.malls.dto.order.ExpressFeeDTO;
 import com.sourcecode.malls.dto.order.OrderDTO;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.enums.OrderStatus;
 import com.sourcecode.malls.enums.Payment;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantSettingRepository;
 import com.sourcecode.malls.repository.redis.impl.CodeStoreRepository;
 import com.sourcecode.malls.service.impl.OrderService;
 import com.sourcecode.malls.util.AssertUtil;
@@ -43,9 +49,15 @@ public class OrderController {
 	@Autowired
 	private CodeStoreRepository codeStoreRepository;
 
+	@Autowired
+	private MerchantRepository merchantRepository;
+
+	@Autowired
+	private MerchantSettingRepository merchantSettingRepository;
+
 	@RequestMapping(path = "/settleAccount")
 	public ResultBean<String> settleAccount(@RequestBody SettleAccountDTO dto) throws Exception {
-		OrderPreviewDTO previewDTO = orderService.settleAccount(dto);
+		OrderPreviewDTO previewDTO = orderService.settleAccount(ClientContext.get(), dto);
 		AssertUtil.assertTrue(!CollectionUtils.isEmpty(previewDTO.getItems()), "未选中商品");
 		String key = UUID.randomUUID().toString();
 		CodeStore store = new CodeStore();
@@ -62,6 +74,17 @@ public class OrderController {
 		OrderPreviewDTO dto = null;
 		if (store.isPresent()) {
 			dto = mapper.readValue(store.get().getValue(), OrderPreviewDTO.class);
+		}
+		return new ResultBean<>(dto);
+	}
+
+	@RequestMapping(path = "/express/fee")
+	public ResultBean<ExpressFeeDTO> getExpressFee(@PathVariable("key") String key) throws Exception {
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		Optional<MerchantSetting> op = merchantSettingRepository.findByMerchantAndCode(merchant.get(), MerchantSettingConstant.EXPRESS_FEE);
+		ExpressFeeDTO dto = null;
+		if (op.isPresent()) {
+			dto = mapper.readValue(op.get().getValue(), ExpressFeeDTO.class);
 		}
 		return new ResultBean<>(dto);
 	}
