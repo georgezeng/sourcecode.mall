@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
+import com.sourcecode.malls.dto.goods.GoodsRecommendCategoryDTO;
 import com.sourcecode.malls.service.impl.GoodsItemService;
 
 @RestController
@@ -28,6 +29,11 @@ public class GoodsCategoryController {
 	@RequestMapping(path = "/list/level2/params/{id}")
 	public ResultBean<GoodsAttributeDTO> listLevel2(@PathVariable Long id) {
 		return new ResultBean<>(service.listCategoryLevel2(id));
+	}
+	
+	@RequestMapping(path = "/recommend/list/params/{id}")
+	public ResultBean<GoodsRecommendCategoryDTO> listRecommend(@PathVariable Long id) {
+		return new ResultBean<>(service.listRecommendCategory(id));
 	}
 
 }

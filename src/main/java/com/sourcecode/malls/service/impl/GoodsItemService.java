@@ -23,6 +23,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
 import org.hibernate.query.NativeQuery;
+import org.hibernate.query.criteria.internal.OrderImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,17 +47,20 @@ import com.sourcecode.malls.domain.client.Client;
 import com.sourcecode.malls.domain.coupon.ClientCoupon;
 import com.sourcecode.malls.domain.goods.GoodsCategory;
 import com.sourcecode.malls.domain.goods.GoodsItem;
+import com.sourcecode.malls.domain.goods.GoodsRecommendCategory;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantShopApplication;
 import com.sourcecode.malls.domain.redis.SearchCacheKeyStore;
 import com.sourcecode.malls.dto.goods.GoodsAttributeDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemDTO;
 import com.sourcecode.malls.dto.goods.GoodsItemPropertyDTO;
+import com.sourcecode.malls.dto.goods.GoodsRecommendCategoryDTO;
 import com.sourcecode.malls.dto.query.PageInfo;
 import com.sourcecode.malls.dto.query.QueryInfo;
 import com.sourcecode.malls.repository.jpa.impl.client.ClientRepository;
 import com.sourcecode.malls.repository.jpa.impl.coupon.ClientCouponRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsCategoryRepository;
+import com.sourcecode.malls.repository.jpa.impl.goods.GoodsRecommendCategoryRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsSpecificationDefinitionRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantShopApplicationRepository;
@@ -108,6 +112,9 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 	private GoodsCategoryRepository categoryRepository;
 
 	@Autowired
+	private GoodsRecommendCategoryRepository recommendCategoryRepository;
+
+	@Autowired
 	private MerchantRepository merchantRepository;
 
 	@Autowired
@@ -127,6 +134,15 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
 		List<GoodsCategory> list = categoryRepository.findByMerchantAndParent(merchant.get(), parent.get());
 		return list.stream().map(it -> it.asDTO(false, true)).collect(Collectors.toList());
+	}
+
+	public List<GoodsRecommendCategoryDTO> listRecommendCategory(Long id) {
+		Optional<GoodsCategory> parent = categoryRepository.findById(id);
+		AssertUtil.assertTrue(parent.isPresent(), "找不到商品分类");
+		AssertUtil.assertIsNull(parent.get().getParent(), "必须是一级分类");
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		List<GoodsRecommendCategory> list = recommendCategoryRepository.findByMerchantAndCategory(merchant.get(), parent.get());
+		return list.stream().map(it -> it.asDTO()).collect(Collectors.toList());
 	}
 
 	@Cacheable(value = CacheNameConstant.GOODS_ITEM_LOAD_ONE, key = "#id")
@@ -171,6 +187,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 							criteriaBuilder.like(root.join("category").get("name"), like), criteriaBuilder.like(root.join("brand").get("name"), like)));
 				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
+				query.orderBy(new OrderImpl(root.get("indexRecommend"), false), new OrderImpl(root.get("indexOrder"), true));
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
