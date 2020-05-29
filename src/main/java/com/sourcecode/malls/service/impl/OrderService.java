@@ -1,6 +1,7 @@
 package com.sourcecode.malls.service.impl;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,9 +33,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sourcecode.malls.constants.CacheNameConstant;
 import com.sourcecode.malls.constants.EnvConstant;
 import com.sourcecode.malls.constants.ExceptionMessageConstant;
+import com.sourcecode.malls.constants.MerchantSettingConstant;
 import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.aftersale.AfterSaleApplication;
 import com.sourcecode.malls.domain.client.Client;
@@ -46,6 +49,7 @@ import com.sourcecode.malls.domain.goods.GoodsItemProperty;
 import com.sourcecode.malls.domain.goods.GoodsItemRank;
 import com.sourcecode.malls.domain.goods.GoodsSpecificationValue;
 import com.sourcecode.malls.domain.merchant.Merchant;
+import com.sourcecode.malls.domain.merchant.MerchantSetting;
 import com.sourcecode.malls.domain.order.Invoice;
 import com.sourcecode.malls.domain.order.Order;
 import com.sourcecode.malls.domain.order.OrderAddress;
@@ -56,6 +60,7 @@ import com.sourcecode.malls.dto.OrderItemDTO;
 import com.sourcecode.malls.dto.OrderPreviewDTO;
 import com.sourcecode.malls.dto.SettleAccountDTO;
 import com.sourcecode.malls.dto.SettleItemDTO;
+import com.sourcecode.malls.dto.order.ExpressFeeDTO;
 import com.sourcecode.malls.dto.order.OrderDTO;
 import com.sourcecode.malls.dto.query.PageResult;
 import com.sourcecode.malls.dto.query.QueryInfo;
@@ -71,6 +76,8 @@ import com.sourcecode.malls.repository.jpa.impl.coupon.CouponSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemPropertyRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRankRepository;
 import com.sourcecode.malls.repository.jpa.impl.goods.GoodsItemRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
+import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantSettingRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.InvoiceRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderAddressRepository;
 import com.sourcecode.malls.repository.jpa.impl.order.OrderRepository;
@@ -156,6 +163,15 @@ public class OrderService implements BaseService {
 	@Autowired
 	private SearchCacheKeyStoreRepository searchCacheKeyStoreRepository;
 
+	@Autowired
+	private MerchantSettingRepository merchantSettingRepository;
+
+	@Autowired
+	private MerchantRepository merchantRepository;
+
+	@Autowired
+	private ObjectMapper mapper;
+
 	@Transactional(readOnly = true)
 	public OrderPreviewDTO settleAccount(Client client, SettleAccountDTO dto) {
 		AssertUtil.assertTrue(!CollectionUtils.isEmpty(dto.getItems()), "未选中商品");
@@ -208,6 +224,19 @@ public class OrderService implements BaseService {
 						orderItems.add(orderItem);
 					}
 				}
+			}
+		}
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		Optional<MerchantSetting> op = merchantSettingRepository.findByMerchantAndCode(merchant.get(), MerchantSettingConstant.EXPRESS_FEE);
+		if (op.isPresent()) {
+			MerchantSetting setting = op.get();
+			try {
+				ExpressFeeDTO fee = mapper.readValue(setting.getValue(), ExpressFeeDTO.class);
+				if (fee.getTotalAmount() != null && fee.getTotalAmount().compareTo(realPrice) > 0) {
+					previewDTO.setExpressFee(fee.getFee());
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e.getMessage(), e);
 			}
 		}
 		previewDTO.setTotalPrice(totalPrice);

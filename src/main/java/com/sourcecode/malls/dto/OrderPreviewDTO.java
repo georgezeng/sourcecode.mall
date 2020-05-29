@@ -8,6 +8,15 @@ public class OrderPreviewDTO {
 	private boolean fromCart;
 	private BigDecimal totalPrice;
 	private BigDecimal realPrice;
+	private BigDecimal expressFee;
+
+	public BigDecimal getExpressFee() {
+		return expressFee;
+	}
+
+	public void setExpressFee(BigDecimal expressFee) {
+		this.expressFee = expressFee;
+	}
 
 	public BigDecimal getTotalPrice() {
 		return totalPrice;
