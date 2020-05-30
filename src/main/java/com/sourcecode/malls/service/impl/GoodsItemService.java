@@ -187,14 +187,16 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 							criteriaBuilder.like(root.join("category").get("name"), like), criteriaBuilder.like(root.join("brand").get("name"), like)));
 				}
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
-				query.orderBy(new OrderImpl(root.get("indexRecommend"), false), new OrderImpl(root.get("indexOrder"), true),
-						new OrderImpl(root.get("putTime"), true));
+				if ("putTime".equals(type)) {
+					query.orderBy(new OrderImpl(root.get("indexRecommend"), false), new OrderImpl(root.get("indexOrder"), true),
+							new OrderImpl(root.get("putTime"), true));
+				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
 		};
 		switch (type) {
 		case "putTime":
-			pageResult = itemRepository.findAll(spec, pageInfo.pageable(pageInfo.getOrder(), "putTime"));
+			pageResult = itemRepository.findAll(spec, pageInfo.pageable());
 			break;
 		case "price": {
 			if (Direction.ASC.name().equals(pageInfo.getOrder())) {
