@@ -7,9 +7,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sourcecode.malls.context.ClientContext;
 import com.sourcecode.malls.domain.merchant.Merchant;
 import com.sourcecode.malls.domain.merchant.MerchantSetting;
-import com.sourcecode.malls.domain.system.User;
 import com.sourcecode.malls.dto.base.ResultBean;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantRepository;
 import com.sourcecode.malls.repository.jpa.impl.merchant.MerchantSettingRepository;
@@ -27,8 +27,7 @@ public class MerchantSettingController extends BaseController {
 
 	@RequestMapping(path = "/load/params/{code}")
 	public ResultBean<String> load(@PathVariable String code) {
-		User user = getRelatedCurrentUser();
-		Optional<Merchant> merchant = merchantRepository.findById(user.getId());
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
 		Optional<MerchantSetting> setting = merchantSettingRepository.findByMerchantAndCode(merchant.get(), code);
 		MerchantSetting data = setting.orElseGet(MerchantSetting::new);
 		return new ResultBean<>(data.getValue());
