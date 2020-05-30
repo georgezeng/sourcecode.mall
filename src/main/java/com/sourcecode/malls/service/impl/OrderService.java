@@ -350,6 +350,20 @@ public class OrderService implements BaseService {
 			}
 			order.setCouponAmount(couponAmount);
 		}
+		Optional<Merchant> merchant = merchantRepository.findById(ClientContext.getMerchantId());
+		Optional<MerchantSetting> op = merchantSettingRepository.findByMerchantAndCode(merchant.get(), MerchantSettingConstant.EXPRESS_FEE);
+		if (op.isPresent()) {
+			MerchantSetting setting = op.get();
+			try {
+				ExpressFeeDTO fee = mapper.readValue(setting.getValue(), ExpressFeeDTO.class);
+				if (fee.getTotalAmount() != null && fee.getTotalAmount().compareTo(realPrice) > 0) {
+					realPrice = realPrice.add(fee.getFee());
+					order.setExpressFee(fee.getFee());
+				}
+			} catch (IOException e) {
+				throw new RuntimeException(e.getMessage(), e);
+			}
+		}
 		order.setTotalPrice(totalPrice);
 		order.setRealPrice(realPrice);
 		order.setSubList(subs);
