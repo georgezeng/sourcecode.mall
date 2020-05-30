@@ -234,7 +234,7 @@ public class OrderService implements BaseService {
 				ExpressFeeDTO fee = mapper.readValue(setting.getValue(), ExpressFeeDTO.class);
 				if (fee.getTotalAmount() != null && fee.getTotalAmount().compareTo(realPrice) > 0) {
 					previewDTO.setExpressFee(fee.getFee());
-					realPrice = realPrice.add(fee.getFee());
+//					realPrice = realPrice.add(fee.getFee());
 				}
 			} catch (IOException e) {
 				throw new RuntimeException(e.getMessage(), e);
@@ -270,7 +270,6 @@ public class OrderService implements BaseService {
 		addressRepository.save(address);
 		BigDecimal clientDiscount = clientService.getCurrentLevel(client).getDiscount();
 		order.setDiscount(clientDiscount);
-		clientDiscount = clientDiscount.multiply(new BigDecimal("0.01"));
 		List<SubOrder> subs = new ArrayList<>();
 		if (dto.isFromCart()) {
 			for (SettleItemDTO itemDTO : dto.getItems()) {
