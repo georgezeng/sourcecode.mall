@@ -189,7 +189,7 @@ public class GoodsItemService extends BaseGoodsItemService implements JpaService
 				predicate.add(criteriaBuilder.equal(root.get("enabled"), true));
 				if ("putTime".equals(type)) {
 					query.orderBy(new OrderImpl(root.get("indexRecommend"), false), new OrderImpl(root.get("indexOrder"), true),
-							new OrderImpl(root.get("putTime"), true));
+							new OrderImpl(root.get("putTime"), false));
 				}
 				return query.where(predicate.toArray(new Predicate[] {})).getRestriction();
 			}
