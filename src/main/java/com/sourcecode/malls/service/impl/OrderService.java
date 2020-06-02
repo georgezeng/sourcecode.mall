@@ -209,11 +209,15 @@ public class OrderService implements BaseService {
 						}
 						orderItem.setAttrs(attrs);
 						BigDecimal discount = goodsItem.get().getDiscount();
-						if (discount != null) {
-							if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
-								discount = clientDiscount;
+						if (!goodsItem.get().isSpecialDiscount()) {
+							if (discount != null) {
+								if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+									discount = clientDiscount;
+								}
+								discount = discount.multiply(new BigDecimal("0.01"));
+							} else {
+								discount = BigDecimal.ONE;
 							}
-							discount = discount.multiply(new BigDecimal("0.01"));
 						} else {
 							discount = BigDecimal.ONE;
 						}
@@ -279,11 +283,15 @@ public class OrderService implements BaseService {
 					BigDecimal dealPrice = cartItem.getProperty().getPrice().multiply(new BigDecimal(cartItem.getNums()));
 					totalPrice = totalPrice.add(dealPrice);
 					BigDecimal discount = cartItem.getItem().getDiscount();
-					if (discount != null) {
-						if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
-							discount = clientDiscount;
+					if (!cartItem.getItem().isSpecialDiscount()) {
+						if (discount != null) {
+							if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+								discount = clientDiscount;
+							}
+							discount = discount.multiply(new BigDecimal("0.01"));
+						} else {
+							discount = BigDecimal.ONE;
 						}
-						discount = discount.multiply(new BigDecimal("0.01"));
 					} else {
 						discount = BigDecimal.ONE;
 					}
@@ -303,11 +311,15 @@ public class OrderService implements BaseService {
 				Optional<GoodsItemProperty> propertyOp = propertyRepository.findById(itemDTO.getPropertyId());
 				if (propertyOp.isPresent() && propertyOp.get().getItem().getId().equals(item.getId())) {
 					BigDecimal discount = item.getDiscount();
-					if (discount != null) {
-						if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
-							discount = clientDiscount;
+					if (!item.isSpecialDiscount()) {
+						if (discount != null) {
+							if (clientDiscount != null && discount.compareTo(clientDiscount) > 0) {
+								discount = clientDiscount;
+							}
+							discount = discount.multiply(new BigDecimal("0.01"));
+						} else {
+							discount = BigDecimal.ONE;
 						}
-						discount = discount.multiply(new BigDecimal("0.01"));
 					} else {
 						discount = BigDecimal.ONE;
 					}
