@@ -1,4 +1,4 @@
-FROM java:8
+FROM openjdk:latest
 ARG project
 ENV artifact=${project}
 RUN echo "Asia/Shanghai" > /etc/timezone && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
